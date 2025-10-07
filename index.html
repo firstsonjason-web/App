@@ -1,0 +1,2752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stay Healthy, Be Happy - Digital Wellness App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+            min-height: 100vh;
+            color: #1F2937;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            padding: 24px;
+            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+        }
+
+        .greeting {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #1F2937;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            font-weight: 500;
+            color: #6B7280;
+        }
+
+        .quote-card {
+            margin: 0 24px 24px 24px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+            padding: 24px;
+            text-align: center;
+        }
+
+        .quote-text {
+            font-size: 18px;
+            font-style: italic;
+            color: white;
+            line-height: 26px;
+            margin-bottom: 16px;
+        }
+
+        .quote-author {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            margin: 0 24px 24px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .awards-section {
+            padding: 20px;
+        }
+
+        .awards-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .awards-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .points-container {
+            background: #FEF3C7;
+            padding: 6px 12px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .points-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #F59E0B;
+        }
+
+        .goal-item {
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .goal-item:hover {
+            border-color: #4F46E5;
+            transform: translateY(-1px);
+        }
+
+        .goal-item.completed {
+            opacity: 0.7;
+        }
+
+        .goal-checkbox {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            border: 2px solid #D1D5DB;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .goal-checkbox.completed {
+            background: #10B981;
+            border-color: #10B981;
+            color: white;
+        }
+
+        .goal-info {
+            flex: 1;
+        }
+
+        .goal-text {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .goal-text.completed {
+            text-decoration: line-through;
+            color: #9CA3AF;
+        }
+
+        .goal-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .difficulty-badge {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .difficulty-easy { background: #10B981; }
+        .difficulty-medium { background: #F59E0B; }
+        .difficulty-hard { background: #EF4444; }
+
+        .points-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: #F59E0B;
+        }
+
+        .add-goal-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #E0E7FF;
+            background: #EEF2FF;
+            border-radius: 12px;
+            padding: 16px;
+            gap: 8px;
+            cursor: pointer;
+            color: #4F46E5;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .add-goal-button:hover {
+            background: #E0E7FF;
+            border-color: #4F46E5;
+        }
+
+        .daily-summary {
+            padding: 20px;
+        }
+
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .summary-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .summary-stat {
+            text-align: center;
+        }
+
+        .summary-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #4F46E5;
+            margin-bottom: 4px;
+        }
+
+        .summary-stat-label {
+            font-size: 12px;
+            color: #6B7280;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10B981, #059669);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .summary-insight {
+            background: #F0F9FF;
+            border-left: 4px solid #4F46E5;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .insight-text {
+            font-size: 14px;
+            line-height: 20px;
+            color: #1F2937;
+        }
+
+        .summary-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .summary-button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .summary-button.primary {
+            background: #4F46E5;
+            color: white;
+        }
+
+        .summary-button.secondary {
+            background: #F3F4F6;
+            color: #6B7280;
+        }
+
+        .summary-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-top: 1px solid #E5E7EB;
+            padding: 8px 0;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px;
+            cursor: pointer;
+            color: #9CA3AF;
+            font-size: 12px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .tab-item.active {
+            color: #4F46E5;
+        }
+
+        .tab-icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 4px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 350px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6B7280;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .difficulty-option {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .difficulty-option.selected {
+            border-color: #4F46E5;
+            background: #4F46E5;
+            color: white;
+        }
+
+        .save-button {
+            width: 100%;
+            padding: 12px;
+            background: #4F46E5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .save-button:hover {
+            background: #4338CA;
+        }
+
+        .subscription-section {
+            padding: 20px;
+        }
+
+        .pay-here-section {
+            text-align: center;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            color: white;
+        }
+
+        .pay-here-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin: 0 auto 12px;
+            min-width: 200px;
+        }
+
+        .pay-here-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .pay-here-icon {
+            font-size: 24px;
+        }
+
+        .pay-here-subtitle {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .plan-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .plan-card:hover {
+            border-color: #4F46E5;
+            transform: translateY(-2px);
+        }
+
+        .plan-card.current {
+            border-color: #10B981;
+            background: #F0FDF4;
+        }
+
+        .plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .plan-name {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .plan-price {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4F46E5;
+        }
+
+        .current-badge {
+            background: #10B981;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .plan-features {
+            margin-bottom: 16px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+
+        .feature-text {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
+        .select-plan-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .select-plan-button.upgrade {
+            background: #10B981;
+            color: white;
+        }
+
+        .select-plan-button.downgrade {
+            background: #F59E0B;
+            color: white;
+        }
+
+        .payment-methods {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .payment-method {
+            padding: 16px;
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .payment-method:hover {
+            border-color: #4F46E5;
+            background: #F8FAFC;
+        }
+
+        .payment-method.selected {
+            border-color: #4F46E5;
+            background: #EEF2FF;
+        }
+
+        .payment-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .payment-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .setting-value {
+            font-size: 14px;
+            font-weight: 500;
+            margin-right: 8px;
+        }
+
+        /* Privacy Modal Styles */
+        .privacy-section h4 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .privacy-options {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .privacy-option {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .privacy-option:hover {
+            border-color: #4f46e5;
+            background-color: #f8fafc;
+        }
+
+        .privacy-option.selected {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+        }
+
+        .privacy-option-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .privacy-option-header input[type="radio"] {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+
+        .privacy-option-header label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .privacy-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .privacy-info h5 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            color: #1f2937;
+        }
+
+        .privacy-info p {
+            font-size: 14px;
+            color: #6b7280;
+            margin: 0;
+        }
+
+        .privacy-features {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .feature-icon {
+            margin-right: 8px;
+            font-size: 12px;
+        }
+
+        .privacy-note {
+            display: flex;
+            align-items: flex-start;
+            background-color: #f0f9ff;
+            border: 1px solid #e0f2fe;
+            border-radius: 8px;
+            padding: 16px;
+            gap: 12px;
+        }
+
+        .note-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .note-content h6 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            color: #0369a1;
+        }
+
+        .note-content p {
+            font-size: 13px;
+            color: #0369a1;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .language-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .language-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .language-native {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .language-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Payment Modal Styles */
+        .payment-modal {
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .payment-content {
+            padding: 0;
+        }
+
+        .selected-plan-display {
+            margin-bottom: 24px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .selected-plan-display h3 {
+            margin: 0 0 12px 0;
+            color: #1f2937;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .plan-info-card {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .plan-name-price {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .plan-name-price span:first-child {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 18px;
+        }
+
+        .plan-name-price span:last-child {
+            font-weight: 700;
+            color: #4f46e5;
+            font-size: 18px;
+        }
+
+        .plan-features-mini {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .plan-selection-section {
+            margin-bottom: 24px;
+        }
+
+        .plan-selection-section h3 {
+            margin: 0 0 16px 0;
+            color: #1f2937;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .plan-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .plan-option {
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .plan-option:hover {
+            border-color: #4f46e5;
+            background: #f8fafc;
+        }
+
+        .plan-option.selected {
+            border-color: #4f46e5;
+            background: #eef2ff;
+        }
+
+        .plan-option-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .plan-option-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .plan-option-price {
+            font-weight: 700;
+            color: #4f46e5;
+        }
+
+        .plan-option-features {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .payment-methods-section {
+            margin-bottom: 24px;
+        }
+
+        .payment-methods-section h3 {
+            margin: 0 0 16px 0;
+            color: #1f2937;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .payment-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .payment-method {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .payment-method:hover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .payment-method.selected {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .payment-method-icon {
+            font-size: 24px;
+            margin-right: 16px;
+            width: 40px;
+            text-align: center;
+        }
+
+        .payment-method-info {
+            flex: 1;
+        }
+
+        .payment-method-name {
+            display: block;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 2px;
+        }
+
+        .payment-method-desc {
+            display: block;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .payment-method-check {
+            color: #10b981;
+            font-weight: 700;
+            font-size: 18px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .payment-method.selected .payment-method-check {
+            opacity: 1;
+        }
+
+        .security-notice {
+            display: flex;
+            align-items: flex-start;
+            padding: 16px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .security-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            margin-top: 2px;
+        }
+
+        .security-text span {
+            display: block;
+            font-weight: 600;
+            color: #065f46;
+            margin-bottom: 4px;
+        }
+
+        .security-text p {
+            margin: 0;
+            color: #047857;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .complete-payment-button {
+            width: 100%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 18px 24px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .complete-payment-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                max-width: 100%;
+            }
+            
+            .tab-bar {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="greeting">Good morning! 🌅</h1>
+            <p class="subtitle">Stay mindful, stay healthy</p>
+        </div>
+
+        <!-- Inspirational Quote -->
+        <div class="quote-card">
+            <p class="quote-text" id="quote-text">"The real problem is not whether machines think but whether men do."</p>
+            <p class="quote-author" id="quote-author">— B.F. Skinner</p>
+        </div>
+
+        <!-- Daily Awards -->
+        <div class="card">
+            <div class="awards-section">
+                <div class="awards-header">
+                    <div class="awards-title">
+                        <span>🏆</span>
+                        <span>Daily Awards</span>
+                    </div>
+                    <div class="points-container">
+                        <span>⭐</span>
+                        <span class="points-text" id="total-points">50 pts</span>
+                    </div>
+                </div>
+                
+                <div id="goals-list">
+                    <div class="goal-item completed" onclick="toggleGoal(1)">
+                        <div class="goal-checkbox completed" id="checkbox-1">✓</div>
+                        <div class="goal-info">
+                            <div class="goal-text completed">Complete morning meditation</div>
+                            <div class="goal-meta">
+                                <div class="difficulty-badge difficulty-medium">MEDIUM</div>
+                                <div class="points-value">+25 pts</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="goal-item completed" onclick="toggleGoal(2)">
+                        <div class="goal-checkbox completed" id="checkbox-2">✓</div>
+                        <div class="goal-info">
+                            <div class="goal-text completed">2 focus sessions</div>
+                            <div class="goal-meta">
+                                <div class="difficulty-badge difficulty-medium">MEDIUM</div>
+                                <div class="points-value">+25 pts</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="goal-item" onclick="toggleGoal(3)">
+                        <div class="goal-checkbox" id="checkbox-3">○</div>
+                        <div class="goal-info">
+                            <div class="goal-text">Stay under 6h screen time</div>
+                            <div class="goal-meta">
+                                <div class="difficulty-badge difficulty-hard">HARD</div>
+                                <div class="points-value">+50 pts</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="add-goal-button" onclick="openAddGoalModal()">
+                    <span>+</span>
+                    <span>Add New Goal</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily Summary -->
+        <div class="card">
+            <div class="daily-summary">
+                <div class="summary-header">
+                    <h3>📊 Daily Summary</h3>
+                    <span>🔥</span>
+                </div>
+                
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="summary-stat-value" id="completed-goals">2</div>
+                        <div class="summary-stat-label">Goals Completed</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value" id="earned-points">50</div>
+                        <div class="summary-stat-label">Points Earned</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">7</div>
+                        <div class="summary-stat-label">Day Streak</div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="daily-progress" style="width: 67%"></div>
+                </div>
+                
+                <div class="summary-insight">
+                    <p class="insight-text" id="daily-insight">
+                        🎯 Great progress! You've completed 2 out of 3 goals today. 
+                        Complete your remaining goal to earn your daily prize!
+                    </p>
+                </div>
+                
+                <div class="summary-actions">
+                    <button class="summary-button primary" onclick="viewAnalytics()">View Analytics</button>
+                    <button class="summary-button secondary" onclick="shareSummary()">Share Summary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscription Section -->
+        <div class="card">
+            <div class="subscription-section">
+                <!-- Pay Here Button -->
+                <div class="pay-here-section">
+                    <button class="pay-here-button" onclick="showPaymentModal()">
+                        <span class="pay-here-text" data-translate="pay_here">Pay Here!</span>
+                        <span class="pay-here-icon">💳</span>
+                    </button>
+                    <p class="pay-here-subtitle" data-translate="choose_plan_pay">Choose your plan and pay securely</p>
+                </div>
+                
+                <div class="plan-card current" onclick="selectPlan('free')">
+                    <div class="plan-header">
+                        <div>
+                            <div class="plan-name">Normal Plan</div>
+                            <div class="plan-price">Free</div>
+                        </div>
+                        <div class="current-badge">CURRENT</div>
+                    </div>
+                    <div class="plan-features">
+                        <div class="feature-item">
+                            <span>🎯</span>
+                            <span class="feature-text">3 daily goals</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>📝</span>
+                            <span class="feature-text">2 posts per day</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>👥</span>
+                            <span class="feature-text">5 friends total</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>📊</span>
+                            <span class="feature-text">Basic progress reports</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="plan-card" onclick="selectPlan('pro')">
+                    <div class="plan-header">
+                        <div>
+                            <div class="plan-name">Pro Plan</div>
+                            <div class="plan-price">$15/month</div>
+                        </div>
+                    </div>
+                    <div class="plan-features">
+                        <div class="feature-item">
+                            <span>🎯</span>
+                            <span class="feature-text">6 daily goals</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>📝</span>
+                            <span class="feature-text">10 posts per day</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>👥</span>
+                            <span class="feature-text">20 friends total</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>📊</span>
+                            <span class="feature-text">Enhanced progress reports</span>
+                        </div>
+                    </div>
+                    <button class="select-plan-button upgrade">Upgrade</button>
+                </div>
+
+                <div class="plan-card" onclick="selectPlan('promax')">
+                    <div class="plan-header">
+                        <div>
+                            <div class="plan-name">ProMax Plan</div>
+                            <div class="plan-price">$30/month</div>
+                        </div>
+                    </div>
+                    <div class="plan-features">
+                        <div class="feature-item">
+                            <span>🎯</span>
+                            <span class="feature-text">20 daily goals</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>📝</span>
+                            <span class="feature-text">25 posts per day</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>👥</span>
+                            <span class="feature-text">Unlimited friends</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>📊</span>
+                            <span class="feature-text">Comprehensive detailed reports</span>
+                        </div>
+                    </div>
+                    <button class="select-plan-button upgrade">Upgrade</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+            <div class="tab-item">
+                <div class="tab-icon">👤</div>
+                <span>Login</span>
+            </div>
+            <div class="tab-item active">
+                <div class="tab-icon">🏠</div>
+                <span>Home</span>
+            </div>
+            <div class="tab-item">
+                <div class="tab-icon">🏆</div>
+                <span>Rankings</span>
+            </div>
+            <div class="tab-item">
+                <div class="tab-icon">👥</div>
+                <span>Activities</span>
+            </div>
+            <div class="tab-item">
+                <div class="tab-icon">💬</div>
+                <span>Friends</span>
+            </div>
+            <div class="tab-item">
+                <div class="tab-icon">📈</div>
+                <span>Progress</span>
+            </div>
+            <div class="tab-item">
+                <div class="tab-icon">👥</div>
+                <span>Communities</span>
+            </div>
+            <div class="tab-item">
+                <div class="tab-icon">👤</div>
+                <span>Profile</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Goal Modal -->
+    <div class="modal" id="add-goal-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Goal</h3>
+                <button class="close-button" onclick="closeAddGoalModal()">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Goal Description</label>
+                <textarea class="form-input form-textarea" id="goal-description" placeholder="e.g., Read for 30 minutes, No social media before noon..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Difficulty Level</label>
+                <div class="difficulty-selector">
+                    <div class="difficulty-option" data-difficulty="easy" onclick="selectDifficulty('easy')">
+                        <div>EASY</div>
+                        <div>+10 pts</div>
+                    </div>
+                    <div class="difficulty-option selected" data-difficulty="medium" onclick="selectDifficulty('medium')">
+                        <div>MEDIUM</div>
+                        <div>+25 pts</div>
+                    </div>
+                    <div class="difficulty-option" data-difficulty="hard" onclick="selectDifficulty('hard')">
+                        <div>HARD</div>
+                        <div>+50 pts</div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="save-button" onclick="addNewGoal()">Add Goal</button>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal" id="payment-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Choose Payment Method</h3>
+                <button class="close-button" onclick="closePaymentModal()">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Select Plan</label>
+                <div class="difficulty-selector">
+                    <div class="difficulty-option selected" data-plan="pro" onclick="selectPaymentPlan('pro')">
+                        <div>Pro Plan</div>
+                        <div>$15/month</div>
+                    </div>
+                    <div class="difficulty-option" data-plan="promax" onclick="selectPaymentPlan('promax')">
+                        <div>ProMax Plan</div>
+                        <div>$30/month</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Payment Method</label>
+                <div class="payment-methods">
+                    <div class="payment-method selected" data-method="alipay" onclick="selectPaymentMethod('alipay')">
+                        <div class="payment-icon">💰</div>
+                        <div class="payment-name">Alipay</div>
+                    </div>
+                    <div class="payment-method" data-method="fps" onclick="selectPaymentMethod('fps')">
+                        <div class="payment-icon">⚡</div>
+                        <div class="payment-name">FPS</div>
+                    </div>
+                    <div class="payment-method" data-method="wechat" onclick="selectPaymentMethod('wechat')">
+                        <div class="payment-icon">💬</div>
+                        <div class="payment-name">WeChat Pay</div>
+                    </div>
+                    <div class="payment-method" data-method="bank" onclick="selectPaymentMethod('bank')">
+                        <div class="payment-icon">🏦</div>
+                        <div class="payment-name">Bank Transfer</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: #F0F9FF; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #4F46E5;">
+                <p style="font-size: 12px; color: #1F2937;">
+                    🔒 Your payment information is encrypted and secure. This is a demo version.
+                </p>
+            </div>
+            
+            <button class="save-button" onclick="processPayment()">Complete Payment</button>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content payment-modal">
+            <div class="modal-header">
+                <button class="close-button" onclick="closePaymentModal()">
+                    <span>&times;</span>
+                </button>
+                <h2 data-translate="payment_checkout">Payment Checkout</h2>
+            </div>
+            
+            <div class="payment-content">
+                <!-- Selected Plan Display -->
+                <div class="selected-plan-display">
+                    <h3 data-translate="selected_plan">Selected Plan</h3>
+                    <div id="selectedPlanInfo" class="plan-info-card">
+                        <div class="plan-name-price">
+                            <span id="selectedPlanName">Pro Plan</span>
+                            <span id="selectedPlanPrice">$15/month</span>
+                        </div>
+                        <div class="plan-features-mini">
+                            <span id="selectedPlanFeatures">6 goals • 10 posts • 20 friends</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plan Selection -->
+                <div class="plan-selection-section">
+                    <h3 data-translate="choose_different_plan">Choose Different Plan</h3>
+                    <div class="plan-options">
+                        <div class="plan-option" data-plan="free" onclick="selectPaymentPlan('free')">
+                            <div class="plan-option-info">
+                                <span class="plan-option-name" data-translate="normal_plan">Normal Plan</span>
+                                <span class="plan-option-price" data-translate="free">Free</span>
+                            </div>
+                            <div class="plan-option-features">
+                                <span data-translate="plan_free_features">3 goals • 2 posts • 5 friends</span>
+                            </div>
+                        </div>
+                        
+                        <div class="plan-option selected" data-plan="pro" onclick="selectPaymentPlan('pro')">
+                            <div class="plan-option-info">
+                                <span class="plan-option-name" data-translate="pro_plan">Pro Plan</span>
+                                <span class="plan-option-price">$15/month</span>
+                            </div>
+                            <div class="plan-option-features">
+                                <span data-translate="plan_pro_features">6 goals • 10 posts • 20 friends</span>
+                            </div>
+                        </div>
+                        
+                        <div class="plan-option" data-plan="promax" onclick="selectPaymentPlan('promax')">
+                            <div class="plan-option-info">
+                                <span class="plan-option-name" data-translate="promax_plan">ProMax Plan</span>
+                                <span class="plan-option-price">$30/month</span>
+                            </div>
+                            <div class="plan-option-features">
+                                <span data-translate="plan_promax_features">20 goals • 25 posts • Unlimited friends</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="payment-methods-section">
+                    <h3 data-translate="payment_method">Payment Method</h3>
+                    <div class="payment-methods">
+                        <div class="payment-method" data-method="alipay" onclick="selectPaymentMethod('alipay')">
+                            <div class="payment-method-icon">💰</div>
+                            <div class="payment-method-info">
+                                <span class="payment-method-name">Alipay</span>
+                                <span class="payment-method-desc" data-translate="alipay_desc">Secure payment with Alipay</span>
+                            </div>
+                            <div class="payment-method-check">✓</div>
+                        </div>
+                        
+                        <div class="payment-method" data-method="fps" onclick="selectPaymentMethod('fps')">
+                            <div class="payment-method-icon">⚡</div>
+                            <div class="payment-method-info">
+                                <span class="payment-method-name">FPS</span>
+                                <span class="payment-method-desc" data-translate="fps_desc">Faster Payment System</span>
+                            </div>
+                            <div class="payment-method-check">✓</div>
+                        </div>
+                        
+                        <div class="payment-method" data-method="wechat" onclick="selectPaymentMethod('wechat')">
+                            <div class="payment-method-icon">💬</div>
+                            <div class="payment-method-info">
+                                <span class="payment-method-name">WeChat Pay</span>
+                                <span class="payment-method-desc" data-translate="wechat_desc">Pay with WeChat wallet</span>
+                            </div>
+                            <div class="payment-method-check">✓</div>
+                        </div>
+                        
+                        <div class="payment-method" data-method="bank" onclick="selectPaymentMethod('bank')">
+                            <div class="payment-method-icon">🏦</div>
+                            <div class="payment-method-info">
+                                <span class="payment-method-name" data-translate="bank_transfer">Bank Transfer</span>
+                                <span class="payment-method-desc" data-translate="bank_desc">Direct bank payment</span>
+                            </div>
+                            <div class="payment-method-check">✓</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Notice -->
+                <div class="security-notice">
+                    <div class="security-icon">🔒</div>
+                    <div class="security-text">
+                        <span data-translate="secure_payment">Secure Payment</span>
+                        <p data-translate="security_notice">Your payment information is encrypted and secure. We never store your payment details.</p>
+                    </div>
+                </div>
+
+                <!-- Payment Button -->
+                <button class="complete-payment-button" onclick="processPayment()">
+                    <span data-translate="complete_payment">Complete Payment</span>
+                    <span id="paymentAmount">$15.00</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transparency/Privacy Modal -->
+    <div id="transparencyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeTransparencyModal()">&times;</button>
+                <h3>Account Privacy Settings</h3>
+                <button class="save-btn" onclick="savePrivacySettings()">Save</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div class="privacy-section">
+                    <h4 style="margin-bottom: 15px; color: #1f2937;">Choose Your Privacy Level</h4>
+                    <p style="color: #6b7280; margin-bottom: 20px; line-height: 1.5;">
+                        Control how your profile and activity are visible to other users in the community.
+                    </p>
+                    
+                    <div class="privacy-options">
+                        <div class="privacy-option" onclick="selectPrivacyOption('public')">
+                            <div class="privacy-option-header">
+                                <input type="radio" name="privacy" value="public" id="privacy-public" checked>
+                                <label for="privacy-public">
+                                    <div class="privacy-icon">🌍</div>
+                                    <div class="privacy-info">
+                                        <h5>Public Account</h5>
+                                        <p>Your profile is visible to all users</p>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="privacy-features">
+                                <div class="feature-item">
+                                    <span class="feature-icon">✅</span>
+                                    <span>Visible in community rankings</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">✅</span>
+                                    <span>Others can see your progress</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">✅</span>
+                                    <span>Can be found by friends</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">✅</span>
+                                    <span>Posts visible to community</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="privacy-option" onclick="selectPrivacyOption('private')">
+                            <div class="privacy-option-header">
+                                <input type="radio" name="privacy" value="private" id="privacy-private">
+                                <label for="privacy-private">
+                                    <div class="privacy-icon">🔒</div>
+                                    <div class="privacy-info">
+                                        <h5>Private Account</h5>
+                                        <p>Your profile is only visible to you</p>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="privacy-features">
+                                <div class="feature-item">
+                                    <span class="feature-icon">❌</span>
+                                    <span>Hidden from community rankings</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">❌</span>
+                                    <span>Progress only visible to you</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">❌</span>
+                                    <span>Cannot be found by others</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">✅</span>
+                                    <span>Personal data stays private</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="privacy-note">
+                        <div class="note-icon">ℹ️</div>
+                        <div class="note-content">
+                            <h6>Privacy Note</h6>
+                            <p>You can change these settings anytime. Private accounts can still use all app features but won't appear in public areas.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Modal -->
+    <div id="languageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button onclick="hideLanguageModal()" class="close-button">×</button>
+                <h2 data-translate="Select Language">Select Language</h2>
+            </div>
+            <div class="language-list">
+                <div class="language-item" onclick="selectLanguage('English')">
+                    <span>English</span>
+                    <span class="language-native">English</span>
+                </div>
+                <div class="language-item" onclick="selectLanguage('Spanish')">
+                    <span>Spanish</span>
+                    <span class="language-native">Español</span>
+                </div>
+                <div class="language-item" onclick="selectLanguage('French')">
+                    <span>French</span>
+                    <span class="language-native">Français</span>
+                </div>
+                <div class="language-item" onclick="selectLanguage('German')">
+                    <span>German</span>
+                    <span class="language-native">Deutsch</span>
+                </div>
+                <div class="language-item" onclick="selectLanguage('Italian')">
+                    <span>Italian</span>
+                    <span class="language-native">Italiano</span>
+                </div>
+                <div class="language-item" onclick="selectLanguage('Portuguese')">
+                    <span>Portuguese</span>
+                    <span class="language-native">Português</span>
+                </div>
+                <div class="language-item" onclick="selectLanguage('Chinese')">
+                    <span>Chinese</span>
+                    <span class="language-native">中文</span>
+                </div>
+                <div class="language-item" onclick="selectLanguage('Japanese')">
+                    <span>Japanese</span>
+                    <span class="language-native">日本語</span>
+                </div>
+                <div class="language-item" onclick="selectLanguage('Korean')">
+                    <span>Korean</span>
+                    <span class="language-native">한국어</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with your Supabase URL
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your Supabase anon key
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Global state
+        let goals = [];
+        let currentUser = null;
+        let userSession = null;
+        let currentSubscriptionPlan = 'free';
+        let accountPrivacy = 'public';
+        let currentLanguage = 'English';
+        
+        // Language translations object
+        const translations = {
+            'English': {
+                // Navigation
+                'Login': 'Login',
+                'Home': 'Home',
+                'Rankings': 'Rankings',
+                'Activities': 'Activities',
+                'Friends': 'Friends',
+                'Progress': 'Progress',
+                'Communities': 'Communities',
+                'Profile': 'Profile',
+                
+                // Login Page
+                'Welcome!': 'Welcome!',
+                'Let\'s start your digital wellness journey': 'Let\'s start your digital wellness journey',
+                'Create Your Profile': 'Create Your Profile',
+                'We\'ll assess your digital habits to provide personalized recommendations': 'We\'ll assess your digital habits to provide personalized recommendations',
+                'Full Name': 'Full Name',
+                'Email Address': 'Email Address',
+                'Password': 'Password',
+                'Start Assessment': 'Start Assessment',
+                'Already have an account? Log In Now': 'Already have an account? Log In Now',
+                'Welcome Back!': 'Welcome Back!',
+                'Sign in to continue your digital wellness journey': 'Sign in to continue your digital wellness journey',
+                'Enter Your Account': 'Enter Your Account',
+                'Sign in with your email and password to access your personalized dashboard': 'Sign in with your email and password to access your personalized dashboard',
+                'Sign In': 'Sign In',
+                'Don\'t have an account? Create one': 'Don\'t have an account? Create one',
+                
+                // Home Page
+                'Good morning! 🌅': 'Good morning! 🌅',
+                'Stay mindful, stay healthy': 'Stay mindful, stay healthy',
+                'Daily Awards': 'Daily Awards',
+                'Add New Goal': 'Add New Goal',
+                'No goals yet. Click \'Add New Goal\' to get started!': 'No goals yet. Click \'Add New Goal\' to get started!',
+                'Daily Prize': 'Daily Prize',
+                'Your reward for completing all daily tasks:': 'Your reward for completing all daily tasks:',
+                'Edit': 'Edit',
+                'tasks completed': 'tasks completed',
+                '🎉 Prize Earned!': '🎉 Prize Earned!',
+                'Recent Activity': 'Recent Activity',
+                
+                // Profile Page
+                'Manage your account and preferences': 'Manage your account and preferences',
+                'Subscription Plan': 'Subscription Plan',
+                'Pay Here!': 'Pay Here!',
+                'Choose Your Plan & Pay': 'Choose Your Plan & Pay',
+                'Normal Plan': 'Normal Plan',
+                'Free': 'Free',
+                'Pro Plan': 'Pro Plan',
+                'ProMax Plan': 'ProMax Plan',
+                'daily goals': 'daily goals',
+                'posts per day': 'posts per day',
+                'friends total': 'friends total',
+                'Unlimited friends': 'Unlimited friends',
+                'Basic progress reports': 'Basic progress reports',
+                'Enhanced progress reports': 'Enhanced progress reports',
+                'Comprehensive detailed reports': 'Comprehensive detailed reports',
+                'Downgrade': 'Downgrade',
+                'Upgrade Plan': 'Upgrade Plan',
+                'Change Plan': 'Change Plan',
+                'Notifications': 'Notifications',
+                'Push Notifications': 'Push Notifications',
+                'Daily Summary': 'Daily Summary',
+                'Privacy & Security': 'Privacy & Security',
+                'Account Privacy': 'Account Privacy',
+                'Public': 'Public',
+                'Private': 'Private',
+                'Preferences': 'Preferences',
+                'Dark Mode': 'Dark Mode',
+                'Language': 'Language',
+                'Support': 'Support',
+                'Help & Support': 'Help & Support',
+                'Logout': 'Logout',
+                
+                // Payment Modal
+                'Select Plan': 'Select Plan',
+                'Choose Payment Method': 'Choose Payment Method',
+                'Pay with Alipay': 'Pay with Alipay',
+                'Faster Payment System': 'Faster Payment System',
+                'Pay with WeChat': 'Pay with WeChat',
+                'Bank Transfer': 'Bank Transfer',
+                'Security Notice': 'Security Notice',
+                'Your payment information is encrypted and secure. This is a demo version.': 'Your payment information is encrypted and secure. This is a demo version.',
+                'Cancel': 'Cancel',
+                'Pay Now': 'Pay Now',
+                
+                // Privacy Modal
+                'Privacy Settings': 'Privacy Settings',
+                'Choose your account visibility': 'Choose your account visibility',
+                'Public Account': 'Public Account',
+                'Visible in community rankings': 'Visible in community rankings',
+                'Others can see your progress': 'Others can see your progress',
+                'Can be found by friends': 'Can be found by friends',
+                'Posts visible to community': 'Posts visible to community',
+                'Private Account': 'Private Account',
+                'Hidden from community rankings': 'Hidden from community rankings',
+                'Progress only visible to you': 'Progress only visible to you',
+                'Cannot be found by others': 'Cannot be found by others',
+                'Personal data stays private': 'Personal data stays private',
+                'Save Settings': 'Save Settings',
+                
+                // Language Modal
+                'Select Language': 'Select Language',
+                
+                // Common
+                'Save': 'Save',
+                'Close': 'Close',
+                'Success': 'Success',
+                'Error': 'Error',
+                'Loading...': 'Loading...',
+                'pts': 'pts',
+                pay_here: "Pay Here!",
+                choose_plan_pay: "Choose your plan and pay securely",
+                payment_checkout: "Payment Checkout",
+                selected_plan: "Selected Plan",
+                choose_different_plan: "Choose Different Plan",
+                payment_method: "Payment Method",
+                alipay_desc: "Secure payment with Alipay",
+                fps_desc: "Faster Payment System",
+                wechat_desc: "Pay with WeChat wallet",
+                bank_transfer: "Bank Transfer",
+                bank_desc: "Direct bank payment",
+                secure_payment: "Secure Payment",
+                security_notice: "Your payment information is encrypted and secure. We never store your payment details.",
+                complete_payment: "Complete Payment",
+                plan_free_features: "3 goals • 2 posts • 5 friends",
+                plan_pro_features: "6 goals • 10 posts • 20 friends",
+                plan_promax_features: "20 goals • 25 posts • Unlimited friends",
+            },
+            
+            'Chinese': {
+                // Navigation
+                'Login': '登录',
+                'Home': '首页',
+                'Rankings': '排行榜',
+                'Activities': '活动',
+                'Friends': '朋友',
+                'Progress': '进度',
+                'Communities': '社区',
+                'Profile': '个人资料',
+                
+                // Login Page
+                'Welcome!': '欢迎！',
+                'Let\'s start your digital wellness journey': '让我们开始您的数字健康之旅',
+                'Create Your Profile': '创建您的个人资料',
+                'We\'ll assess your digital habits to provide personalized recommendations': '我们将评估您的数字习惯，为您提供个性化建议',
+                'Full Name': '全名',
+                'Email Address': '电子邮件地址',
+                'Password': '密码',
+                'Start Assessment': '开始评估',
+                'Already have an account? Log In Now': '已有账户？立即登录',
+                'Welcome Back!': '欢迎回来！',
+                'Sign in to continue your digital wellness journey': '登录以继续您的数字健康之旅',
+                'Enter Your Account': '进入您的账户',
+                'Sign in with your email and password to access your personalized dashboard': '使用您的电子邮件和密码登录以访问您的个性化仪表板',
+                'Sign In': '登录',
+                'Don\'t have an account? Create one': '没有账户？创建一个',
+                
+                // Home Page
+                'Good morning! 🌅': '早上好！🌅',
+                'Stay mindful, stay healthy': '保持专注，保持健康',
+                'Daily Awards': '每日奖励',
+                'Add New Goal': '添加新目标',
+                'No goals yet. Click \'Add New Goal\' to get started!': '还没有目标。点击"添加新目标"开始吧！',
+                'Daily Prize': '每日奖品',
+                'Your reward for completing all daily tasks:': '完成所有每日任务的奖励：',
+                'Edit': '编辑',
+                'tasks completed': '任务已完成',
+                '🎉 Prize Earned!': '🎉 获得奖品！',
+                'Recent Activity': '最近活动',
+                
+                // Profile Page
+                'Manage your account and preferences': '管理您的账户和偏好设置',
+                'Subscription Plan': '订阅计划',
+                'Pay Here!': '在此付款！',
+                'Choose Your Plan & Pay': '选择您的计划并付款',
+                'Normal Plan': '普通计划',
+                'Free': '免费',
+                'Pro Plan': '专业计划',
+                'ProMax Plan': '专业增强计划',
+                'daily goals': '每日目标',
+                'posts per day': '每日帖子',
+                'friends total': '朋友总数',
+                'Unlimited friends': '无限朋友',
+                'Basic progress reports': '基础进度报告',
+                'Enhanced progress reports': '增强进度报告',
+                'Comprehensive detailed reports': '全面详细报告',
+                'Downgrade': '降级',
+                'Upgrade Plan': '升级计划',
+                'Change Plan': '更改计划',
+                'Notifications': '通知',
+                'Push Notifications': '推送通知',
+                'Daily Summary': '每日摘要',
+                'Privacy & Security': '隐私与安全',
+                'Account Privacy': '账户隐私',
+                'Public': '公开',
+                'Private': '私密',
+                'Preferences': '偏好设置',
+                'Dark Mode': '深色模式',
+                'Language': '语言',
+                'Support': '支持',
+                'Help & Support': '帮助与支持',
+                'Logout': '退出登录',
+                
+                // Payment Modal
+                'Select Plan': '选择计划',
+                'Choose Payment Method': '选择付款方式',
+                'Pay with Alipay': '使用支付宝付款',
+                'Faster Payment System': '快速付款系统',
+                'Pay with WeChat': '使用微信付款',
+                'Bank Transfer': '银行转账',
+                'Security Notice': '安全提示',
+                'Your payment information is encrypted and secure. This is a demo version.': '您的付款信息已加密且安全。这是演示版本。',
+                'Cancel': '取消',
+                'Pay Now': '立即付款',
+                
+                // Privacy Modal
+                'Privacy Settings': '隐私设置',
+                'Choose your account visibility': '选择您的账户可见性',
+                'Public Account': '公开账户',
+                'Visible in community rankings': '在社区排行榜中可见',
+                'Others can see your progress': '其他人可以看到您的进度',
+                'Can be found by friends': '可以被朋友找到',
+                'Posts visible to community': '帖子对社区可见',
+                'Private Account': '私密账户',
+                'Hidden from community rankings': '在社区排行榜中隐藏',
+                'Progress only visible to you': '进度仅对您可见',
+                'Cannot be found by others': '无法被其他人找到',
+                'Personal data stays private': '个人数据保持私密',
+                'Save Settings': '保存设置',
+                
+                // Language Modal
+                'Select Language': '选择语言',
+                
+                // Common
+                'Save': '保存',
+                'Close': '关闭',
+                'Success': '成功',
+                'Error': '错误',
+                'Loading...': '加载中...',
+                'pts': '分',
+                pay_here: "立即支付！",
+                choose_plan_pay: "选择您的计划并安全支付",
+                payment_checkout: "支付结账",
+                selected_plan: "已选择的计划",
+                choose_different_plan: "选择不同的计划",
+                payment_method: "支付方式",
+                alipay_desc: "使用支付宝安全支付",
+                fps_desc: "快速支付系统",
+                wechat_desc: "使用微信钱包支付",
+                bank_transfer: "银行转账",
+                bank_desc: "直接银行支付",
+                secure_payment: "安全支付",
+                security_notice: "您的支付信息已加密并安全。我们绝不存储您的支付详细信息。",
+                complete_payment: "完成支付",
+                plan_free_features: "3个目标 • 2篇帖子 • 5个朋友",
+                plan_pro_features: "6个目标 • 10篇帖子 • 20个朋友",
+                plan_promax_features: "20个目标 • 25篇帖子 • 无限朋友",
+            },
+            
+            'Spanish': {
+                // Navigation
+                'Login': 'Iniciar Sesión',
+                'Home': 'Inicio',
+                'Rankings': 'Clasificaciones',
+                'Activities': 'Actividades',
+                'Friends': 'Amigos',
+                'Progress': 'Progreso',
+                'Communities': 'Comunidades',
+                'Profile': 'Perfil',
+                
+                // Login Page
+                'Welcome!': '¡Bienvenido!',
+                'Let\'s start your digital wellness journey': 'Comencemos tu viaje de bienestar digital',
+                'Create Your Profile': 'Crea Tu Perfil',
+                'We\'ll assess your digital habits to provide personalized recommendations': 'Evaluaremos tus hábitos digitales para brindarte recomendaciones personalizadas',
+                'Full Name': 'Nombre Completo',
+                'Email Address': 'Dirección de Correo',
+                'Password': 'Contraseña',
+                'Start Assessment': 'Comenzar Evaluación',
+                'Already have an account? Log In Now': '¿Ya tienes cuenta? Inicia Sesión Ahora',
+                'Welcome Back!': '¡Bienvenido de Vuelta!',
+                'Sign in to continue your digital wellness journey': 'Inicia sesión para continuar tu viaje de bienestar digital',
+                'Enter Your Account': 'Ingresa a Tu Cuenta',
+                'Sign in with your email and password to access your personalized dashboard': 'Inicia sesión con tu correo y contraseña para acceder a tu panel personalizado',
+                'Sign In': 'Iniciar Sesión',
+                'Don\'t have an account? Create one': '¿No tienes cuenta? Crea una',
+                
+                // Home Page
+                'Good morning! 🌅': '¡Buenos días! 🌅',
+                'Stay mindful, stay healthy': 'Mantente consciente, mantente saludable',
+                'Daily Awards': 'Premios Diarios',
+                'Add New Goal': 'Agregar Nueva Meta',
+                'No goals yet. Click \'Add New Goal\' to get started!': 'Aún no hay metas. ¡Haz clic en "Agregar Nueva Meta" para comenzar!',
+                'Daily Prize': 'Premio Diario',
+                'Your reward for completing all daily tasks:': 'Tu recompensa por completar todas las tareas diarias:',
+                'Edit': 'Editar',
+                'tasks completed': 'tareas completadas',
+                '🎉 Prize Earned!': '¡🎉 Premio Ganado!',
+                'Recent Activity': 'Actividad Reciente',
+                
+                // Profile Page
+                'Manage your account and preferences': 'Gestiona tu cuenta y preferencias',
+                'Subscription Plan': 'Plan de Suscripción',
+                'Pay Here!': '¡Pagar Aquí!',
+                'Choose Your Plan & Pay': 'Elige Tu Plan y Paga',
+                'Normal Plan': 'Plan Normal',
+                'Free': 'Gratis',
+                'Pro Plan': 'Plan Pro',
+                'ProMax Plan': 'Plan ProMax',
+                'daily goals': 'metas diarias',
+                'posts per day': 'publicaciones por día',
+                'friends total': 'amigos en total',
+                'Unlimited friends': 'Amigos ilimitados',
+                'Basic progress reports': 'Informes de progreso básicos',
+                'Enhanced progress reports': 'Informes de progreso mejorados',
+                'Comprehensive detailed reports': 'Informes detallados completos',
+                'Downgrade': 'Degradar',
+                'Upgrade Plan': 'Actualizar Plan',
+                'Change Plan': 'Cambiar Plan',
+                'Notifications': 'Notificaciones',
+                'Push Notifications': 'Notificaciones Push',
+                'Daily Summary': 'Resumen Diario',
+                'Privacy & Security': 'Privacidad y Seguridad',
+                'Account Privacy': 'Privacidad de Cuenta',
+                'Public': 'Público',
+                'Private': 'Privado',
+                'Preferences': 'Preferencias',
+                'Dark Mode': 'Modo Oscuro',
+                'Language': 'Idioma',
+                'Support': 'Soporte',
+                'Help & Support': 'Ayuda y Soporte',
+                'Logout': 'Cerrar Sesión',
+                
+                // Payment Modal
+                'Select Plan': 'Seleccionar Plan',
+                'Choose Payment Method': 'Elegir Método de Pago',
+                'Pay with Alipay': 'Pagar con Alipay',
+                'Faster Payment System': 'Sistema de Pago Rápido',
+                'Pay with WeChat': 'Pagar con WeChat',
+                'Bank Transfer': 'Transferencia Bancaria',
+                'Security Notice': 'Aviso de Seguridad',
+                'Your payment information is encrypted and secure. This is a demo version.': 'Tu información de pago está encriptada y segura. Esta es una versión demo.',
+                'Cancel': 'Cancelar',
+                'Pay Now': 'Pagar Ahora',
+                
+                // Privacy Modal
+                'Privacy Settings': 'Configuración de Privacidad',
+                'Choose your account visibility': 'Elige la visibilidad de tu cuenta',
+                'Public Account': 'Cuenta Pública',
+                'Visible in community rankings': 'Visible en clasificaciones comunitarias',
+                'Others can see your progress': 'Otros pueden ver tu progreso',
+                'Can be found by friends': 'Puede ser encontrado por amigos',
+                'Posts visible to community': 'Publicaciones visibles para la comunidad',
+                'Private Account': 'Cuenta Privada',
+                'Hidden from community rankings': 'Oculto de clasificaciones comunitarias',
+                'Progress only visible to you': 'Progreso solo visible para ti',
+                'Cannot be found by others': 'No puede ser encontrado por otros',
+                'Personal data stays private': 'Los datos personales permanecen privados',
+                'Save Settings': 'Guardar Configuración',
+                
+                // Language Modal
+                'Select Language': 'Seleccionar Idioma',
+                
+                // Common
+                'Save': 'Guardar',
+                'Close': 'Cerrar',
+                'Success': 'Éxito',
+                'Error': 'Error',
+                'Loading...': 'Cargando...',
+                'pts': 'pts',
+                pay_here: "¡Pagar Aquí!",
+                choose_plan_pay: "Elige tu plan y paga de forma segura",
+                payment_checkout: "Pago",
+                selected_plan: "Plan Seleccionado",
+                choose_different_plan: "Elegir Plan Diferente",
+                payment_method: "Método de Pago",
+                alipay_desc: "Pago seguro con Alipay",
+                fps_desc: "Sistema de Pago Rápido",
+                wechat_desc: "Pagar con billetera WeChat",
+                bank_transfer: "Transferencia Bancaria",
+                bank_desc: "Pago bancario directo",
+                secure_payment: "Pago Seguro",
+                security_notice: "Su información de pago está encriptada y segura. Nunca almacenamos sus detalles de pago.",
+                complete_payment: "Completar Pago",
+                plan_free_features: "3 objetivos • 2 publicaciones • 5 amigos",
+                plan_pro_features: "6 objetivos • 10 publicaciones • 20 amigos",
+                plan_promax_features: "20 objetivos • 25 publicaciones • Amigos ilimitados",
+            },
+            
+            'French': {
+                // Navigation
+                'Login': 'Connexion',
+                'Home': 'Accueil',
+                'Rankings': 'Classements',
+                'Activities': 'Activités',
+                'Friends': 'Amis',
+                'Progress': 'Progrès',
+                'Communities': 'Communautés',
+                'Profile': 'Profil',
+                
+                // Login Page
+                'Welcome!': 'Bienvenue !',
+                'Let\'s start your digital wellness journey': 'Commençons votre parcours de bien-être numérique',
+                'Create Your Profile': 'Créez Votre Profil',
+                'We\'ll assess your digital habits to provide personalized recommendations': 'Nous évaluerons vos habitudes numériques pour fournir des recommandations personnalisées',
+                'Full Name': 'Nom Complet',
+                'Email Address': 'Adresse E-mail',
+                'Password': 'Mot de Passe',
+                'Start Assessment': 'Commencer l\'Évaluation',
+                'Already have an account? Log In Now': 'Vous avez déjà un compte ? Connectez-vous Maintenant',
+                'Welcome Back!': 'Bon Retour !',
+                'Sign in to continue your digital wellness journey': 'Connectez-vous pour continuer votre parcours de bien-être numérique',
+                'Enter Your Account': 'Accédez à Votre Compte',
+                'Sign in with your email and password to access your personalized dashboard': 'Connectez-vous avec votre e-mail et mot de passe pour accéder à votre tableau de bord personnalisé',
+                'Sign In': 'Se Connecter',
+                'Don\'t have an account? Create one': 'Vous n\'avez pas de compte ? Créez-en un',
+                
+                // Home Page
+                'Good morning! 🌅': 'Bonjour ! 🌅',
+                'Stay mindful, stay healthy': 'Restez conscient, restez en bonne santé',
+                'Daily Awards': 'Récompenses Quotidiennes',
+                'Add New Goal': 'Ajouter un Nouvel Objectif',
+                'No goals yet. Click \'Add New Goal\' to get started!': 'Aucun objectif pour le moment. Cliquez sur "Ajouter un Nouvel Objectif" pour commencer !',
+                'Daily Prize': 'Prix Quotidien',
+                'Your reward for completing all daily tasks:': 'Votre récompense pour avoir terminé toutes les tâches quotidiennes :',
+                'Edit': 'Modifier',
+                'tasks completed': 'tâches terminées',
+                '🎉 Prize Earned!': '🎉 Prix Gagné !',
+                'Recent Activity': 'Activité Récente',
+                
+                // Profile Page
+                'Manage your account and preferences': 'Gérez votre compte et vos préférences',
+                'Subscription Plan': 'Plan d\'Abonnement',
+                'Pay Here!': 'Payez Ici !',
+                'Choose Your Plan & Pay': 'Choisissez Votre Plan et Payez',
+                'Normal Plan': 'Plan Normal',
+                'Free': 'Gratuit',
+                'Pro Plan': 'Plan Pro',
+                'ProMax Plan': 'Plan ProMax',
+                'daily goals': 'objectifs quotidiens',
+                'posts per day': 'publications par jour',
+                'friends total': 'amis au total',
+                'Unlimited friends': 'Amis illimités',
+                'Basic progress reports': 'Rapports de progrès de base',
+                'Enhanced progress reports': 'Rapports de progrès améliorés',
+                'Comprehensive detailed reports': 'Rapports détaillés complets',
+                'Downgrade': 'Rétrograder',
+                'Upgrade Plan': 'Mettre à Niveau le Plan',
+                'Change Plan': 'Changer de Plan',
+                'Notifications': 'Notifications',
+                'Push Notifications': 'Notifications Push',
+                'Daily Summary': 'Résumé Quotidien',
+                'Privacy & Security': 'Confidentialité et Sécurité',
+                'Account Privacy': 'Confidentialité du Compte',
+                'Public': 'Public',
+                'Private': 'Privé',
+                'Preferences': 'Préférences',
+                'Dark Mode': 'Mode Sombre',
+                'Language': 'Langue',
+                'Support': 'Support',
+                'Help & Support': 'Aide et Support',
+                'Logout': 'Déconnexion',
+                
+                // Payment Modal
+                'Select Plan': 'Sélectionner un Plan',
+                'Choose Payment Method': 'Choisir la Méthode de Paiement',
+                'Pay with Alipay': 'Payer avec Alipay',
+                'Faster Payment System': 'Système de Paiement Rapide',
+                'Pay with WeChat': 'Payer avec WeChat',
+                'Bank Transfer': 'Virement Bancaire',
+                'Security Notice': 'Avis de Sécurité',
+                'Your payment information is encrypted and secure. This is a demo version.': 'Vos informations de paiement sont cryptées et sécurisées. Ceci est une version de démonstration.',
+                'Cancel': 'Annuler',
+                'Pay Now': 'Payer Maintenant',
+                
+                // Privacy Modal
+                'Privacy Settings': 'Paramètres de Confidentialité',
+                'Choose your account visibility': 'Choisissez la visibilité de votre compte',
+                'Public Account': 'Compte Public',
+                'Visible in community rankings': 'Visible dans les classements communautaires',
+                'Others can see your progress': 'Les autres peuvent voir vos progrès',
+                'Can be found by friends': 'Peut être trouvé par des amis',
+                'Posts visible to community': 'Publications visibles par la communauté',
+                'Private Account': 'Compte Privé',
+                'Hidden from community rankings': 'Caché des classements communautaires',
+                'Progress only visible to you': 'Progrès visible seulement par vous',
+                'Cannot be found by others': 'Ne peut pas être trouvé par d\'autres',
+                'Personal data stays private': 'Les données personnelles restent privées',
+                'Save Settings': 'Enregistrer les Paramètres',
+                
+                // Language Modal
+                'Select Language': 'Sélectionner la Langue',
+                
+                // Common
+                'Save': 'Enregistrer',
+                'Close': 'Fermer',
+                'Success': 'Succès',
+                'Error': 'Erreur',
+                'Loading...': 'Chargement...',
+                'pts': 'pts',
+                pay_here: "Payez Ici !",
+                choose_plan_pay: "Choisissez votre plan et payez en toute sécurité",
+                payment_checkout: "Paiement",
+                selected_plan: "Plan Sélectionné",
+                choose_different_plan: "Choisir un Plan Différent",
+                payment_method: "Méthode de Paiement",
+                alipay_desc: "Paiement sécurisé avec Alipay",
+                fps_desc: "Système de Paiement Rapide",
+                wechat_desc: "Payer avec le portefeuille WeChat",
+                bank_transfer: "Virement Bancaire",
+                bank_desc: "Paiement bancaire direct",
+                secure_payment: "Paiement Sécurisé",
+                security_notice: "Vos informations de paiement sont cryptées et sécurisées. Nous ne stockons jamais vos détails de paiement.",
+                complete_payment: "Finaliser le Paiement",
+                plan_free_features: "3 objectifs • 2 publications • 5 amis",
+                plan_pro_features: "6 objectifs • 10 publications • 20 amis",
+                plan_promax_features: "20 objectifs • 25 publications • Amis illimités",
+            },
+            
+            'German': {
+                // Navigation
+                'Login': 'Anmelden',
+                'Home': 'Startseite',
+                'Rankings': 'Ranglisten',
+                'Activities': 'Aktivitäten',
+                'Friends': 'Freunde',
+                'Progress': 'Fortschritt',
+                'Communities': 'Gemeinschaften',
+                'Profile': 'Profil',
+                
+                // Login Page
+                'Welcome!': 'Willkommen!',
+                'Let\'s start your digital wellness journey': 'Beginnen wir Ihre digitale Wellness-Reise',
+                'Create Your Profile': 'Erstellen Sie Ihr Profil',
+                'We\'ll assess your digital habits to provide personalized recommendations': 'Wir bewerten Ihre digitalen Gewohnheiten, um personalisierte Empfehlungen zu geben',
+                'Full Name': 'Vollständiger Name',
+                'Email Address': 'E-Mail-Adresse',
+                'Password': 'Passwort',
+                'Start Assessment': 'Bewertung Starten',
+                'Already have an account? Log In Now': 'Haben Sie bereits ein Konto? Jetzt Anmelden',
+                'Welcome Back!': 'Willkommen Zurück!',
+                'Sign in to continue your digital wellness journey': 'Melden Sie sich an, um Ihre digitale Wellness-Reise fortzusetzen',
+                'Enter Your Account': 'Betreten Sie Ihr Konto',
+                'Sign in with your email and password to access your personalized dashboard': 'Melden Sie sich mit Ihrer E-Mail und Ihrem Passwort an, um auf Ihr personalisiertes Dashboard zuzugreifen',
+                'Sign In': 'Anmelden',
+                'Don\'t have an account? Create one': 'Haben Sie kein Konto? Erstellen Sie eines',
+                
+                // Home Page
+                'Good morning! 🌅': 'Guten Morgen! 🌅',
+                'Stay mindful, stay healthy': 'Bleiben Sie achtsam, bleiben Sie gesund',
+                'Daily Awards': 'Tägliche Auszeichnungen',
+                'Add New Goal': 'Neues Ziel Hinzufügen',
+                'No goals yet. Click \'Add New Goal\' to get started!': 'Noch keine Ziele. Klicken Sie auf "Neues Ziel Hinzufügen", um zu beginnen!',
+                'Daily Prize': 'Täglicher Preis',
+                'Your reward for completing all daily tasks:': 'Ihre Belohnung für das Abschließen aller täglichen Aufgaben:',
+                'Edit': 'Bearbeiten',
+                'tasks completed': 'Aufgaben abgeschlossen',
+                '🎉 Prize Earned!': '🎉 Preis Verdient!',
+                'Recent Activity': 'Kürzliche Aktivität',
+                
+                // Profile Page
+                'Manage your account and preferences': 'Verwalten Sie Ihr Konto und Ihre Einstellungen',
+                'Subscription Plan': 'Abonnement-Plan',
+                'Pay Here!': 'Hier Bezahlen!',
+                'Choose Your Plan & Pay': 'Wählen Sie Ihren Plan und Bezahlen Sie',
+                'Normal Plan': 'Normal Plan',
+                'Free': 'Kostenlos',
+                'Pro Plan': 'Pro Plan',
+                'ProMax Plan': 'ProMax Plan',
+                'daily goals': 'tägliche Ziele',
+                'posts per day': 'Beiträge pro Tag',
+                'friends total': 'Freunde insgesamt',
+                'Unlimited friends': 'Unbegrenzte Freunde',
+                'Basic progress reports': 'Grundlegende Fortschrittsberichte',
+                'Enhanced progress reports': 'Erweiterte Fortschrittsberichte',
+                'Comprehensive detailed reports': 'Umfassende detaillierte Berichte',
+                'Downgrade': 'Herabstufen',
+                'Upgrade Plan': 'Plan Upgraden',
+                'Change Plan': 'Plan Ändern',
+                'Notifications': 'Benachrichtigungen',
+                'Push Notifications': 'Push-Benachrichtigungen',
+                'Daily Summary': 'Tägliche Zusammenfassung',
+                'Privacy & Security': 'Datenschutz & Sicherheit',
+                'Account Privacy': 'Konto-Datenschutz',
+                'Public': 'Öffentlich',
+                'Private': 'Privat',
+                'Preferences': 'Einstellungen',
+                'Dark Mode': 'Dunkler Modus',
+                'Language': 'Sprache',
+                'Support': 'Support',
+                'Help & Support': 'Hilfe & Support',
+                'Logout': 'Abmelden',
+                
+                // Payment Modal
+                'Select Plan': 'Plan Auswählen',
+                'Choose Payment Method': 'Zahlungsmethode Wählen',
+                'Pay with Alipay': 'Mit Alipay Bezahlen',
+                'Faster Payment System': 'Schnelleres Zahlungssystem',
+                'Pay with WeChat': 'Mit WeChat Bezahlen',
+                'Bank Transfer': 'Banküberweisung',
+                'Security Notice': 'Sicherheitshinweis',
+                'Your payment information is encrypted and secure. This is a demo version.': 'Ihre Zahlungsinformationen sind verschlüsselt und sicher. Dies ist eine Demo-Version.',
+                'Cancel': 'Abbrechen',
+                'Pay Now': 'Jetzt Bezahlen',
+                
+                // Privacy Modal
+                'Privacy Settings': 'Datenschutz-Einstellungen',
+                'Choose your account visibility': 'Wählen Sie die Sichtbarkeit Ihres Kontos',
+                'Public Account': 'Öffentliches Konto',
+                'Visible in community rankings': 'Sichtbar in Community-Rankings',
+                'Others can see your progress': 'Andere können Ihren Fortschritt sehen',
+                'Can be found by friends': 'Kann von Freunden gefunden werden',
+                'Posts visible to community': 'Beiträge für die Community sichtbar',
+                'Private Account': 'Privates Konto',
+                'Hidden from community rankings': 'Versteckt vor Community-Rankings',
+                'Progress only visible to you': 'Fortschritt nur für Sie sichtbar',
+                'Cannot be found by others': 'Kann nicht von anderen gefunden werden',
+                'Personal data stays private': 'Persönliche Daten bleiben privat',
+                'Save Settings': 'Einstellungen Speichern',
+                
+                // Language Modal
+                'Select Language': 'Sprache Auswählen',
+                
+                // Common
+                'Save': 'Speichern',
+                'Close': 'Schließen',
+                'Success': 'Erfolg',
+                'Error': 'Fehler',
+                'Loading...': 'Laden...',
+                'pts': 'Pkt',
+                pay_here: "Hier Bezahlen!",
+                choose_plan_pay: "Wählen Sie Ihren Plan und bezahlen Sie sicher",
+                payment_checkout: "Zahlung",
+                selected_plan: "Ausgewählter Plan",
+                choose_different_plan: "Anderen Plan Wählen",
+                payment_method: "Zahlungsmethode",
+                alipay_desc: "Sichere Zahlung mit Alipay",
+                fps_desc: "Schnelles Zahlungssystem",
+                wechat_desc: "Mit WeChat Wallet bezahlen",
+                bank_transfer: "Banküberweisung",
+                bank_desc: "Direkte Bankzahlung",
+                secure_payment: "Sichere Zahlung",
+                security_notice: "Ihre Zahlungsinformationen sind verschlüsselt und sicher. Wir speichern niemals Ihre Zahlungsdetails.",
+                complete_payment: "Zahlung Abschließen",
+                plan_free_features: "3 Ziele • 2 Beiträge • 5 Freunde",
+                plan_pro_features: "6 Ziele • 10 Beiträge • 20 Freunde",
+                plan_promax_features: "20 Ziele • 25 Beiträge • Unbegrenzte Freunde",
+            },
+            
+            'Italian': {
+                // Navigation
+                'Login': 'Accedi',
+                'Home': 'Home',
+                'Rankings': 'Classifiche',
+                'Activities': 'Attività',
+                'Friends': 'Amici',
+                'Progress': 'Progresso',
+                'Communities': 'Comunità',
+                'Profile': 'Profilo',
+                
+                // Login Page
+                'Welcome!': 'Benvenuto!',
+                'Let\'s start your digital wellness journey': 'Iniziamo il tuo viaggio di benessere digitale',
+                'Create Your Profile': 'Crea il Tuo Profilo',
+                'We\'ll assess your digital habits to provide personalized recommendations': 'Valuteremo le tue abitudini digitali per fornire raccomandazioni personalizzate',
+                'Full Name': 'Nome Completo',
+                'Email Address': 'Indirizzo Email',
+                'Password': 'Password',
+                'Start Assessment': 'Inizia Valutazione',
+                'Already have an account? Log In Now': 'Hai già un account? Accedi Ora',
+                'Welcome Back!': 'Bentornato!',
+                'Sign in to continue your digital wellness journey': 'Accedi per continuare il tuo viaggio di benessere digitale',
+                'Enter Your Account': 'Accedi al Tuo Account',
+                'Sign in with your email and password to access your personalized dashboard': 'Accedi con la tua email e password per accedere al tuo dashboard personalizzato',
+                'Sign In': 'Accedi',
+                'Don\'t have an account? Create one': 'Non hai un account? Creane uno',
+                
+                // Home Page
+                'Good morning! 🌅': 'Buongiorno! 🌅',
+                'Stay mindful, stay healthy': 'Rimani consapevole, rimani in salute',
+                'Daily Awards': 'Premi Giornalieri',
+                'Add New Goal': 'Aggiungi Nuovo Obiettivo',
+                'No goals yet. Click \'Add New Goal\' to get started!': 'Nessun obiettivo ancora. Clicca su "Aggiungi Nuovo Obiettivo" per iniziare!',
+                'Daily Prize': 'Premio Giornaliero',
+                'Your reward for completing all daily tasks:': 'La tua ricompensa per aver completato tutte le attività giornaliere:',
+                'Edit': 'Modifica',
+                'tasks completed': 'attività completate',
+                '🎉 Prize Earned!': '🎉 Premio Guadagnato!',
+                'Recent Activity': 'Attività Recente',
+                
+                // Profile Page
+                'Manage your account and preferences': 'Gestisci il tuo account e le preferenze',
+                'Subscription Plan': 'Piano di Abbonamento',
+                'Pay Here!': 'Paga Qui!',
+                'Choose Your Plan & Pay': 'Scegli il Tuo Piano e Paga',
+                'Normal Plan': 'Piano Normale',
+                'Free': 'Gratuito',
+                'Pro Plan': 'Piano Pro',
+                'ProMax Plan': 'Piano ProMax',
+                'daily goals': 'obiettivi giornalieri',
+                'posts per day': 'post al giorno',
+                'friends total': 'amici totali',
+                'Unlimited friends': 'Amici illimitati',
+                'Basic progress reports': 'Rapporti di progresso di base',
+                'Enhanced progress reports': 'Rapporti di progresso migliorati',
+                'Comprehensive detailed reports': 'Rapporti dettagliati completi',
+                'Downgrade': 'Declassa',
+                'Upgrade Plan': 'Aggiorna Piano',
+                'Change Plan': 'Cambia Piano',
+                'Notifications': 'Notifiche',
+                'Push Notifications': 'Notifiche Push',
+                'Daily Summary': 'Riassunto Giornaliero',
+                'Privacy & Security': 'Privacy e Sicurezza',
+                'Account Privacy': 'Privacy dell\'Account',
+                'Public': 'Pubblico',
+                'Private': 'Privato',
+                'Preferences': 'Preferenze',
+                'Dark Mode': 'Modalità Scura',
+                'Language': 'Lingua',
+                'Support': 'Supporto',
+                'Help & Support': 'Aiuto e Supporto',
+                'Logout': 'Disconnetti',
+                
+                // Payment Modal
+                'Select Plan': 'Seleziona Piano',
+                'Choose Payment Method': 'Scegli Metodo di Pagamento',
+                'Pay with Alipay': 'Paga con Alipay',
+                'Faster Payment System': 'Sistema di Pagamento Veloce',
+                'Pay with WeChat': 'Paga con WeChat',
+                'Bank Transfer': 'Bonifico Bancario',
+                'Security Notice': 'Avviso di Sicurezza',
+                'Your payment information is encrypted and secure. This is a demo version.': 'Le tue informazioni di pagamento sono crittografate e sicure. Questa è una versione demo.',
+                'Cancel': 'Annulla',
+                'Pay Now': 'Paga Ora',
+                
+                // Privacy Modal
+                'Privacy Settings': 'Impostazioni Privacy',
+                'Choose your account visibility': 'Scegli la visibilità del tuo account',
+                'Public Account': 'Account Pubblico',
+                'Visible in community rankings': 'Visibile nelle classifiche della comunità',
+                'Others can see your progress': 'Altri possono vedere i tuoi progressi',
+                'Can be found by friends': 'Può essere trovato dagli amici',
+                'Posts visible to community': 'Post visibili alla comunità',
+                'Private Account': 'Account Privato',
+                'Hidden from community rankings': 'Nascosto dalle classifiche della comunità',
+                'Progress only visible to you': 'Progresso visibile solo a te',
+                'Cannot be found by others': 'Non può essere trovato da altri',
+                'Personal data stays private': 'I dati personali rimangono privati',
+                'Save Settings': 'Salva Impostazioni',
+                
+                // Language Modal
+                'Select Language': 'Seleziona Lingua',
+                
+                // Common
+                'Save': 'Salva',
+                'Close': 'Chiudi',
+                'Success': 'Successo',
+                'Error': 'Errore',
+                'Loading...': 'Caricamento...',
+                'pts': 'pt',
+                pay_here: "Paga Qui!",
+                choose_plan_pay: "Scegli il tuo piano e paga in sicurezza",
+                payment_checkout: "Pagamento",
+                selected_plan: "Piano Selezionato",
+                choose_different_plan: "Scegli Piano Diverso",
+                payment_method: "Metodo di Pagamento",
+                alipay_desc: "Pagamento sicuro con Alipay",
+                fps_desc: "Sistema di Pagamento Veloce",
+                wechat_desc: "Paga con portafoglio WeChat",
+                bank_transfer: "Bonifico Bancario",
+                bank_desc: "Pagamento bancario diretto",
+                secure_payment: "Pagamento Sicuro",
+                security_notice: "Le tue informazioni di pagamento sono crittografate e sicure. Non memorizziamo mai i tuoi dettagli di pagamento.",
+                complete_payment: "Completa Pagamento",
+                plan_free_features: "3 obiettivi • 2 post • 5 amici",
+                plan_pro_features: "6 obiettivi • 10 post • 20 amici",
+                plan_promax_features: "20 obiettivi • 25 post • Amici illimitati",
+            },
+            
+            'Portuguese': {
+                // Navigation
+                'Login': 'Entrar',
+                'Home': 'Início',
+                'Rankings': 'Rankings',
+                'Activities': 'Atividades',
+                'Friends': 'Amigos',
+                'Progress': 'Progresso',
+                'Communities': 'Comunidades',
+                'Profile': 'Perfil',
+                
+                // Login Page
+                'Welcome!': 'Bem-vindo!',
+                'Let\'s start your digital wellness journey': 'Vamos começar sua jornada de bem-estar digital',
+                'Create Your Profile': 'Crie Seu Perfil',
+                'We\'ll assess your digital habits to provide personalized recommendations': 'Avaliaremos seus hábitos digitais para fornecer recomendações personalizadas',
+                'Full Name': 'Nome Completo',
+                'Email Address': 'Endereço de Email',
+                'Password': 'Senha',
+                'Start Assessment': 'Iniciar Avaliação',
+                'Already have an account? Log In Now': 'Já tem uma conta? Entre Agora',
+                'Welcome Back!': 'Bem-vindo de Volta!',
+                'Sign in to continue your digital wellness journey': 'Entre para continuar sua jornada de bem-estar digital',
+                'Enter Your Account': 'Entre na Sua Conta',
+                'Sign in with your email and password to access your personalized dashboard': 'Entre com seu email e senha para acessar seu painel personalizado',
+                'Sign In': 'Entrar',
+                'Don\'t have an account? Create one': 'Não tem uma conta? Crie uma',
+                
+                // Home Page
+                'Good morning! 🌅': 'Bom dia! 🌅',
+                'Stay mindful, stay healthy': 'Mantenha-se consciente, mantenha-se saudável',
+                'Daily Awards': 'Prêmios Diários',
+                'Add New Goal': 'Adicionar Nova Meta',
+                'No goals yet. Click \'Add New Goal\' to get started!': 'Nenhuma meta ainda. Clique em "Adicionar Nova Meta" para começar!',
+                'Daily Prize': 'Prêmio Diário',
+                'Your reward for completing all daily tasks:': 'Sua recompensa por completar todas as tarefas diárias:',
+                'Edit': 'Editar',
+                'tasks completed': 'tarefas concluídas',
+                '🎉 Prize Earned!': '🎉 Prêmio Conquistado!',
+                'Recent Activity': 'Atividade Recente',
+                
+                // Profile Page
+                'Manage your account and preferences': 'Gerencie sua conta e preferências',
+                'Subscription Plan': 'Plano de Assinatura',
+                'Pay Here!': 'Pague Aqui!',
+                'Choose Your Plan & Pay': 'Escolha Seu Plano e Pague',
+                'Normal Plan': 'Plano Normal',
+                'Free': 'Gratuito',
+                'Pro Plan': 'Plano Pro',
+                'ProMax Plan': 'Plano ProMax',
+                'daily goals': 'metas diárias',
+                'posts per day': 'posts por dia',
+                'friends total': 'amigos no total',
+                'Unlimited friends': 'Amigos ilimitados',
+                'Basic progress reports': 'Relatórios de progresso básicos',
+                'Enhanced progress reports': 'Relatórios de progresso aprimorados',
+                'Comprehensive detailed reports': 'Relatórios detalhados abrangentes',
+                'Downgrade': 'Rebaixar',
+                'Upgrade Plan': 'Atualizar Plano',
+                'Change Plan': 'Mudar Plano',
+                'Notifications': 'Notificações',
+                'Push Notifications': 'Notificações Push',
+                'Daily Summary': 'Resumo Diário',
+                'Privacy & Security': 'Privacidade e Segurança',
+                'Account Privacy': 'Privacidade da Conta',
+                'Public': 'Público',
+                'Private': 'Privado',
+                'Preferences': 'Preferências',
+                'Dark Mode': 'Modo Escuro',
+                'Language': 'Idioma',
+                'Support': 'Suporte',
+                'Help & Support': 'Ajuda e Suporte',
+                'Logout': 'Sair',
+                
+                // Payment Modal
+                'Select Plan': 'Selecionar Plano',
+                'Choose Payment Method': 'Escolher Método de Pagamento',
+                'Pay with Alipay': 'Pagar com Alipay',
+                'Faster Payment System': 'Sistema de Pagamento Rápido',
+                'Pay with WeChat': 'Pagar com WeChat',
+                'Bank Transfer': 'Transferência Bancária',
+                'Security Notice': 'Aviso de Segurança',
+                'Your payment information is encrypted and secure. This is a demo version.': 'Suas informações de pagamento são criptografadas e seguras. Esta é uma versão demo.',
+                'Cancel': 'Cancelar',
+                'Pay Now': 'Pagar Agora',
+                
+                // Privacy Modal
+                'Privacy Settings': 'Configurações de Privacidade',
+                'Choose your account visibility': 'Escolha a visibilidade da sua conta',
+                'Public Account': 'Conta Pública',
+                'Visible in community rankings': 'Visível nos rankings da comunidade',
+                'Others can see your progress': 'Outros podem ver seu progresso',
+                'Can be found by friends': 'Pode ser encontrado por amigos',
+                'Posts visible to community': 'Posts visíveis para a comunidade',
+                'Private Account': 'Conta Privada',
+                'Hidden from community rankings': 'Oculto dos rankings da comunidade',
+                'Progress only visible to you': 'Progresso visível apenas para você',
+                'Cannot be found by others': 'Não pode ser encontrado por outros',
+                'Personal data stays private': 'Dados pessoais permanecem privados',
+                'Save Settings': 'Salvar Configurações',
+                
+                // Language Modal
+                'Select Language': 'Selecionar Idioma',
+                
+                // Common
+                'Save': 'Salvar',
+                'Close': 'Fechar',
+                'Success': 'Sucesso',
+                'Error': 'Erro',
+                'Loading...': 'Carregando...',
+                'pts': 'pts',
+                pay_here: "Pague Aqui!",
+                choose_plan_pay: "Escolha seu plano e pague com segurança",
+                payment_checkout: "Pagamento",
+                selected_plan: "Plano Selecionado",
+                choose_different_plan: "Escolher Plano Diferente",
+                payment_method: "Método de Pagamento",
+                alipay_desc: "Pagamento seguro com Alipay",
+                fps_desc: "Sistema de Pagamento Rápido",
+                wechat_desc: "Pagar com carteira WeChat",
+                bank_transfer: "Transferência Bancária",
+                bank_desc: "Pagamento bancário direto",
+                secure_payment: "Pagamento Seguro",
+                security_notice: "Suas informações de pagamento são criptografadas e seguras. Nunca armazenamos seus detalhes de pagamento.",
+                complete_payment: "Finalizar Pagamento",
+                plan_free_features: "3 objetivos • 2 posts • 5 amigos",
+                plan_pro_features: "6 objetivos • 10 posts • 20 amigos",
+                plan_promax_features: "20 objetivos • 25 posts • Amigos ilimitados",
+            },
+            
+            'Japanese': {
+                // Navigation
+                'Login': 'ログイン',
+                'Home': 'ホーム',
+                'Rankings': 'ランキング',
+                'Activities': 'アクティビティ',
+                'Friends': '友達',
+                'Progress': '進捗',
+                'Communities': 'コミュニティ',
+                'Profile': 'プロフィール',
+                
+                // Login Page
+                'Welcome!': 'ようこそ！',
+                'Let\'s start your digital wellness journey': 'デジタルウェルネスの旅を始めましょう',
+                'Create Your Profile': 'プロフィールを作成',
+                'We\'ll assess your digital habits to provide personalized recommendations': 'あなたのデジタル習慣を評価し、個人に合わせた推奨事項を提供します',
+                'Full Name': '氏名',
+                'Email Address': 'メールアドレス',
+                'Password': 'パスワード',
+                'Start Assessment': '評価を開始',
+                'Already have an account? Log In Now': 'すでにアカウントをお持ちですか？今すぐログイン',
+                'Welcome Back!': 'おかえりなさい！',
+                'Sign in to continue your digital wellness journey': 'デジタルウェルネスの旅を続けるためにサインインしてください',
+                'Enter Your Account': 'アカウントに入る',
+                'Sign in with your email and password to access your personalized dashboard': 'メールアドレスとパスワードでサインインして、パーソナライズされたダッシュボードにアクセスしてください',
+                'Sign In': 'サインイン',
+                'Don\'t have an account? Create one': 'アカウントをお持ちでないですか？作成してください',
+                
+                // Home Page
+                'Good morning! 🌅': 'おはようございます！🌅',
+                'Stay mindful, stay healthy': 'マインドフルに、健康に',
+                'Daily Awards': '毎日の賞',
+                'Add New Goal': '新しい目標を追加',
+                'No goals yet. Click \'Add New Goal\' to get started!': 'まだ目標がありません。「新しい目標を追加」をクリックして始めましょう！',
+                'Daily Prize': '毎日の賞品',
+                'Your reward for completing all daily tasks:': '毎日のタスクをすべて完了した報酬：',
+                'Edit': '編集',
+                'tasks completed': 'タスク完了',
+                '🎉 Prize Earned!': '🎉 賞品獲得！',
+                'Recent Activity': '最近のアクティビティ',
+                
+                // Profile Page
+                'Manage your account and preferences': 'アカウントと設定を管理',
+                'Subscription Plan': 'サブスクリプションプラン',
+                'Pay Here!': 'ここで支払い！',
+                'Choose Your Plan & Pay': 'プランを選択して支払い',
+                'Normal Plan': '通常プラン',
+                'Free': '無料',
+                'Pro Plan': 'プロプラン',
+                'ProMax Plan': 'プロマックスプラン',
+                'daily goals': '毎日の目標',
+                'posts per day': '1日の投稿数',
+                'friends total': '友達の合計',
+                'Unlimited friends': '無制限の友達',
+                'Basic progress reports': '基本的な進捗レポート',
+                'Enhanced progress reports': '強化された進捗レポート',
+                'Comprehensive detailed reports': '包括的な詳細レポート',
+                'Downgrade': 'ダウングレード',
+                'Upgrade Plan': 'プランをアップグレード',
+                'Change Plan': 'プランを変更',
+                'Notifications': '通知',
+                'Push Notifications': 'プッシュ通知',
+                'Daily Summary': '毎日のサマリー',
+                'Privacy & Security': 'プライバシーとセキュリティ',
+                'Account Privacy': 'アカウントプライバシー',
+                'Public': '公開',
+                'Private': 'プライベート',
+                'Preferences': '設定',
+                'Dark Mode': 'ダークモード',
+                'Language': '言語',
+                'Support': 'サポート',
+                'Help & Support': 'ヘルプとサポート',
+                'Logout': 'ログアウト',
+                
+                // Payment Modal
+                'Select Plan': 'プランを選択',
+                'Choose Payment Method': '支払い方法を選択',
+                'Pay with Alipay': 'Alipayで支払い',
+                'Faster Payment System': '高速支払いシステム',
+                'Pay with WeChat': 'WeChatで支払い',
+                'Bank Transfer': '銀行振込',
+                'Security Notice': 'セキュリティ通知',
+                'Your payment information is encrypted and secure. This is a demo version.': 'お支払い情報は暗号化されており安全です。これはデモ版です。',
+                'Cancel': 'キャンセル',
+                'Pay Now': '今すぐ支払い',
+                
+                // Privacy Modal
+                'Privacy Settings': 'プライバシー設定',
+                'Choose your account visibility': 'アカウントの可視性を選択',
+                'Public Account': '公開アカウント',
+                'Visible in community rankings': 'コミュニティランキングで表示',
+                'Others can see your progress': '他の人があなたの進捗を見ることができます',
+                'Can be found by friends': '友達に見つけられます',
+                'Posts visible to community': '投稿がコミュニティに表示されます',
+                'Private Account': 'プライベートアカウント',
+                'Hidden from community rankings': 'コミュニティランキングから非表示',
+                'Progress only visible to you': '進捗はあなたにのみ表示されます',
+                'Cannot be found by others': '他の人に見つけられません',
+                'Personal data stays private': '個人データはプライベートのまま',
+                'Save Settings': '設定を保存',
+                
+                // Language Modal
+                'Select Language': '言語を選択',
+                
+                // Common
+                'Save': '保存',
+                'Close': '閉じる',
+                'Success': '成功',
+                'Error': 'エラー',
+                'Loading...': '読み込み中...',
+                'pts': 'ポイント',
+                pay_here: "ここで支払う！",
+                choose_plan_pay: "プランを選択して安全にお支払いください",
+                payment_checkout: "支払い",
+                selected_plan: "選択されたプラン",
+                choose_different_plan: "別のプランを選択",
+                payment_method: "支払い方法",
+                alipay_desc: "Alipayで安全に支払い",
+                fps_desc: "高速支払いシステム",
+                wechat_desc: "WeChatウォレットで支払い",
+                bank_transfer: "銀行振込",
+                bank_desc: "直接銀行支払い",
+                secure_payment: "安全な支払い",
+                security_notice: "お客様の支払い情報は暗号化され安全です。支払い詳細を保存することはありません。",
+                complete_payment: "支払いを完了",
+                plan_free_features: "3つの目標 • 2つの投稿 • 5人の友達",
+                plan_pro_features: "6つの目標 • 10の投稿 • 20人の友達",
+                plan_promax_features: "20の目標 • 25の投稿 • 無制限の友達",
+            },
+            
+            'Korean': {
+                // Navigation
+                'Login': '로그인',
+                'Home': '홈',
+                'Rankings': '순위',
+                'Activities': '활동',
+                'Friends': '친구',
+                'Progress': '진행상황',
+                'Communities': '커뮤니티',
+                'Profile': '프로필',
+                
+                // Login Page
+                'Welcome!': '환영합니다!',
+                'Let\'s start your digital wellness journey': '디지털 웰니스 여정을 시작해보세요',
+                'Create Your Profile': '프로필 만들기',
+                'We\'ll assess your digital habits to provide personalized recommendations': '개인화된 추천을 제공하기 위해 디지털 습관을 평가합니다',
+                'Full Name': '전체 이름',
+                'Email Address': '이메일 주소',
+                'Password': '비밀번호',
+                'Start Assessment': '평가 시작',
+                'Already have an account? Log In Now': '이미 계정이 있으신가요? 지금 로그인',
+                'Welcome Back!': '다시 오신 것을 환영합니다!',
+                'Sign in to continue your digital wellness journey': '디지털 웰니스 여정을 계속하려면 로그인하세요',
+                'Enter Your Account': '계정 입력',
+                'Sign in with your email and password to access your personalized dashboard': '개인화된 대시보드에 액세스하려면 이메일과 비밀번호로 로그인하세요',
+                'Sign In': '로그인',
+                'Don\'t have an account? Create one': '계정이 없으신가요? 만들어보세요',
+                
+                // Home Page
+                'Good morning! 🌅': '좋은 아침입니다! 🌅',
+                'Stay mindful, stay healthy': '마음챙김하며 건강하게',
+                'Daily Awards': '일일 상',
+                'Add New Goal': '새 목표 추가',
+                'No goals yet. Click \'Add New Goal\' to get started!': '아직 목표가 없습니다. "새 목표 추가"를 클릭하여 시작하세요!',
+                'Daily Prize': '일일 상품',
+                'Your reward for completing all daily tasks:': '모든 일일 작업을 완료한 보상:',
+                'Edit': '편집',
+                'tasks completed': '작업 완료',
+                '🎉 Prize Earned!': '🎉 상품 획득!',
+                'Recent Activity': '최근 활동',
+                
+                // Profile Page
+                'Manage your account and preferences': '계정 및 환경설정 관리',
+                'Subscription Plan': '구독 플랜',
+                'Pay Here!': '여기서 결제!',
+                'Choose Your Plan & Pay': '플랜 선택 및 결제',
+                'Normal Plan': '일반 플랜',
+                'Free': '무료',
+                'Pro Plan': '프로 플랜',
+                'ProMax Plan': '프로맥스 플랜',
+                'daily goals': '일일 목표',
+                'posts per day': '일일 게시물',
+                'friends total': '총 친구 수',
+                'Unlimited friends': '무제한 친구',
+                'Basic progress reports': '기본 진행 보고서',
+                'Enhanced progress reports': '향상된 진행 보고서',
+                'Comprehensive detailed reports': '포괄적인 상세 보고서',
+                'Downgrade': '다운그레이드',
+                'Upgrade Plan': '플랜 업그레이드',
+                'Change Plan': '플랜 변경',
+                'Notifications': '알림',
+                'Push Notifications': '푸시 알림',
+                'Daily Summary': '일일 요약',
+                'Privacy & Security': '개인정보 보호 및 보안',
+                'Account Privacy': '계정 개인정보 보호',
+                'Public': '공개',
+                'Private': '비공개',
+                'Preferences': '환경설정',
+                'Dark Mode': '다크 모드',
+                'Language': '언어',
+                'Support': '지원',
+                'Help & Support': '도움말 및 지원',
+                'Logout': '로그아웃',
+                
+                // Payment Modal
+                'Select Plan': '플랜 선택',
+                'Choose Payment Method': '결제 방법 선택',
+                'Pay with Alipay': 'Alipay로 결제',
+                'Faster Payment System': '빠른 결제 시스템',
+                'Pay with WeChat': 'WeChat으로 결제',
+                'Bank Transfer': '은행 이체',
+                'Security Notice': '보안 알림',
+                'Your payment information is encrypted and secure. This is a demo version.': '결제 정보는 암호화되어 안전합니다. 이것은 데모 버전입니다.',
+                'Cancel': '취소',
+                'Pay Now': '지금 결제',
+                
+                // Privacy Modal
+                'Privacy Settings': '개인정보 보호 설정',
+                '
