@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,37 +17,32 @@ import { DashboardCard } from '@/components/DashboardCard';
 import * as Sharing from 'expo-sharing';
 import { Linking } from 'react-native';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { getColors } from '@/constants/Colors';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert as RNAlert } from 'react-native';
+import { CommunityPost, CommunityComment, DatabaseService } from '@/lib/firebase-services';
+import { formatTime } from '@/lib/firebase-services';
 
-interface Post {
-  id: number;
+interface Post extends CommunityPost {
+  isLiked: boolean;
+  timestamp: string;
   author: {
     name: string;
     avatar: string;
     streak: number;
     level: string;
   };
-  content: string;
-  timestamp: string;
-  likes: number;
-  comments: number;
-  isLiked: boolean;
-  category: 'success' | 'challenge' | 'tip' | 'motivation';
-  image?: string;
 }
 
-interface Comment {
-  id: number;
+interface Comment extends CommunityComment {
+  isLiked: boolean;
+  timestamp: string;
   author: {
     name: string;
     avatar: string;
   };
-  content: string;
-  timestamp: string;
-  likes: number;
-  isLiked: boolean;
 }
 
 const initialPosts: Post[] = [
@@ -61,19 +56,62 @@ const categories = [
   { id: 'motivation', name: 'Motivation', color: '#EF4444' },
 ];
 
+
 export default function CommunitiesScreen() {
   const { isDarkMode } = useDarkMode();
+  const { user } = useAuth();
+  const { userProfile, getTotalPoints } = useFirebaseData();
   const colors = getColors(isDarkMode);
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [comments, setComments] = useState<{ [key: string]: Comment[] }>({});
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [newPostContent, setNewPostContent] = useState('');
-  const [newPostCategory, setNewPostCategory] = useState<Post['category']>('motivation');
+  const [newPostCategory, setNewPostCategory] = useState<CommunityPost['category']>('motivation');
   const [newComment, setNewComment] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<{ uri: string; type: 'image' | 'video' } | null>(null);
+
+  // Load posts from Firebase
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const loadPosts = async () => {
+    try {
+      setLoading(true);
+      const firebasePosts = await DatabaseService.getPosts(50);
+
+      // Transform Firebase posts to include additional data needed by UI
+      const transformedPosts: Post[] = await Promise.all(
+        firebasePosts.map(async (post) => {
+          // Get user profile for streak and level
+          const authorProfile = await DatabaseService.getUserProfile(post.authorId);
+
+          return {
+            ...post,
+            isLiked: false, // Will be updated based on current user
+            author: {
+              name: post.authorName,
+              avatar: post.authorAvatar,
+              streak: Math.floor((authorProfile?.totalPoints || 0) / 50),
+              level: `Level ${Math.floor((authorProfile?.totalPoints || 0) / 100) + 1}`,
+            },
+            timestamp: formatTime(post.createdAt),
+          };
+        })
+      );
+
+      setPosts(transformedPosts);
+    } catch (error) {
+      console.error('Error loading posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSharePost = async (post: Post) => {
     const shareContent = `Check out this post from ${post.author.name}:\n\n"${post.content}"\n\nShared from Stay Healthy, Be Happy app`;
@@ -188,53 +226,115 @@ export default function CommunitiesScreen() {
     return matchesCategory && matchesSearch;
   });
 
-  const handleLikePost = (postId: number) => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
-          : post
-      )
-    );
+  const openCommentsModal = async (post: Post) => {
+    setSelectedPost(post);
+    await loadComments(post.id);
+    setShowCommentsModal(true);
   };
 
-  const handleCreatePost = () => {
-    if (newPostContent.trim()) {
-      const newPost: Post = {
-        id: posts.length + 1,
-        author: {
-          name: 'You',
-          avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100',
-          streak: 7,
-          level: 'Focus Warrior',
-        },
-        content: newPostContent,
-        timestamp: 'Just now',
-        likes: 0,
-        comments: 0,
-        isLiked: false,
-        category: newPostCategory,
-        image: selectedMedia?.type === 'image' ? selectedMedia.uri : undefined,
-      };
-      
-      setPosts([newPost, ...posts]);
-      setNewPostContent('');
-      setSelectedMedia(null);
-      setShowNewPostModal(false);
-      Alert.alert('Success', 'Your post has been shared with the community!');
+  const handleLikePost = async (postId: string) => {
+    if (!user) return;
+
+    try {
+      await DatabaseService.likePost(postId, user.uid);
+
+      // Update local state
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? {
+                ...post,
+                isLiked: !post.isLiked,
+                likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+              }
+            : post
+        )
+      );
+    } catch (error) {
+      console.error('Error liking post:', error);
     }
   };
 
-  const handleAddComment = () => {
-    if (newComment.trim() && selectedPost) {
-      // In a real app, this would update the backend
-      Alert.alert('Success', 'Your comment has been added!');
-      setNewComment('');
-      setShowCommentsModal(false);
+  const handleCreatePost = async () => {
+    if (newPostContent.trim() && user) {
+      try {
+        const postId = await DatabaseService.createPost({
+          authorId: user.uid,
+          authorName: user.email?.split('@')[0] || 'User',
+          authorAvatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100',
+          content: newPostContent,
+          category: newPostCategory,
+          image: selectedMedia?.type === 'image' ? selectedMedia.uri : undefined,
+        });
+
+        // Reload posts to show the new post
+        await loadPosts();
+
+        setNewPostContent('');
+        setSelectedMedia(null);
+        setShowNewPostModal(false);
+        Alert.alert('Success', 'Your post has been shared with the community!');
+      } catch (error) {
+        console.error('Error creating post:', error);
+        Alert.alert('Error', 'Failed to create post. Please try again.');
+      }
+    }
+  };
+
+  const loadComments = async (postId: string) => {
+    try {
+      const firebaseComments = await DatabaseService.getPostComments(postId);
+      const transformedComments: Comment[] = firebaseComments.map(comment => ({
+        ...comment,
+        isLiked: false,
+        author: {
+          name: comment.authorName,
+          avatar: comment.authorAvatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100',
+        },
+        timestamp: formatTime(comment.createdAt),
+      }));
+
+      setComments(prev => ({
+        ...prev,
+        [postId]: transformedComments
+      }));
+    } catch (error) {
+      console.error('Error loading comments:', error);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (newComment.trim() && selectedPost && user) {
+      try {
+        await DatabaseService.addComment({
+          postId: selectedPost.id,
+          authorId: user.uid,
+          authorName: user.email?.split('@')[0] || 'User',
+          content: newComment,
+        });
+
+        // Reload comments for this post
+        const postComments = await DatabaseService.getPostComments(selectedPost.id);
+        setComments(prev => ({
+          ...prev,
+          [selectedPost.id]: postComments.map(comment => ({
+            ...comment,
+            isLiked: false,
+            author: {
+              name: comment.authorName,
+              avatar: comment.authorAvatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100',
+            },
+            timestamp: formatTime(comment.createdAt),
+          }))
+        }));
+
+        setNewComment('');
+        setShowCommentsModal(false);
+        Alert.alert('Success', 'Your comment has been added!');
+      } catch (error) {
+        console.error('Error adding comment:', error);
+        Alert.alert('Error', 'Failed to add comment. Please try again.');
+      }
     }
   };
 
@@ -478,10 +578,7 @@ export default function CommunitiesScreen() {
 
                   <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() => {
-                      setSelectedPost(post);
-                      setShowCommentsModal(true);
-                    }}
+                    onPress={() => openCommentsModal(post)}
                   >
                     <MessageCircle size={20} color={colors.textSecondary} />
                     <Text style={[styles.actionText, { color: colors.textSecondary }]}>{post.comments}</Text>
@@ -624,7 +721,7 @@ export default function CommunitiesScreen() {
             </View>
 
             <ScrollView style={styles.commentsContainer}>
-              {selectedPost && sampleComments[selectedPost.id]?.map((comment) => (
+              {selectedPost && comments[selectedPost.id]?.map((comment) => (
                 <View key={comment.id} style={styles.commentItem}>
                   <Image source={{ uri: comment.author.avatar }} style={styles.commentAvatar} />
                   <View style={styles.commentContent}>

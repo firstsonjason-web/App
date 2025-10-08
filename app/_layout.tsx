@@ -3,20 +3,36 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { DarkModeContext, useDarkModeState } from '@/hooks/useDarkMode';
+import { AuthProvider, useAuth } from '@/hooks/useFirebaseAuth';
+
+function AppNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    // You could return a loading screen here
+    return null;
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="landing" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   useFrameworkReady();
   const { isDarkMode, toggleDarkMode } = useDarkModeState();
 
-
   return (
-    <DarkModeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="login" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style={isDarkMode ? "light" : "auto"} />
-    </DarkModeContext.Provider>
+    <AuthProvider>
+      <DarkModeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
+        <AppNavigator />
+        <StatusBar style={isDarkMode ? "light" : "auto"} />
+      </DarkModeContext.Provider>
+    </AuthProvider>
   );
 }

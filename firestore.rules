@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUserData() {
+      return request.auth != null &&
+             request.auth.uid == resource.data.userId;
+    }
+
+    // Users collection - users can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      allow read: if isAuthenticated() && resource.data.isPublic == true;
+    }
+
+    // Goals collection - users can manage their own goals
+    match /goals/{goalId} {
+      allow read, write: if isAuthenticated() && isValidUserData();
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Activities collection - users can read/write their own activities
+    match /activities/{activityId} {
+      allow read, write: if isAuthenticated() && isValidUserData();
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
+    }
+
+    // Communities collection - public read for all authenticated users
+    match /communities/{communityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.createdBy;
+      allow update, delete: if isAuthenticated() &&
+        request.auth.uid == resource.data.createdBy;
+    }
+
+    // Posts collection - community posts with proper access control
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.authorId;
+      allow update, delete: if isAuthenticated() &&
+        request.auth.uid == resource.data.authorId;
+    }
+
+    // Comments collection - users can manage their own comments
+    match /comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.authorId;
+      allow update, delete: if isAuthenticated() &&
+        request.auth.uid == resource.data.authorId;
+    }
+
+    // Friends collection - users can manage their own friend relationships
+    match /friends/{friendId} {
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == resource.data.friendId);
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId;
+    }
+
+    // Rankings collection - public read for authenticated users
+    match /rankings/{rankingId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Rankings are calculated server-side
+    }
+
+    // User rankings subcollection - users can read rankings data
+    match /users/{userId}/rankings/{rankingId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Rankings are calculated server-side
+    }
+
+    // Global rankings for different time periods
+    match /global_rankings/{period} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Rankings are calculated server-side
+    }
+
+    // Admin functions - only allow from authenticated admin users
+    match /admin/{document=**} {
+      allow read, write: if false; // Disable admin access for now
+    }
+
+    // Public data that anyone can read (if needed)
+    match /public/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

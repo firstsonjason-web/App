@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,30 +13,35 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Search,
-  UserPlus,
-  MessageCircle,
-  Phone,
-  Video,
-  Users,
-  Heart,
-  Send,
-  X,
-  Plus,
-  Share,
-  Instagram,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Mail,
-  ExternalLink,
-} from 'lucide-react-native';
+   Search,
+   UserPlus,
+   MessageCircle,
+   Phone,
+   Video,
+   Users,
+   Heart,
+   Send,
+   X,
+   Plus,
+   Share,
+   Instagram,
+   Facebook,
+   Twitter,
+   Linkedin,
+   Mail,
+   ExternalLink,
+ } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DashboardCard } from '@/components/DashboardCard';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { getColors } from '@/constants/Colors';
+import { UserFriend, DatabaseService } from '@/lib/firebase-services';
+import { formatTime } from '@/lib/firebase-services';
 
 interface Friend {
+  id: string;
   name: string;
   avatar: string;
   status: 'online' | 'offline' | 'away';
@@ -47,6 +52,7 @@ interface Friend {
   isOnline: boolean;
   lastMessage?: string;
   unreadCount?: number;
+  userId: string;
 }
 
 interface ChatMessage {
@@ -59,7 +65,7 @@ interface ChatMessage {
 
 const friends: Friend[] = [
   {
-    id: 1,
+    id: '1',
     name: 'Emma Wilson',
     avatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=100',
     status: 'online',
@@ -70,9 +76,10 @@ const friends: Friend[] = [
     isOnline: true,
     lastMessage: 'Just finished my morning meditation! 🧘‍♀️',
     unreadCount: 2,
+    userId: 'user1',
   },
   {
-    id: 2,
+    id: '2',
     name: 'Michael Chen',
     avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100',
     status: 'online',
@@ -82,9 +89,10 @@ const friends: Friend[] = [
     level: 'Focus Champion',
     isOnline: true,
     lastMessage: 'Great job on your screen time goals yesterday!',
+    userId: 'user2',
   },
   {
-    id: 3,
+    id: '3',
     name: 'Sarah Johnson',
     avatar: 'https://images.pexels.com/photos/1181424/pexels-photo-1181424.jpeg?auto=compress&cs=tinysrgb&w=100',
     status: 'away',
@@ -94,9 +102,10 @@ const friends: Friend[] = [
     level: 'Digital Beginner',
     isOnline: false,
     lastMessage: 'Thanks for the mindfulness tip!',
+    userId: 'user3',
   },
   {
-    id: 4,
+    id: '4',
     name: 'David Kim',
     avatar: 'https://images.pexels.com/photos/1212984/pexels-photo-1212984.jpeg?auto=compress&cs=tinysrgb&w=100',
     status: 'offline',
@@ -105,6 +114,7 @@ const friends: Friend[] = [
     streak: 45,
     level: 'Mindfulness Master',
     isOnline: false,
+    userId: 'user4',
   },
 ];
 
@@ -137,47 +147,138 @@ const socialPlatforms = [
 
 export default function FriendsScreen() {
   const { isDarkMode } = useDarkMode();
+  const { user } = useAuth();
+  const { userProfile, getTotalPoints } = useFirebaseData();
   const colors = getColors(isDarkMode);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [suggestedFriends, setSuggestedFriends] = useState<any[]>([]);
+  const [friendRequests, setFriendRequests] = useState<UserFriend[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTab, setSelectedTab] = useState<'friends' | 'suggestions' | 'search'>('friends');
+  const [selectedTab, setSelectedTab] = useState<'friends' | 'suggestions' | 'requests'>('friends');
   const [showChatModal, setShowChatModal] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      senderId: 1,
-      message: 'Hey! How\'s your digital wellness journey going?',
-      timestamp: '10:30 AM',
-      isRead: true,
-    },
-    {
-      id: 2,
-      senderId: 0, // Current user
-      message: 'Going great! Just completed my morning meditation 🧘‍♀️',
-      timestamp: '10:32 AM',
-      isRead: true,
-    },
-    {
-      id: 3,
-      senderId: 1,
-      message: 'That\'s awesome! I\'m struggling with my screen time goals today',
-      timestamp: '10:35 AM',
-      isRead: true,
-    },
-    {
-      id: 4,
-      senderId: 0,
-      message: 'You got this! Try the 20-20-20 rule - every 20 minutes, look at something 20 feet away for 20 seconds',
-      timestamp: '10:37 AM',
-      isRead: true,
-    },
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isProcessingRequest, setIsProcessingRequest] = useState(false);
+  const [profileShareUrl, setProfileShareUrl] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      // Generate a shareable profile URL (in a real app, this would be a unique link)
+      setProfileShareUrl(`https://myapp.com/profile/${user.uid}`);
+    }
+  }, [user]);
+
+  // Load friends and suggestions from Firebase
+  useEffect(() => {
+    if (user) {
+      loadFriendsData();
+    }
+  }, [user]);
+
+  const loadFriendsData = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      // Load user's friends
+      const userFriends = await DatabaseService.getUserFriends(user.uid);
+
+      // Transform friends data
+      const transformedFriends: Friend[] = await Promise.all(
+        userFriends.map(async (friend) => {
+          const friendProfile = await DatabaseService.getUserProfile(friend.friendId);
+
+          return {
+            id: friend.id,
+            name: friendProfile?.displayName || friendProfile?.email?.split('@')[0] || 'User',
+            avatar: friendProfile?.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100',
+            status: 'online', // Would need real-time status tracking
+            lastSeen: formatTime(friend.createdAt),
+            mutualFriends: 0, // Would need to calculate
+            streak: Math.floor((friendProfile?.totalPoints || 0) / 50),
+            level: `Level ${Math.floor((friendProfile?.totalPoints || 0) / 100) + 1}`,
+            isOnline: true, // Would need real-time status tracking
+            lastMessage: 'Connected as friends',
+            userId: friend.friendId,
+          };
+        })
+      );
+
+      setFriends(transformedFriends);
+
+      // Load suggested friends
+      const suggestions = await DatabaseService.getSuggestedFriends(user.uid, 10);
+      setSuggestedFriends(suggestions);
+
+      // Load friend requests
+      const requests = await DatabaseService.getFriendRequests(user.uid);
+      setFriendRequests(requests);
+
+    } catch (error) {
+      console.error('Error loading friends data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredFriends = friends.filter(friend =>
     friend.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleSendFriendRequest = async (friendId: string) => {
+    if (!user || isProcessingRequest) return;
+
+    setIsProcessingRequest(true);
+    try {
+      await DatabaseService.sendFriendRequest(friendId);
+      Alert.alert('✅ Friend Request Sent', 'Your friend request has been sent successfully!');
+      // Reload data to update suggestions
+      loadFriendsData();
+    } catch (error: any) {
+      console.error('Error sending friend request:', error);
+
+      let errorMessage = 'Failed to send friend request. Please try again.';
+      if (error.message === 'Friend request already sent') {
+        errorMessage = 'You have already sent a friend request to this user.';
+      } else if (error.message === 'Already friends with this user') {
+        errorMessage = 'You are already friends with this user.';
+      }
+
+      Alert.alert('❌ Error', errorMessage);
+    } finally {
+      setIsProcessingRequest(false);
+    }
+  };
+
+  const handleRespondToRequest = async (requestId: string, accept: boolean) => {
+    if (isProcessingRequest) return;
+
+    setIsProcessingRequest(true);
+    try {
+      await DatabaseService.respondToFriendRequest(requestId, accept);
+      Alert.alert(
+        accept ? '✅ Friend Added!' : '❌ Request Declined',
+        accept ? 'Friend request accepted! You can now chat with your new friend.' : 'Friend request declined.'
+      );
+      // Reload data to update friends list and requests
+      loadFriendsData();
+    } catch (error: any) {
+      console.error('Error responding to friend request:', error);
+
+      let errorMessage = 'Failed to respond to friend request. Please try again.';
+      if (error.message === 'Friend request not found') {
+        errorMessage = 'Friend request not found. It may have already been processed.';
+      }
+
+      Alert.alert('❌ Error', errorMessage);
+    } finally {
+      setIsProcessingRequest(false);
+    }
+  };
 
   const openChat = (friend: Friend) => {
     setSelectedFriend(friend);
@@ -198,35 +299,121 @@ export default function FriendsScreen() {
     }
   };
 
-  const addFriendViaSocial = async (platform: string) => {
-    const messages = {
-      instagram: 'Opening Instagram to find friends...',
-      facebook: 'Opening Facebook to find friends...',
-      twitter: 'Opening Twitter to find friends...',
-      linkedin: 'Opening LinkedIn to find friends...',
-      email: 'Opening tutorial video...',
-    };
-
-    const urls = {
-      instagram: '',
-      facebook: 'fb://',
-      twitter: 'twitter://',
-      linkedin: 'linkedin://',
-      email: 'https://www.youtube.com/watch?v=JWWgegLiCGk',
-    };
+  const shareProfile = async () => {
+    if (!profileShareUrl) {
+      Alert.alert('❌ Error', 'Unable to generate profile link. Please try again.');
+      return;
+    }
 
     try {
-      const url = urls[platform as keyof typeof urls];
-      const supported = platform === 'email' ? true : await Linking.canOpenURL(url);
-      
-      if (supported) {
-        await Linking.openURL(url);
-        Alert.alert('Success', messages[platform as keyof typeof messages]);
-      } else {
-        Alert.alert('App not found', `Please install ${platform} to add friends from this platform.`);
+      const shareMessage = `🌟 Check out my profile on this amazing app!\n\n${profileShareUrl}\n\nJoin me in tracking goals and building positive habits! 🎯`;
+
+      // Show the shareable link in an alert for easy copying
+      Alert.alert(
+        '📋 Share Your Profile',
+        `Copy and share this link with your friends:\n\n${profileShareUrl}\n\nMessage suggestion:\n${shareMessage}`,
+        [
+          {
+            text: 'Copy Link',
+            onPress: async () => {
+              try {
+                if (navigator.clipboard) {
+                  await navigator.clipboard.writeText(profileShareUrl);
+                  Alert.alert('✅ Success!', 'Profile link copied to clipboard!');
+                } else {
+                  Alert.alert('✅', 'Link is ready to share!');
+                }
+              } catch (error) {
+                Alert.alert('❌ Error', 'Unable to copy to clipboard');
+              }
+            }
+          },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    } catch (error) {
+      console.error('Error sharing profile:', error);
+      Alert.alert('❌ Error', 'Unable to share profile. Please try again.');
+    }
+  };
+
+  const addFriendViaSocial = async (platform: string) => {
+    const platformConfig = {
+      instagram: {
+        name: 'Instagram',
+        appUrl: 'instagram://',
+        webUrl: 'https://www.instagram.com',
+        message: 'Opening Instagram to find friends...',
+        searchQuery: 'goal tracking app friends'
+      },
+      facebook: {
+        name: 'Facebook',
+        appUrl: 'fb://',
+        webUrl: 'https://www.facebook.com',
+        message: 'Opening Facebook to find friends...',
+        searchQuery: 'goal tracking motivation'
+      },
+      twitter: {
+        name: 'Twitter',
+        appUrl: 'twitter://',
+        webUrl: 'https://www.twitter.com',
+        message: 'Opening Twitter to find friends...',
+        searchQuery: 'productivity app community'
+      },
+      linkedin: {
+        name: 'LinkedIn',
+        appUrl: 'linkedin://',
+        webUrl: 'https://www.linkedin.com',
+        message: 'Opening LinkedIn to find friends...',
+        searchQuery: 'productivity tools'
+      },
+      email: {
+        name: 'Email',
+        appUrl: 'mailto:',
+        webUrl: 'https://www.youtube.com/watch?v=JWWgegLiCGk',
+        message: 'Opening tutorial video...',
+        searchQuery: ''
+      },
+    };
+
+    const config = platformConfig[platform as keyof typeof platformConfig];
+
+    if (!config) {
+      Alert.alert('❌ Error', 'Unknown platform selected');
+      return;
+    }
+
+    try {
+      // Try to open the app first, but wrap in try-catch since canOpenURL can be misleading
+      try {
+        await Linking.openURL(config.appUrl);
+        Alert.alert('✅ Success', config.message);
+      } catch (appError) {
+        // App URL failed, try web version for social platforms
+        if (platform !== 'email') {
+          try {
+            const webUrl = config.webUrl;
+            await Linking.openURL(webUrl);
+            Alert.alert('✅ Browser Opened', `Opening ${config.name} in your browser. Search for "${config.searchQuery}" to find friends using goal tracking apps!`);
+          } catch (webError) {
+            Alert.alert(
+              '❌ Platform Not Available',
+              `${config.name} app is not installed or not accessible. Please visit ${config.name}.com and search for "${config.searchQuery}" to find friends.`
+            );
+          }
+        } else {
+          // For email, open the tutorial
+          try {
+            await Linking.openURL(config.webUrl);
+            Alert.alert('✅ Tutorial Opened', 'Learn how to share your profile with friends!');
+          } catch (emailError) {
+            Alert.alert('❌ Error', 'Unable to open tutorial. Please search for "how to share app profile" online.');
+          }
+        }
       }
     } catch (error) {
-      Alert.alert('Error', `Unable to open ${platform}`);
+      console.error(`Error opening ${platform}:`, error);
+      Alert.alert('❌ Error', `Unable to open ${config.name}. Please try again or check if the app is installed.`);
     }
   };
 
@@ -279,6 +466,14 @@ export default function FriendsScreen() {
           >
             <Text style={[styles.tabText, { color: selectedTab === 'friends' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'friends' && styles.activeTabText]}>
               My Friends ({friends.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'requests' && styles.activeTab]}
+            onPress={() => setSelectedTab('requests')}
+          >
+            <Text style={[styles.tabText, { color: selectedTab === 'requests' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'requests' && styles.activeTabText]}>
+              Requests ({friendRequests.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -383,29 +578,88 @@ export default function FriendsScreen() {
             </View>
           )}
 
+          {selectedTab === 'requests' && (
+            <View style={styles.requestsContainer}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Friend Requests ({friendRequests.length})
+              </Text>
+              {friendRequests.map((request) => (
+                <DashboardCard key={request.id} style={styles.requestCard}>
+                  <View style={styles.requestItem}>
+                    <View style={styles.requestInfo}>
+                      <Text style={[styles.requestText, { color: colors.text }]}>
+                        {request.friendProfile?.name || 'Someone'} wants to be your friend
+                      </Text>
+                      <Text style={[styles.requestTime, { color: colors.textSecondary }]}>
+                        {formatTime(request.createdAt)}
+                      </Text>
+                    </View>
+                    <View style={styles.requestActions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.requestButton,
+                          styles.acceptButton,
+                          isProcessingRequest && styles.disabledButton
+                        ]}
+                        onPress={() => handleRespondToRequest(request.id, true)}
+                        disabled={isProcessingRequest}
+                      >
+                        <Text style={styles.requestButtonText}>
+                          {isProcessingRequest ? '...' : 'Accept'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.requestButton,
+                          styles.declineButton,
+                          isProcessingRequest && styles.disabledButton
+                        ]}
+                        onPress={() => handleRespondToRequest(request.id, false)}
+                        disabled={isProcessingRequest}
+                      >
+                        <Text style={[styles.requestButtonText, styles.declineButtonText]}>
+                          {isProcessingRequest ? '...' : 'Decline'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </DashboardCard>
+              ))}
+            </View>
+          )}
+
           {selectedTab === 'suggestions' && (
             <View style={styles.suggestionsContainer}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>People You May Know</Text>
               {suggestedFriends.map((person) => (
                 <DashboardCard key={person.id} style={styles.suggestionCard}>
                   <View style={styles.suggestionItem}>
-                    <Image source={{ uri: person.avatar }} style={styles.avatar} />
+                    <Image source={{ uri: person.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100' }} style={styles.avatar} />
                     <View style={styles.suggestionInfo}>
-                      <Text style={[styles.suggestionName, { color: colors.text }]}>{person.name}</Text>
-                      <Text style={styles.suggestionLevel}>{person.level}</Text>
+                      <Text style={[styles.suggestionName, { color: colors.text }]}>{person.displayName || person.email?.split('@')[0] || 'User'}</Text>
+                      <Text style={styles.suggestionLevel}>Level {Math.floor((person.totalPoints || 0) / 100) + 1}</Text>
                       <Text style={[styles.mutualFriends, { color: colors.textSecondary }]}>
-                        {person.mutualFriends} mutual friends
+                        {Math.floor(Math.random() * 5) + 1} mutual friends
                       </Text>
                       <View style={styles.commonInterests}>
-                        {person.commonInterests.map((interest, index) => (
-                          <View key={index} style={[styles.interestTag, { backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF' }]}>
-                            <Text style={styles.interestText}>{interest}</Text>
-                          </View>
-                        ))}
+                        <View style={[styles.interestTag, { backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF' }]}>
+                          <Text style={styles.interestText}>Digital Wellness</Text>
+                        </View>
+                        <View style={[styles.interestTag, { backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF' }]}>
+                          <Text style={styles.interestText}>Mindfulness</Text>
+                        </View>
                       </View>
                     </View>
-                    <TouchableOpacity style={styles.addFriendButton}>
-                      <UserPlus size={20} color="#FFFFFF" />
+                    <TouchableOpacity
+                      style={[styles.addFriendButton, isProcessingRequest && styles.disabledButton]}
+                      onPress={() => handleSendFriendRequest(person.id)}
+                      disabled={isProcessingRequest}
+                    >
+                      {isProcessingRequest ? (
+                        <Text style={styles.loadingText}>...</Text>
+                      ) : (
+                        <UserPlus size={20} color="#FFFFFF" />
+                      )}
                     </TouchableOpacity>
                   </View>
                 </DashboardCard>
@@ -440,8 +694,13 @@ export default function FriendsScreen() {
                   return (
                     <TouchableOpacity
                       key={platform.id}
-                      style={[styles.platformButton, { borderColor: platform.color, backgroundColor: colors.background }]}
+                      style={[
+                        styles.platformButton,
+                        { borderColor: platform.color, backgroundColor: colors.background },
+                        isProcessingRequest && styles.disabledButton
+                      ]}
                       onPress={() => addFriendViaSocial(platform.id)}
+                      disabled={isProcessingRequest}
                     >
                       <IconComponent size={24} color={platform.color} />
                       <Text style={[styles.platformText, { color: platform.color }]}>
@@ -455,7 +714,11 @@ export default function FriendsScreen() {
 
               <View style={styles.inviteSection}>
                 <Text style={[styles.inviteTitle, { color: colors.textSecondary }]}>Or invite by sharing your profile</Text>
-                <TouchableOpacity style={styles.shareButton}>
+                <TouchableOpacity
+                  style={[styles.shareButton, isProcessingRequest && styles.disabledButton]}
+                  onPress={shareProfile}
+                  disabled={isProcessingRequest}
+                >
                   <Share size={20} color="#FFFFFF" />
                   <Text style={styles.shareButtonText}>Share Profile Link</Text>
                 </TouchableOpacity>
@@ -919,4 +1182,58 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-});
+  requestsContainer: {
+    paddingBottom: 24,
+  },
+  requestCard: {
+    marginBottom: 12,
+    padding: 16,
+  },
+  requestItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  requestInfo: {
+    flex: 1,
+  },
+  requestText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  requestTime: {
+    fontSize: 12,
+  },
+  requestActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  requestButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  acceptButton: {
+    backgroundColor: '#10B981',
+  },
+  declineButton: {
+    backgroundColor: '#EF4444',
+  },
+  requestButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  declineButtonText: {
+    color: '#FFFFFF',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+ });

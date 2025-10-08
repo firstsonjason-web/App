@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,42 +14,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useFirebaseAuth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
+  const { signIn, signUp, user } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      router.replace('/(tabs)');
+    }
+  }, [user]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSkip = async () => {
-    try {
-      // Set a flag to indicate user skipped login
-      await AsyncStorage.setItem('hasSkippedLogin', 'true');
-      await AsyncStorage.setItem('isLoggedIn', 'false');
-      
-      // Create a guest user profile for basic functionality
-      const guestProfile = {
-        id: 'guest',
-        name: 'Guest User',
-        email: '',
-        level: 'Digital Beginner',
-        streak: 0,
-        totalPoints: 0,
-      };
-      
-      await AsyncStorage.setItem('userProfile', JSON.stringify(guestProfile));
-      
-      // Directly navigate to the home page
-      router.replace('/(tabs)');
-    } catch (error) {
-      console.error('Error setting up guest mode:', error);
-      Alert.alert('Error', 'Failed to enter guest mode. Please try again.');
-    }
-  };
+  // Skip button removed - users must authenticate to use the app
 
   const handleSignUp = async () => {
     if (!email.trim() || !password.trim() || !fullName.trim()) {
@@ -70,57 +54,12 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // Create user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password: password,
-      });
+      // Create user account with Firebase
+      await signUp(email.trim().toLowerCase(), password, fullName.trim());
 
-      if (authError) {
-        Alert.alert('Sign Up Failed', authError.message);
-        return;
-      }
-
-      if (!authData.user) {
-        Alert.alert('Error', 'Failed to create account. Please try again.');
-        return;
-      }
-
-      // Create user profile
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: authData.user.id,
-          email: email.trim().toLowerCase(),
-          full_name: fullName.trim(),
-          level: 'Digital Beginner',
-          streak_days: 0,
-          total_points: 0,
-        });
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        Alert.alert('Error', 'Account created but failed to set up profile. Please contact support.');
-        return;
-      }
-
-      // Create initial subscription (free plan)
-      const { error: subscriptionError } = await supabase
-        .from('user_subscriptions')
-        .insert({
-          user_id: authData.user.id,
-          plan_type: 'free',
-          status: 'active',
-        });
-
-      if (subscriptionError) {
-        console.error('Subscription creation error:', subscriptionError);
-        // Don't fail the signup for this, just log it
-      }
-
-      // Save user data locally
+      // Save user data locally for compatibility with existing code
       const userProfile = {
-        id: authData.user.id,
+        id: 'current-user', // Firebase will handle the actual user ID
         name: fullName.trim(),
         email: email.trim().toLowerCase(),
         level: 'Digital Beginner',
@@ -141,9 +80,9 @@ export default function LoginScreen() {
           },
         ]
       );
-    } catch (error) {
-      console.error('Unexpected error during sign up:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      Alert.alert('Sign Up Failed', error.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -163,63 +102,35 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Sign in with Firebase
+      await signIn(email.trim().toLowerCase(), password);
+
+      // Save user data locally for compatibility with existing code
+      const userProfile = {
+        id: 'current-user', // Firebase will handle the actual user ID
+        name: 'User', // This will be updated from Firebase profile
         email: email.trim().toLowerCase(),
-        password: password,
-      });
+        level: 'Digital Beginner',
+        streak: 0,
+        totalPoints: 0,
+      };
 
-      if (error) {
-        Alert.alert('Sign In Failed', error.message);
-        return;
-      }
+      await AsyncStorage.setItem('userProfile', JSON.stringify(userProfile));
+      await AsyncStorage.setItem('isLoggedIn', 'true');
 
-      if (!data.user) {
-        Alert.alert('Error', 'No user data returned. Please try again.');
-        return;
-      }
-
-      // Fetch user profile from database
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError) {
-        console.error('Profile fetch error:', profileError);
-        Alert.alert('Error', 'Failed to load user profile: ' + profileError.message);
-        return;
-      }
-
-      if (profileData) {
-        const userProfile = {
-          id: profileData.id,
-          name: profileData.full_name,
-          email: profileData.email,
-          level: profileData.level || 'Digital Beginner',
-          streak: profileData.streak_days || 0,
-          totalPoints: profileData.total_points || 0,
-        };
-
-        await AsyncStorage.setItem('userProfile', JSON.stringify(userProfile));
-        await AsyncStorage.setItem('isLoggedIn', 'true');
-
-        Alert.alert(
-          'Welcome Back!',
-          `Hello ${profileData.full_name}! You're now signed in.`,
-          [
-            {
-              text: 'Continue',
-              onPress: () => router.replace('/(tabs)'),
-            },
-          ]
-        );
-      } else {
-        Alert.alert('Error', 'No profile data found for this user.');
-      }
-    } catch (error) {
-      console.error('Unexpected error during sign in:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      Alert.alert(
+        'Welcome Back!',
+        'You\'re now signed in.',
+        [
+          {
+            text: 'Continue',
+            onPress: () => router.replace('/(tabs)'),
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      Alert.alert('Sign In Failed', error.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -354,13 +265,6 @@ export default function LoginScreen() {
                 <Text style={styles.featureText}>Connect with like-minded people</Text>
               </View>
 
-              {/* Skip Button */}
-              <TouchableOpacity
-                style={styles.skipButton}
-                onPress={handleSkip}
-              >
-                <Text style={styles.skipText}>Skip for now</Text>
-              </TouchableOpacity>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

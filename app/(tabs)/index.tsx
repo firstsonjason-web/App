@@ -15,6 +15,10 @@ import { Plus, Trophy, Star, X, CircleCheck as CheckCircle, Circle, Quote, Smart
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DashboardCard } from '@/components/DashboardCard';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { router } from 'expo-router';
+import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
+import { formatTime } from '@/lib/firebase-services';
 import { getColors } from '@/constants/Colors';
 
 const { width } = Dimensions.get('window');
@@ -114,7 +118,22 @@ const goalCategories = [
 export default function HomeScreen() {
   const { isDarkMode } = useDarkMode();
   const colors = getColors(isDarkMode);
-  
+  const { user } = useAuth();
+
+  const {
+    goals,
+    activities,
+    userProfile,
+    loading,
+    addGoal,
+    updateGoal,
+    deleteGoal,
+    updateDailyPrize,
+    getTotalPoints,
+    getCompletedGoalsCount,
+    refreshData
+  } = useFirebaseData();
+
   const [screenTime, setScreenTime] = useState({
     today: 4.5,
     goal: 6,
@@ -123,8 +142,6 @@ export default function HomeScreen() {
 
   const [focusStreak, setFocusStreak] = useState(7);
   const [weeklyProgress, setWeeklyProgress] = useState(68);
-  const [dailyGoals, setDailyGoals] = useState<Goal[]>([
-  ]);
   const [showAddGoalModal, setShowAddGoalModal] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState('');
   const [newGoalDifficulty, setNewGoalDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
@@ -134,114 +151,93 @@ export default function HomeScreen() {
   const [tempPrize, setTempPrize] = useState('');
   const [totalPoints, setTotalPoints] = useState(0);
   const [currentQuote, setCurrentQuote] = useState(inspirationalQuotes[0]);
-  const [recentActivities, setRecentActivities] = useState<Array<{
-    id: number;
-    title: string;
-    completedAt: string;
-  }>>([]);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
 
-  // Load saved points from storage on component mount
+  // Redirect to landing if not authenticated
   useEffect(() => {
-    const loadSavedPoints = async () => {
-      try {
-        // In a real app, this would load from AsyncStorage or a database
-        // For now, we'll use the calculated points from completed goals
-        const completedPoints = dailyGoals
-          .filter(goal => goal.completed)
-          .reduce((sum, goal) => sum + goal.points, 0);
-        setTotalPoints(completedPoints);
-      } catch (error) {
-        console.log('Error loading saved points:', error);
-      }
-    };
-    
-    loadSavedPoints();
-  }, []);
+    if (!user) {
+      router.replace('/landing');
+    }
+  }, [user]);
 
+  // Update local state when Firebase data changes
   useEffect(() => {
-    // Set a random quote when component mounts
+    console.log('Goals updated in main page:', goals);
+    console.log('Goals count:', goals.length);
+    setTotalPoints(getTotalPoints());
+    setDailyPrize(userProfile?.dailyPrize || '');
+  }, [goals, userProfile, getTotalPoints]);
+
+  // Set a random quote when component mounts
+  useEffect(() => {
     const randomIndex = Math.floor(Math.random() * inspirationalQuotes.length);
     setCurrentQuote(inspirationalQuotes[randomIndex]);
   }, []);
 
+  // Update points when goals change
   useEffect(() => {
-    const completedPoints = dailyGoals
-      .filter(goal => goal.completed)
-      .reduce((sum, goal) => sum + goal.points, 0);
+    console.log('Goals changed, updating points:', goals);
+    const completedPoints = getTotalPoints();
+    console.log('New total points:', completedPoints);
     setTotalPoints(completedPoints);
-    
-    // Save points to storage for Rankings page
-    const savePointsToStorage = async () => {
-      try {
-        // In a real app, this would save to AsyncStorage or send to backend
-        // For demo purposes, we'll store in a global variable or context
-        global.userDailyPoints = completedPoints;
-      } catch (error) {
-        console.log('Error saving points:', error);
-      }
-    };
-    
-    savePointsToStorage();
-  }, [dailyGoals]);
 
-  const toggleGoalCompletion = (goalId: number) => {
-    setDailyGoals(prevGoals =>
-      prevGoals.map(goal =>
-        goal.id === goalId
-          ? { 
-              ...goal, 
-              completed: !goal.completed 
-            }
-          : goal
-      )
-    );
-    
-    // Add to recent activities when goal is completed
-    const goal = dailyGoals.find(g => g.id === goalId);
-    if (goal && !goal.completed) {
-      const now = new Date();
-      const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
-      setRecentActivities(prev => [
-        {
-          id: goalId,
-          title: goal.title,
-          completedAt: `Success! • ${timeString}`,
-        },
-        ...prev.slice(0, 4) // Keep only the 5 most recent activities
-      ]);
-    } else if (goal && goal.completed) {
-      // Remove from recent activities when goal is unchecked
-      setRecentActivities(prev => prev.filter(activity => activity.id !== goalId));
+    // Points are now stored in Firebase, no need for local storage
+  }, [goals, getTotalPoints]);
+
+  const toggleGoalCompletion = async (goalId: string) => {
+    try {
+      // Update goal in Firebase
+      await updateGoal(goalId, { completed: !goals.find(g => g.id === goalId)?.completed });
+
+      // Refresh data to get updated activities
+      await refreshData();
+    } catch (error) {
+      console.error('Error toggling goal completion:', error);
+      Alert.alert('Error', 'Failed to update goal. Please try again.');
     }
   };
 
-  const addNewGoal = () => {
+  const addNewGoal = async () => {
     if (newGoalTitle.trim()) {
-      const newGoal: Goal = {
-        id: Date.now(),
-        title: newGoalTitle,
-        points: difficultyPoints[newGoalDifficulty],
-        difficulty: newGoalDifficulty,
-        completed: false,
-        category: newGoalCategory,
-      };
-      
-      setDailyGoals([...dailyGoals, newGoal]);
-      setNewGoalTitle('');
-      setNewGoalDifficulty('medium');
-      setNewGoalCategory('custom');
-      setShowAddGoalModal(false);
-      Alert.alert('Success', 'New goal added to your daily awards!');
+      try {
+        console.log('Starting to add new goal:', newGoalTitle);
+        console.log('Current goals before adding:', goals.length);
+
+        await addGoal({
+          title: newGoalTitle,
+          points: difficultyPoints[newGoalDifficulty],
+          difficulty: newGoalDifficulty,
+          completed: false,
+          category: newGoalCategory,
+        });
+
+        console.log('Goal added successfully');
+        console.log('Current goals after adding:', goals.length);
+
+        setNewGoalTitle('');
+        setNewGoalDifficulty('medium');
+        setNewGoalCategory('custom');
+        setShowAddGoalModal(false);
+        Alert.alert('Success', 'New goal added to your daily awards!');
+
+        // Refresh data to get the new goal
+        console.log('Refreshing data...');
+        await refreshData();
+        console.log('Data refreshed, final goals count:', goals.length);
+      } catch (error) {
+        console.error('Error adding goal:', error);
+        Alert.alert('Error', 'Failed to add goal. Please try again.');
+      }
     }
   };
 
-  const updateDailyPrize = () => {
+  const handleUpdateDailyPrize = () => {
     if (tempPrize.trim()) {
       setDailyPrize(tempPrize);
       setShowPrizeModal(false);
       setTempPrize('');
+      // Update in Firebase
+      updateDailyPrize(tempPrize);
       Alert.alert('Success', 'Your daily prize has been updated!');
     }
   };
@@ -251,17 +247,25 @@ export default function HomeScreen() {
     setShowPrizeModal(true);
   };
 
-  const removeGoal = (goalId: number) => {
-    setDailyGoals(prevGoals => prevGoals.filter(goal => goal.id !== goalId));
-    // Also remove from recent activities if it was completed
-    setRecentActivities(prev => prev.filter(activity => activity.id !== goalId));
-    // Also remove from recent activities if it was completed
-    setRecentActivities(prev => prev.filter(activity => activity.id !== goalId));
+  const removeGoal = async (goalId: string) => {
+    try {
+      await deleteGoal(goalId);
+      // Refresh data to get updated lists
+      await refreshData();
+    } catch (error) {
+      console.error('Error removing goal:', error);
+      Alert.alert('Error', 'Failed to remove goal. Please try again.');
+    }
   };
 
   const toggleDeleteMode = () => {
     setShowDeleteMode(!showDeleteMode);
   };
+
+  // Don't render anything if user is not authenticated
+  if (!user) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -289,7 +293,7 @@ export default function HomeScreen() {
             >
               <View style={styles.quoteContent}>
                 <Quote size={24} color="rgba(255, 255, 255, 0.7)" style={styles.quoteIcon} />
-                <Text style={styles.quoteText}>"{currentQuote.text}"</Text>
+                <Text style={styles.quoteText}>&ldquo;{currentQuote.text}&rdquo;</Text>
                 <Text style={styles.quoteAuthor}>— {currentQuote.author}</Text>
               </View>
             </LinearGradient>
@@ -304,15 +308,7 @@ export default function HomeScreen() {
                   <Text style={[styles.cardTitle, { color: colors.text }]}>Daily Awards</Text>
                 </View>
                 <View style={styles.awardsActions}>
-                  {dailyGoals.length > 0 && (
-                    <TouchableOpacity
-                      style={[styles.deleteButton, showDeleteMode && styles.deleteButtonActive]}
-                      onPress={toggleDeleteMode}
-                    >
-                      <Trash2 size={16} color={showDeleteMode ? "#FFFFFF" : "#EF4444"} />
-                    </TouchableOpacity>
-                  )}
-                  {dailyGoals.length > 0 && (
+                  {goals.length > 0 && (
                     <TouchableOpacity
                       style={[styles.deleteButton, showDeleteMode && styles.deleteButtonActive]}
                       onPress={toggleDeleteMode}
@@ -326,9 +322,9 @@ export default function HomeScreen() {
                   </View>
                 </View>
               </View>
-              
+
               <View style={styles.goalsList}>
-                {dailyGoals.map((goal) => (
+                {goals.map((goal) => (
                   <TouchableOpacity
                     key={goal.id}
                     style={[styles.goalItem, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
@@ -343,18 +339,7 @@ export default function HomeScreen() {
                           ]
                         );
                       } else {
-                      if (showDeleteMode) {
-                        Alert.alert(
-                          'Remove Goal',
-                          `Remove "${goal.title}" from today's awards?`,
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Remove', style: 'destructive', onPress: () => removeGoal(goal.id) },
-                          ]
-                        );
-                      } else {
                         toggleGoalCompletion(goal.id);
-                      }
                       }
                     }}
                   >
@@ -385,8 +370,6 @@ export default function HomeScreen() {
                             </Text>
                           </View>
                           {!showDeleteMode && (
-                            <Text style={styles.pointsValue}>+{goal.points} pts</Text>
-                          )}
                             <Text style={styles.pointsValue}>+{goal.points} pts</Text>
                           )}
                         </View>
@@ -434,18 +417,18 @@ export default function HomeScreen() {
                 <View style={styles.prizeProgress}>
                   <View style={styles.prizeProgressInfo}>
                     <Text style={[styles.prizeProgressText, { color: colors.textSecondary }]}>
-                      {dailyGoals.filter(goal => goal.completed).length} / {dailyGoals.length} tasks completed
+                      {getCompletedGoalsCount()} / {goals.length} tasks completed
                     </Text>
-                    {dailyGoals.length > 0 && dailyGoals.every(goal => goal.completed) && (
+                    {goals.length > 0 && goals.every(goal => goal.completed) && (
                       <Text style={styles.prizeEarnedText}>🎉 Prize Earned!</Text>
                     )}
                   </View>
                   <View style={[styles.prizeProgressBar, { backgroundColor: colors.border }]}>
-                    <View 
+                    <View
                       style={[
                         styles.prizeProgressFill,
-                        { width: `${(dailyGoals.filter(goal => goal.completed).length / dailyGoals.length) * 100}%` }
-                      ]} 
+                        { width: `${goals.length > 0 ? (getCompletedGoalsCount() / goals.length) * 100 : 0}%` }
+                      ]}
                     />
                   </View>
                 </View>
@@ -457,14 +440,16 @@ export default function HomeScreen() {
           <DashboardCard>
             <View style={styles.activitySection}>
               <Text style={[styles.cardTitle, { color: colors.text }]}>Recent Activity</Text>
-              {recentActivities.length > 0 ? (
+              {activities.length > 0 ? (
                 <View style={styles.activityList}>
-                  {recentActivities.map((activity) => (
+                  {activities.map((activity) => (
                     <View key={activity.id} style={styles.activityItem}>
                       <View style={[styles.activityDot, { backgroundColor: '#10B981' }]} />
                       <View style={styles.activityContent}>
                         <Text style={[styles.activityTitle, { color: colors.text }]}>{activity.title}</Text>
-                        <Text style={[styles.activityTime, { color: colors.textSecondary }]}>{activity.completedAt}</Text>
+                        <Text style={[styles.activityTime, { color: colors.textSecondary }]}>
+                          Success! • {formatTime(activity.completedAt)}
+                        </Text>
                       </View>
                     </View>
                   ))}
@@ -624,7 +609,7 @@ export default function HomeScreen() {
               <Text style={[styles.modalTitle, { color: colors.text }]}>Set Daily Prize</Text>
               <TouchableOpacity
                 style={styles.saveButton}
-                onPress={updateDailyPrize}
+                onPress={handleUpdateDailyPrize}
               >
                 <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>

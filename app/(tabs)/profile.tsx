@@ -12,13 +12,16 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Settings, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, Moon, Sun, Globe, X, Camera, CreditCard as Edit3, Mail, FileText, Upload } from 'lucide-react-native';
+import { User, Settings, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, Moon, Sun, Globe, X, Camera, CreditCard as Edit3, Mail, FileText, Upload, UserPlus } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { DashboardCard } from '@/components/DashboardCard';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
+import { useNotifications } from '@/hooks/useNotifications';
 import { getColors } from '@/constants/Colors';
-import { supabase } from '@/lib/supabase';
+import { DatabaseService } from '@/lib/firebase-services';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -33,10 +36,19 @@ interface UserProfile {
 
 export default function ProfileScreen() {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const { user, signOut } = useAuth();
+  const { userProfile, getTotalPoints } = useFirebaseData();
+  const {
+    isNotificationsEnabled,
+    isDailySummaryEnabled,
+    permissionStatus,
+    requestPermissions,
+    updateNotificationSettings
+  } = useNotifications();
   const colors = getColors(isDarkMode);
-  
-  const [notifications, setNotifications] = useState(true);
-  const [dailySummary, setDailySummary] = useState(true);
+
+  const [notifications, setNotifications] = useState(isNotificationsEnabled);
+  const [dailySummary, setDailySummary] = useState(isDailySummaryEnabled);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('English');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -47,8 +59,9 @@ export default function ProfileScreen() {
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [selectedFAQCategory, setSelectedFAQCategory] = useState('general');
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
+  const [showProfileDetailsModal, setShowProfileDetailsModal] = useState(false);
   
-  const [userProfile, setUserProfile] = useState<UserProfile>({
+  const [localUserProfile, setLocalUserProfile] = useState<UserProfile>({
     name: 'Alex Johnson',
     email: 'alex@example.com',
     introduction: 'Digital wellness enthusiast on a journey to mindful technology use.',
@@ -79,7 +92,7 @@ export default function ProfileScreen() {
         setSelectedLanguage(savedLanguage);
       }
       if (savedProfile !== null) {
-        setUserProfile(JSON.parse(savedProfile));
+        setLocalUserProfile(JSON.parse(savedProfile));
       }
     } catch (error) {
       console.log('Error loading settings:', error);
@@ -105,14 +118,24 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleNotificationToggle = (value: boolean) => {
+  const handleNotificationToggle = async (value: boolean) => {
     setNotifications(value);
-    saveSettings('notifications', value);
+
+    if (value && permissionStatus !== 'granted') {
+      const granted = await requestPermissions();
+      if (granted) {
+        updateNotificationSettings(value, dailySummary);
+      } else {
+        setNotifications(false);
+      }
+    } else {
+      updateNotificationSettings(value, dailySummary);
+    }
   };
 
   const handleDailySummaryToggle = (value: boolean) => {
     setDailySummary(value);
-    saveSettings('daily_summary', value);
+    updateNotificationSettings(notifications, value);
   };
 
   const handleLanguageSelect = (language: string) => {
@@ -125,7 +148,7 @@ export default function ProfileScreen() {
   const handleEditProfile = (type: 'name' | 'email' | 'introduction' | 'photo') => {
     setEditType(type);
     if (type !== 'photo') {
-      setTempValue(userProfile[type]);
+      setTempValue(localUserProfile[type as keyof UserProfile] as string);
       setShowEditModal(true);
     } else {
       handlePhotoUpload();
@@ -168,11 +191,22 @@ export default function ProfileScreen() {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        const newProfile = { ...userProfile, avatar: result.assets[0].uri };
-        setUserProfile(newProfile);
-        await AsyncStorage.setItem('userProfile', JSON.stringify(newProfile));
-        Alert.alert('Success', 'Profile photo updated successfully!');
+      if (!result.canceled && result.assets[0] && user) {
+        try {
+          // Update profile in Firebase
+          await DatabaseService.updateUserProfile(user.uid, {
+            avatar: result.assets[0].uri
+          });
+
+          // Update local state
+          const newProfile = { ...localUserProfile, avatar: result.assets[0].uri };
+          setLocalUserProfile(newProfile);
+
+          Alert.alert('Success', 'Profile photo updated successfully!');
+        } catch (error) {
+          console.error('Error updating profile photo:', error);
+          Alert.alert('Error', 'Failed to update profile photo. Please try again.');
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to access camera');
@@ -194,11 +228,22 @@ export default function ProfileScreen() {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        const newProfile = { ...userProfile, avatar: result.assets[0].uri };
-        setUserProfile(newProfile);
-        await AsyncStorage.setItem('userProfile', JSON.stringify(newProfile));
-        Alert.alert('Success', 'Profile photo updated successfully!');
+      if (!result.canceled && result.assets[0] && user) {
+        try {
+          // Update profile in Firebase
+          await DatabaseService.updateUserProfile(user.uid, {
+            avatar: result.assets[0].uri
+          });
+
+          // Update local state
+          const newProfile = { ...localUserProfile, avatar: result.assets[0].uri };
+          setLocalUserProfile(newProfile);
+
+          Alert.alert('Success', 'Profile photo updated successfully!');
+        } catch (error) {
+          console.error('Error updating profile photo:', error);
+          Alert.alert('Error', 'Failed to update profile photo. Please try again.');
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to access media library');
@@ -206,28 +251,50 @@ export default function ProfileScreen() {
   };
 
   const handleSaveEdit = async () => {
-    if (tempValue.trim()) {
-      const newProfile = { ...userProfile, [editType]: tempValue.trim() };
-      setUserProfile(newProfile);
-      await AsyncStorage.setItem('userProfile', JSON.stringify(newProfile));
-      setShowEditModal(false);
-      setTempValue('');
-      Alert.alert('Success', `${editType.charAt(0).toUpperCase() + editType.slice(1)} updated successfully!`);
+    if (tempValue.trim() && user) {
+      try {
+        // Update profile in Firebase
+        const updates: any = { [editType]: tempValue.trim() };
+
+        if (editType === 'name') {
+          updates.displayName = tempValue.trim();
+        } else if (editType === 'introduction') {
+          // You could add an introduction field to UserProfile if needed
+          updates.bio = tempValue.trim();
+        }
+
+        await DatabaseService.updateUserProfile(user.uid, updates);
+
+        // Update local state
+        const newProfile = { ...localUserProfile, [editType]: tempValue.trim() };
+        setLocalUserProfile(newProfile);
+
+        setShowEditModal(false);
+        setTempValue('');
+        Alert.alert('Success', `${editType.charAt(0).toUpperCase() + editType.slice(1)} updated successfully!`);
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        Alert.alert('Error', 'Failed to update profile. Please try again.');
+      }
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
+        {
+          text: 'Logout',
           style: 'destructive',
-          onPress: () => {
-            // In a real app, this would clear user session and navigate to login
-            Alert.alert('Logged Out', 'You have been logged out successfully.');
+          onPress: async () => {
+            try {
+              await signOut();
+              Alert.alert('Logged Out', 'You have been logged out successfully.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
           }
         },
       ]
@@ -340,43 +407,56 @@ export default function ProfileScreen() {
           </View>
 
           {/* Profile Card */}
-          <TouchableOpacity onPress={() => {
-            Alert.alert(
-              'Edit Profile',
-              'What would you like to update?',
-              [
-                { text: 'Name', onPress: () => handleEditProfile('name') },
-                { text: 'Email', onPress: () => handleEditProfile('email') },
-                { text: 'Introduction', onPress: () => handleEditProfile('introduction') },
-                { text: 'Profile Photo', onPress: () => handleEditProfile('photo') },
-                { text: 'Cancel', style: 'cancel' },
-              ]
-            );
-          }}>
-            <DashboardCard style={styles.profileCard}>
-              <LinearGradient
-                colors={isDarkMode ? ['#7C3AED', '#5B21B6'] : ['#8B5CF6', '#7C3AED']}
-                style={styles.profileGradient}
-              >
-                <View style={styles.profileContent}>
-                  <View style={styles.profileLeft}>
-                    <View style={styles.avatarContainer}>
-                      <User size={32} color="#FFFFFF" />
-                    </View>
-                    <View style={styles.profileInfo}>
-                      <Text style={styles.profileName}>{userProfile.name}</Text>
-                      <Text style={styles.profileEmail}>{userProfile.email}</Text>
-                      <Text style={styles.profileStreak}>🔥 {userProfile.streak} day focus streak</Text>
-                    </View>
-                  </View>
-                  <View style={styles.profileRight}>
-                    <Text style={styles.profileLevel}>{userProfile.level}</Text>
-                    <ChevronRight size={20} color="rgba(255, 255, 255, 0.7)" />
-                  </View>
-                </View>
-              </LinearGradient>
-            </DashboardCard>
-          </TouchableOpacity>
+           <TouchableOpacity onPress={() => setShowProfileDetailsModal(true)}>
+             <DashboardCard style={styles.profileCard}>
+               <LinearGradient
+                 colors={isDarkMode ? ['#7C3AED', '#5B21B6'] : ['#8B5CF6', '#7C3AED']}
+                 style={styles.profileGradient}
+               >
+                 <View style={styles.profileContent}>
+                   <View style={styles.profileLeft}>
+                     <View style={styles.avatarContainer}>
+                       <Image
+                         source={{ uri: userProfile?.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100' }}
+                         style={styles.profileAvatar}
+                       />
+                     </View>
+                     <View style={styles.profileInfo}>
+                       <Text style={styles.profileName}>{userProfile?.displayName || user?.email?.split('@')[0] || 'User'}</Text>
+                       <Text style={styles.profileEmail}>{user?.email || 'user@example.com'}</Text>
+                       <Text style={styles.profileStreak}>🔥 {Math.floor((userProfile?.totalPoints || 0) / 50)} day focus streak</Text>
+                       <View style={styles.profileStats}>
+                         <Text style={styles.profileStat}>🎯 {userProfile?.totalPoints || 0} points</Text>
+                         <Text style={styles.profileStat}>⭐ Level {Math.floor((userProfile?.totalPoints || 0) / 100) + 1}</Text>
+                       </View>
+                     </View>
+                   </View>
+                   <View style={styles.profileRight}>
+                     <TouchableOpacity
+                       style={styles.editButton}
+                       onPress={(e) => {
+                         e.stopPropagation();
+                         Alert.alert(
+                           'Edit Profile',
+                           'What would you like to update?',
+                           [
+                             { text: 'Name', onPress: () => handleEditProfile('name') },
+                             { text: 'Email', onPress: () => handleEditProfile('email') },
+                             { text: 'Introduction', onPress: () => handleEditProfile('introduction') },
+                             { text: 'Profile Photo', onPress: () => handleEditProfile('photo') },
+                             { text: 'Cancel', style: 'cancel' },
+                           ]
+                         );
+                       }}
+                     >
+                       <Edit3 size={16} color="#FFFFFF" />
+                     </TouchableOpacity>
+                     <ChevronRight size={20} color="rgba(255, 255, 255, 0.7)" />
+                   </View>
+                 </View>
+               </LinearGradient>
+             </DashboardCard>
+           </TouchableOpacity>
 
           {/* Subscription Card */}
           <DashboardCard style={styles.subscriptionCard}>
@@ -690,6 +770,141 @@ export default function ProfileScreen() {
             </ScrollView>
           </SafeAreaView>
         </Modal>
+
+        {/* Profile Details Modal */}
+        <Modal
+          visible={showProfileDetailsModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowProfileDetailsModal(false)}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Profile Details</Text>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => {
+                  setShowProfileDetailsModal(false);
+                  Alert.alert(
+                    'Edit Profile',
+                    'What would you like to update?',
+                    [
+                      { text: 'Name', onPress: () => handleEditProfile('name') },
+                      { text: 'Email', onPress: () => handleEditProfile('email') },
+                      { text: 'Introduction', onPress: () => handleEditProfile('introduction') },
+                      { text: 'Profile Photo', onPress: () => handleEditProfile('photo') },
+                      { text: 'Cancel', style: 'cancel' },
+                    ]
+                  );
+                }}
+              >
+                <Edit3 size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.profileDetailsContent}>
+                <View style={styles.profileDetailsAvatarContainer}>
+                  <Image
+                    source={{ uri: userProfile?.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150' }}
+                    style={styles.profileDetailsAvatar}
+                  />
+                  <TouchableOpacity
+                    style={styles.editPhotoButton}
+                    onPress={() => handleEditProfile('photo')}
+                  >
+                    <Camera size={16} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.profileDetailsInfo}>
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Display Name</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      {userProfile?.displayName || user?.email?.split('@')[0] || 'User'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Email</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>{user?.email || 'user@example.com'}</Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Focus Streak</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      🔥 {Math.floor((userProfile?.totalPoints || 0) / 50)} days
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Current Level</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      ⭐ Level {Math.floor((userProfile?.totalPoints || 0) / 100) + 1}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Total Points</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      🎯 {userProfile?.totalPoints || 0} points
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Goals Completed</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      ✅ {Math.floor((userProfile?.totalPoints || 0) / 30)} goals
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Member Since</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      📅 {userProfile?.createdAt ? new Date(userProfile.createdAt.toMillis()).toLocaleDateString() : 'Recently'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.profileActions}>
+                  <TouchableOpacity
+                    style={[styles.profileActionButton, { backgroundColor: '#4F46E5' }]}
+                    onPress={() => {
+                      setShowProfileDetailsModal(false);
+                      Alert.alert(
+                        'Edit Profile',
+                        'What would you like to update?',
+                        [
+                          { text: 'Name', onPress: () => handleEditProfile('name') },
+                          { text: 'Email', onPress: () => handleEditProfile('email') },
+                          { text: 'Introduction', onPress: () => handleEditProfile('introduction') },
+                          { text: 'Profile Photo', onPress: () => handleEditProfile('photo') },
+                          { text: 'Cancel', style: 'cancel' },
+                        ]
+                      );
+                    }}
+                  >
+                    <Edit3 size={20} color="#FFFFFF" />
+                    <Text style={styles.profileActionText}>Edit Profile</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.profileActionButton, { backgroundColor: '#10B981' }]}
+                    onPress={() => {
+                      // Share profile functionality
+                      Alert.alert('Share Profile', 'Share your profile with friends!');
+                    }}
+                  >
+                    <UserPlus size={20} color="#FFFFFF" />
+                    <Text style={styles.profileActionText}>Share Profile</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -745,6 +960,94 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+  },
+  profileAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  profileStats: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  profileStat: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  editButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  profileDetailsContent: {
+    padding: 24,
+  },
+  profileDetailsAvatarContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+    position: 'relative',
+  },
+  profileDetailsAvatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: '#4F46E5',
+  },
+  editPhotoButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#4F46E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  profileDetailsInfo: {
+    marginBottom: 32,
+  },
+  detailSection: {
+    marginBottom: 20,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  profileActions: {
+    gap: 12,
+  },
+  profileActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  profileActionText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   profileInfo: {
     flex: 1,
@@ -1030,89 +1333,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  faqContainer: {
-    flex: 1,
-    padding: 24,
-  },
-  faqCategoriesScroll: {
-    gap: 12,
-    marginBottom: 20,
-  },
-  faqCategoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  faqCategoryText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  faqList: {
-    flex: 1,
-    marginBottom: 20,
-  },
-  faqItem: {
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  faqQuestion: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  faqQuestionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 12,
-    lineHeight: 22,
-  },
-  faqAnswer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-  },
-  faqAnswerText: {
-    fontSize: 14,
-    lineHeight: 22,
-    marginTop: 12,
-  },
-  contactSupport: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 20,
-    alignItems: 'center',
-  },
-  contactSupportTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  contactSupportText: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  contactButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  contactButtonGradient: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  contactButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+  // Duplicate styles removed - keeping only the first definition
   faqContainer: {
     flex: 1,
     padding: 24,

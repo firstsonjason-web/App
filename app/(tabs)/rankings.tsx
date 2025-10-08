@@ -13,7 +13,10 @@ import { Trophy, Medal, Crown, Star, TrendingUp, Users, Target, Calendar, Award,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DashboardCard } from '@/components/DashboardCard';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { getColors } from '@/constants/Colors';
+import { DatabaseService } from '@/lib/firebase-services';
 
 const { width } = Dimensions.get('window');
 
@@ -144,47 +147,92 @@ const categories = [
 
 export default function RankingsScreen() {
   const { isDarkMode } = useDarkMode();
+  const { user } = useAuth();
+  const { userProfile, getTotalPoints } = useFirebaseData();
   const colors = getColors(isDarkMode);
-  const [leaderboard, setLeaderboard] = useState<User[]>(initialLeaderboard);
+  const [leaderboard, setLeaderboard] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState('weekly');
   const [selectedCategory, setSelectedCategory] = useState('global');
-  const [userPoints, setUserPoints] = useState(2156);
 
-  // Load user's current points from Daily Awards
+  // Load leaderboard from Firebase
   useEffect(() => {
-    const loadUserPoints = () => {
-      try {
-        // Get points from global storage (in a real app, this would be from AsyncStorage or API)
-        const dailyPoints = global.userDailyPoints || 0;
-        // Add daily points to existing total (simulating cumulative scoring)
-        const totalPoints = 2156 + dailyPoints;
-        setUserPoints(totalPoints);
-        
-        // Update the current user in the leaderboard state
-        setLeaderboard(prevLeaderboard => {
-          const updatedLeaderboard = [...prevLeaderboard];
-          const userIndex = updatedLeaderboard.findIndex(user => user.name === 'You');
-          if (userIndex !== -1) {
-            updatedLeaderboard[userIndex].points = totalPoints;
-            
-            // Recalculate rank based on new points
-            const sortedUsers = [...updatedLeaderboard].sort((a, b) => b.points - a.points);
-            const newRank = sortedUsers.findIndex(user => user.name === 'You') + 1;
-            updatedLeaderboard[userIndex].rank = newRank;
-          }
-          return updatedLeaderboard;
-        });
-      } catch (error) {
-        console.log('Error loading user points:', error);
-      }
-    };
+    loadLeaderboard();
+  }, [selectedTimeframe, selectedCategory]);
 
-    loadUserPoints();
-    
-    // Set up interval to check for point updates
-    const interval = setInterval(loadUserPoints, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const loadLeaderboard = async () => {
+    try {
+      setLoading(true);
+      const firebaseLeaderboard = await DatabaseService.getLeaderboard(50);
+
+      // Update current user's data in the leaderboard
+      if (userProfile) {
+        const currentUserPoints = getTotalPoints();
+        const currentUserIndex = firebaseLeaderboard.findIndex(user => user.id === user.uid);
+
+        if (currentUserIndex !== -1) {
+          firebaseLeaderboard[currentUserIndex] = {
+            ...firebaseLeaderboard[currentUserIndex],
+            points: currentUserPoints,
+            name: 'You',
+          };
+        } else {
+          // Add current user if not in leaderboard
+          firebaseLeaderboard.push({
+            id: user!.uid,
+            name: 'You',
+            avatar: userProfile ? userProfile.avatar || 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150' : 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150',
+            points: currentUserPoints,
+            rank: firebaseLeaderboard.length + 1,
+            level: `Level ${Math.floor(currentUserPoints / 100) + 1}`,
+            streak: Math.floor(currentUserPoints / 50),
+            country: '🇺🇸',
+            weeklyChange: 3,
+            badges: ['🎯', '💎', '🚀'],
+          });
+        }
+
+        // Re-sort leaderboard
+        firebaseLeaderboard.sort((a, b) => b.points - a.points);
+
+        // Update ranks
+        const updatedLeaderboard = firebaseLeaderboard.map((user, index) => ({
+          ...user,
+          rank: index + 1,
+        }));
+
+        setLeaderboard(updatedLeaderboard);
+      } else {
+        setLeaderboard(firebaseLeaderboard);
+      }
+    } catch (error) {
+      console.error('Error loading leaderboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load user's current points from Firebase
+  useEffect(() => {
+    if (userProfile) {
+      const totalPoints = getTotalPoints();
+
+      // Update the current user in the leaderboard state
+      setLeaderboard(prevLeaderboard => {
+        const updatedLeaderboard = [...prevLeaderboard];
+        const userIndex = updatedLeaderboard.findIndex(user => user.name === 'You');
+        if (userIndex !== -1) {
+          updatedLeaderboard[userIndex].points = totalPoints;
+
+          // Recalculate rank based on new points
+          const sortedUsers = [...updatedLeaderboard].sort((a, b) => b.points - a.points);
+          const newRank = sortedUsers.findIndex(user => user.name === 'You') + 1;
+          updatedLeaderboard[userIndex].rank = newRank;
+        }
+        return updatedLeaderboard;
+      });
+    }
+  }, [userProfile, getTotalPoints]);
 
   const currentUser = leaderboard.find(user => user.name === 'You');
   const topUsers = leaderboard.slice(0, 3);
@@ -262,7 +310,7 @@ export default function RankingsScreen() {
                         </Text>
                       </View>
                     </View>
-                    <Text style={styles.yourRankPoints}>{userPoints} points</Text>
+                    <Text style={styles.yourRankPoints}>{getTotalPoints()} points</Text>
                   </View>
                   <View style={styles.yourRankRight}>
                     <Image source={{ uri: currentUser.avatar }} style={styles.yourRankAvatar} />
@@ -339,52 +387,58 @@ export default function RankingsScreen() {
           </View>
 
           {/* Top 3 Podium */}
-          <View style={styles.podiumContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Top Champions</Text>
-            <View style={styles.podium}>
-              {/* 2nd Place */}
-              <View style={[styles.podiumPlace, styles.secondPlace]}>
-                <LinearGradient
-                  colors={isDarkMode ? ['#9CA3AF', '#6B7280'] : getRankColors(2)}
-                  style={styles.podiumGradient}
-                >
-                  <Image source={{ uri: topUsers[1].avatar }} style={styles.podiumAvatar} />
-                  <Medal size={20} color="#C0C0C0" />
-                  <Text style={styles.podiumName}>{topUsers[1].name}</Text>
-                  <Text style={styles.podiumPoints}>{topUsers[1].points}</Text>
-                </LinearGradient>
-              </View>
-
-              {/* 1st Place */}
-              <View style={[styles.podiumPlace, styles.firstPlace]}>
-                <LinearGradient
-                  colors={isDarkMode ? ['#F59E0B', '#D97706'] : getRankColors(1)}
-                  style={styles.podiumGradient}
-                >
-                  <Image source={{ uri: topUsers[0].avatar }} style={styles.podiumAvatar} />
-                  <Crown size={24} color="#FFD700" />
-                  <Text style={styles.podiumName}>{topUsers[0].name}</Text>
-                  <Text style={styles.podiumPoints}>{topUsers[0].points}</Text>
-                  <View style={styles.crownEffect}>
-                    <Star size={12} color="#FFD700" />
+          {topUsers.length > 0 && (
+            <View style={styles.podiumContainer}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Top Champions</Text>
+              <View style={styles.podium}>
+                {/* 2nd Place */}
+                {topUsers.length > 1 && (
+                  <View style={[styles.podiumPlace, styles.secondPlace]}>
+                    <LinearGradient
+                      colors={isDarkMode ? ['#9CA3AF', '#6B7280'] : (getRankColors(2) as [string, string])}
+                      style={styles.podiumGradient}
+                    >
+                      <Image source={{ uri: topUsers[1].avatar }} style={styles.podiumAvatar} />
+                      <Medal size={20} color="#C0C0C0" />
+                      <Text style={styles.podiumName}>{topUsers[1].name}</Text>
+                      <Text style={styles.podiumPoints}>{topUsers[1].points}</Text>
+                    </LinearGradient>
                   </View>
-                </LinearGradient>
-              </View>
+                )}
 
-              {/* 3rd Place */}
-              <View style={[styles.podiumPlace, styles.thirdPlace]}>
-                <LinearGradient
-                  colors={isDarkMode ? ['#CD7F32', '#A0522D'] : getRankColors(3)}
-                  style={styles.podiumGradient}
-                >
-                  <Image source={{ uri: topUsers[2].avatar }} style={styles.podiumAvatar} />
-                  <Medal size={20} color="#CD7F32" />
-                  <Text style={styles.podiumName}>{topUsers[2].name}</Text>
-                  <Text style={styles.podiumPoints}>{topUsers[2].points}</Text>
-                </LinearGradient>
+                {/* 1st Place */}
+                <View style={[styles.podiumPlace, styles.firstPlace]}>
+                  <LinearGradient
+                    colors={isDarkMode ? ['#F59E0B', '#D97706'] : (getRankColors(1) as [string, string])}
+                    style={styles.podiumGradient}
+                  >
+                    <Image source={{ uri: topUsers[0].avatar }} style={styles.podiumAvatar} />
+                    <Crown size={24} color="#FFD700" />
+                    <Text style={styles.podiumName}>{topUsers[0].name}</Text>
+                    <Text style={styles.podiumPoints}>{topUsers[0].points}</Text>
+                    <View style={styles.crownEffect}>
+                      <Star size={12} color="#FFD700" />
+                    </View>
+                  </LinearGradient>
+                </View>
+
+                {/* 3rd Place */}
+                {topUsers.length > 2 && (
+                  <View style={[styles.podiumPlace, styles.thirdPlace]}>
+                    <LinearGradient
+                      colors={isDarkMode ? ['#CD7F32', '#A0522D'] : (getRankColors(3) as [string, string])}
+                      style={styles.podiumGradient}
+                    >
+                      <Image source={{ uri: topUsers[2].avatar }} style={styles.podiumAvatar} />
+                      <Medal size={20} color="#CD7F32" />
+                      <Text style={styles.podiumName}>{topUsers[2].name}</Text>
+                      <Text style={styles.podiumPoints}>{topUsers[2].points}</Text>
+                    </LinearGradient>
+                  </View>
+                )}
               </View>
             </View>
-          </View>
+          )}
 
           {/* Leaderboard */}
           <View style={styles.leaderboardContainer}>

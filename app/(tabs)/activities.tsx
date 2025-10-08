@@ -29,14 +29,18 @@ import {
   Flower,
   Star,
   ExternalLink,
+  CheckCircle,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DashboardCard } from '@/components/DashboardCard';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseData } from '@/hooks/useFirebaseData';
+import { formatTime, Activity as FirebaseActivity, DatabaseService } from '@/lib/firebase-services';
 import { getColors } from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface Activity {
+interface ActivityTemplate {
   id: number;
   title: string;
   description: string;
@@ -51,7 +55,7 @@ interface Activity {
   videoThumbnail?: string;
 }
 
-const activities: Activity[] = [
+const activityTemplates: ActivityTemplate[] = [
   {
     id: 1,
     title: 'Nature Walk',
@@ -183,6 +187,8 @@ const difficultyColors = {
 
 export default function ActivitiesScreen() {
   const { isDarkMode } = useDarkMode();
+  const { user } = useAuth();
+  const { activities, userProfile } = useFirebaseData();
   const colors = getColors(isDarkMode);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandedActivity, setExpandedActivity] = useState<number | null>(null);
@@ -190,49 +196,67 @@ export default function ActivitiesScreen() {
 
   useEffect(() => {
     loadUserAddictionLevel();
-  }, []);
+  }, [user]);
 
   const loadUserAddictionLevel = async () => {
+    if (!user) return;
+
     try {
-      const level = await AsyncStorage.getItem('addictionLevel');
-      if (level) {
-        setUserAddictionLevel(level as 'low' | 'moderate' | 'high');
+      // For now, use a simple calculation based on user's total points
+      // In a real app, this could be more sophisticated
+      const totalPoints = userProfile?.totalPoints || 0;
+      let level: 'low' | 'moderate' | 'high';
+
+      if (totalPoints < 100) {
+        level = 'high'; // New users likely need more help
+      } else if (totalPoints < 500) {
+        level = 'moderate';
+      } else {
+        level = 'low';
       }
+
+      setUserAddictionLevel(level);
     } catch (error) {
-      console.log('Error loading addiction level:', error);
+      console.log('Error determining addiction level:', error);
     }
   };
 
   const getRecommendedActivities = () => {
-    if (!userAddictionLevel) return activities;
-    
+    if (!userAddictionLevel) return activityTemplates;
+
     switch (userAddictionLevel) {
       case 'low':
         // Light activities for users with low digital dependency
-        return activities.filter(activity => 
-          activity.difficulty === 'Easy' && 
+        return activityTemplates.filter(activity =>
+          activity.difficulty === 'Easy' &&
           ['Creative', 'Learning', 'Mindful'].includes(activity.category)
         );
       case 'moderate':
         // Structured activities for moderate users
-        return activities.filter(activity => 
+        return activityTemplates.filter(activity =>
           ['Easy', 'Medium'].includes(activity.difficulty) &&
           ['Physical', 'Creative', 'Social'].includes(activity.category)
         );
       case 'high':
         // Intensive activities for high dependency users
-        return activities.filter(activity => 
+        return activityTemplates.filter(activity =>
           ['Medium', 'Hard'].includes(activity.difficulty) &&
           ['Physical', 'Mindful'].includes(activity.category)
         );
       default:
-        return activities;
+        return activityTemplates;
     }
   };
   const recommendedActivities = getRecommendedActivities();
-  const filteredActivities = selectedCategory === 'all' 
-    ? recommendedActivities 
+  const filteredActivities = selectedCategory === 'all'
+    ? recommendedActivities
     : recommendedActivities.filter(activity => activity.category === selectedCategory);
+
+  // Get user's completed activities for display
+  const userCompletedActivities = activities.map(firebaseActivity => {
+    const templateActivity = activityTemplates.find(template => template.title === firebaseActivity.title);
+    return templateActivity ? { ...templateActivity, completedAt: firebaseActivity.completedAt } : null;
+  }).filter(Boolean);
 
   const openYouTubeVideo = async (videoId: string, videoTitle: string) => {
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -251,6 +275,32 @@ export default function ActivitiesScreen() {
 
   const toggleActivityExpansion = (activityId: number) => {
     setExpandedActivity(expandedActivity === activityId ? null : activityId);
+  };
+
+  const completeActivity = async (activity: ActivityTemplate) => {
+    if (!user) {
+      Alert.alert('Authentication Required', 'Please log in to track your activities.');
+      return;
+    }
+
+    try {
+      // Add activity to Firebase
+      await DatabaseService.addActivity({
+        userId: user.uid,
+        title: activity.title,
+        completedAt: new Date() as any, // Firebase Timestamp
+        points: activity.difficulty === 'Easy' ? 10 : activity.difficulty === 'Medium' ? 20 : 30
+      });
+
+      Alert.alert(
+        'Activity Completed! 🎉',
+        `Great job completing "${activity.title}"! You've earned ${activity.difficulty === 'Easy' ? 10 : activity.difficulty === 'Medium' ? 20 : 30} points.`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Error completing activity:', error);
+      Alert.alert('Error', 'Failed to save activity. Please try again.');
+    }
   };
 
   return (
@@ -358,30 +408,31 @@ export default function ActivitiesScreen() {
           {/* Activities List */}
           <View style={styles.activitiesContainer}>
             {filteredActivities.map((activity) => {
-              const IconComponent = activity.icon;
-              const isExpanded = expandedActivity === activity.id;
-              
+              const activityData = activity as any; // Type assertion for static activity data
+              const IconComponent = activityData.icon;
+              const isExpanded = expandedActivity === activityData.id;
+
               return (
-                <DashboardCard key={activity.id} style={styles.activityCard}>
+                <DashboardCard key={activityData.id} style={styles.activityCard}>
                   <TouchableOpacity
                     style={styles.activityHeader}
-                    onPress={() => toggleActivityExpansion(activity.id)}
+                    onPress={() => toggleActivityExpansion(activityData.id)}
                   >
-                    <View style={[styles.activityIcon, { backgroundColor: activity.color }]}>
+                    <View style={[styles.activityIcon, { backgroundColor: activityData.color }]}>
                       <IconComponent size={24} color="#FFFFFF" />
                     </View>
                     <View style={styles.activityInfo}>
-                      <Text style={[styles.activityTitle, { color: colors.text }]}>{activity.title}</Text>
+                      <Text style={[styles.activityTitle, { color: colors.text }]}>{activityData.title}</Text>
                       <View style={styles.activityMeta}>
                         <View style={[
                           styles.difficultyBadge,
-                          { backgroundColor: difficultyColors[activity.difficulty] }
+                          { backgroundColor: difficultyColors[activityData.difficulty as keyof typeof difficultyColors] }
                         ]}>
-                          <Text style={styles.difficultyText}>{activity.difficulty}</Text>
+                          <Text style={styles.difficultyText}>{activityData.difficulty}</Text>
                         </View>
                         <View style={styles.durationContainer}>
                           <Clock size={14} color={colors.textSecondary} />
-                          <Text style={[styles.durationText, { color: colors.textSecondary }]}>{activity.duration}</Text>
+                          <Text style={[styles.durationText, { color: colors.textSecondary }]}>{activityData.duration}</Text>
                         </View>
                       </View>
                     </View>
@@ -389,36 +440,36 @@ export default function ActivitiesScreen() {
 
                   {isExpanded && (
                     <View style={styles.activityDetails}>
-                      <Text style={[styles.activityDescription, { color: colors.text }]}>{activity.description}</Text>
-                      
+                      <Text style={[styles.activityDescription, { color: colors.text }]}>{activityData.description}</Text>
+
                       <View style={styles.benefitsSection}>
                         <Text style={[styles.benefitsTitle, { color: colors.text }]}>Benefits:</Text>
                         <View style={styles.benefitsList}>
-                          {activity.benefits.map((benefit, index) => (
+                          {activityData.benefits.map((benefit: string, index: number) => (
                             <View key={index} style={styles.benefitItem}>
-                              <Star size={12} color={activity.color} />
+                              <Star size={12} color={activityData.color} />
                               <Text style={[styles.benefitText, { color: colors.textSecondary }]}>{benefit}</Text>
                             </View>
                           ))}
                         </View>
                       </View>
 
-                      {activity.videoId && (
+                      {activityData.videoId && (
                         <View style={styles.videoSection}>
                           <Text style={[styles.videoSectionTitle, { color: colors.text }]}>Learn More:</Text>
                           <TouchableOpacity
                             style={[styles.videoCard, { backgroundColor: colors.background, borderColor: colors.border }]}
-                            onPress={() => openYouTubeVideo(activity.videoId!, activity.videoTitle!)}
+                            onPress={() => openYouTubeVideo(activityData.videoId, activityData.videoTitle)}
                           >
-                            <Image 
-                              source={{ uri: activity.videoThumbnail }} 
+                            <Image
+                              source={{ uri: activityData.videoThumbnail }}
                               style={styles.videoThumbnail}
                             />
                             <View style={styles.videoOverlay}>
                               <Play size={24} color="#FFFFFF" />
                             </View>
                             <View style={styles.videoInfo}>
-                              <Text style={[styles.videoTitle, { color: colors.text }]}>{activity.videoTitle}</Text>
+                              <Text style={[styles.videoTitle, { color: colors.text }]}>{activityData.videoTitle}</Text>
                               <View style={styles.videoMeta}>
                                 <ExternalLink size={14} color={colors.textSecondary} />
                                 <Text style={[styles.videoSource, { color: colors.textSecondary }]}>Watch on YouTube</Text>
@@ -427,6 +478,15 @@ export default function ActivitiesScreen() {
                           </TouchableOpacity>
                         </View>
                       )}
+
+                      {/* Complete Activity Button */}
+                      <TouchableOpacity
+                        style={[styles.completeButton, { backgroundColor: activityData.color }]}
+                        onPress={() => completeActivity(activityData)}
+                      >
+                        <CheckCircle size={20} color="#FFFFFF" />
+                        <Text style={styles.completeButtonText}>Mark as Complete</Text>
+                      </TouchableOpacity>
                     </View>
                   )}
                 </DashboardCard>
@@ -434,13 +494,53 @@ export default function ActivitiesScreen() {
             })}
           </View>
 
+          {/* User's Completed Activities */}
+          {user && activities.length > 0 && (
+            <View style={styles.completedSection}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Your Completed Activities
+              </Text>
+              <View style={styles.activitiesContainer}>
+                {activities.slice(0, 3).map((firebaseActivity, index) => {
+                  // Find matching template activity for icon and color
+                  const templateActivity = activityTemplates.find(template => template.title === firebaseActivity.title);
+
+                  return (
+                    <DashboardCard key={`completed-${firebaseActivity.id}`} style={styles.completedActivityCard}>
+                      <View style={styles.completedActivityHeader}>
+                        <View style={[styles.activityIcon, { backgroundColor: templateActivity?.color || '#6B7280' }]}>
+                          {templateActivity?.icon ? (
+                            React.createElement(templateActivity.icon, { size: 24, color: "#FFFFFF" })
+                          ) : (
+                            <TreePine size={24} color="#FFFFFF" />
+                          )}
+                        </View>
+                        <View style={styles.activityInfo}>
+                          <Text style={[styles.activityTitle, { color: colors.text }]}>
+                            {firebaseActivity.title || 'Unknown Activity'}
+                          </Text>
+                          <Text style={[styles.completedDate, { color: colors.textSecondary }]}>
+                            Completed {formatTime(firebaseActivity.completedAt)}
+                          </Text>
+                        </View>
+                        <View style={styles.completedBadge}>
+                          <CheckCircle size={20} color="#10B981" />
+                        </View>
+                      </View>
+                    </DashboardCard>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
           {/* Daily Challenge */}
           <View style={styles.challengeContainer}>
             <DashboardCard>
               <View style={styles.challengeContent}>
                 <Text style={[styles.challengeTitle, { color: colors.text }]}>Today's Challenge</Text>
                 <Text style={[styles.challengeDescription, { color: colors.textSecondary }]}>
-                  Try one new activity from the list above for at least 15 minutes. 
+                  Try one new activity from the list above for at least 15 minutes.
                   Notice how you feel before and after!
                 </Text>
                 <View style={styles.challengeStats}>
@@ -732,5 +832,46 @@ const styles = StyleSheet.create({
   noticeDescription: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  completedSection: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  completedActivityCard: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  completedActivityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  completedDate: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  completedBadge: {
+    marginLeft: 'auto',
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  completeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 8,
+  },
+  completeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
