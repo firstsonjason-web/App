@@ -1,15 +1,10 @@
 import { Tabs } from 'expo-router';
-import { LogIn, Chrome as Home, TrendingUp, Users, User, MessageCircle, Trophy } from 'lucide-react-native';
-import { useTranslation } from '@/hooks/useTranslation';
-
-import { createClient } from '@supabase/supabase-js'
-const supabaseUrl = 'https://rmlugnqqlrpilcerrnuh.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtbHVnbnFxbHJwaWxjZXJybnVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNzg4MzIsImV4cCI6MjA3MTc1NDgzMn0.jLWR0KIvshkKnqoMAQSwoA9TsfSPnbkRxrmt1WTMUS8'
-const supabase = createClient(supabaseUrl, supabaseKey)
+import { Chrome as Home, TrendingUp, Users, User, MessageCircle, Trophy } from 'lucide-react-native';
+import { useLanguage } from '@/hooks/LanguageContext';
 
 
 export default function TabLayout() {
-  const { t } = useTranslation();
+  const { t } = useLanguage();
 
   return (
     <Tabs

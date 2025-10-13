@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { DarkModeContext, useDarkModeState } from '@/hooks/useDarkMode';
 import { AuthProvider, useAuth } from '@/hooks/useFirebaseAuth';
+import { LanguageProvider } from '@/hooks/LanguageContext';
 
 function AppNavigator() {
   const { user, loading } = useAuth();
@@ -29,10 +30,12 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <DarkModeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
-        <AppNavigator />
-        <StatusBar style={isDarkMode ? "light" : "auto"} />
-      </DarkModeContext.Provider>
+      <LanguageProvider>
+        <DarkModeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
+          <AppNavigator />
+          <StatusBar style={isDarkMode ? "light" : "auto"} />
+        </DarkModeContext.Provider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

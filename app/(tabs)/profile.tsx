@@ -24,6 +24,7 @@ import { getColors } from '@/constants/Colors';
 import { DatabaseService } from '@/lib/firebase-services';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { useLanguage } from '@/hooks/LanguageContext';
 
 interface UserProfile {
   name: string;
@@ -45,12 +46,12 @@ export default function ProfileScreen() {
     requestPermissions,
     updateNotificationSettings
   } = useNotifications();
+  const { t, currentLanguage, changeLanguage } = useLanguage();
   const colors = getColors(isDarkMode);
 
   const [notifications, setNotifications] = useState(isNotificationsEnabled);
   const [dailySummary, setDailySummary] = useState(isDailySummaryEnabled);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
   const [showEditModal, setShowEditModal] = useState(false);
   const [editType, setEditType] = useState<'name' | 'email' | 'introduction' | 'photo'>('name');
   const [tempValue, setTempValue] = useState('');
@@ -88,9 +89,7 @@ export default function ProfileScreen() {
       if (savedDailySummary !== null) {
         setDailySummary(JSON.parse(savedDailySummary));
       }
-      if (savedLanguage !== null) {
-        setSelectedLanguage(savedLanguage);
-      }
+      // Language is now managed by useTranslation hook
       if (savedProfile !== null) {
         setLocalUserProfile(JSON.parse(savedProfile));
       }
@@ -138,11 +137,36 @@ export default function ProfileScreen() {
     updateNotificationSettings(notifications, value);
   };
 
-  const handleLanguageSelect = (language: string) => {
-    setSelectedLanguage(language);
-    saveSettings('language', language);
-    setShowLanguageModal(false);
-    Alert.alert('Language Updated', `Language changed to ${language}`);
+  const handleLanguageSelect = async (language: string) => {
+    console.log('🔤 LANGUAGE DEBUG: Language selection started in profile.tsx');
+    console.log('🔤 LANGUAGE DEBUG: Selected language value:', language);
+    console.log('🔤 LANGUAGE DEBUG: Current language before change:', currentLanguage);
+
+    try {
+      // Map display name to language code
+      const languageCode = languageMapping[language] as any;
+
+      if (!languageCode) {
+        console.error('🔤 LANGUAGE DEBUG: No mapping found for language:', language);
+        Alert.alert(t('error'), `Unsupported language: ${language}`);
+        return;
+      }
+
+      console.log('🔤 LANGUAGE DEBUG: Mapped display name to language code:', language, '->', languageCode);
+      console.log('🔤 LANGUAGE DEBUG: Calling changeLanguage function...');
+      await changeLanguage(languageCode);
+
+      console.log('🔤 LANGUAGE DEBUG: Language modal closing...');
+      setShowLanguageModal(false);
+
+      console.log('🔤 LANGUAGE DEBUG: Showing success alert...');
+      Alert.alert(t('success'), `Language changed to ${language}`);
+
+      console.log('🔤 LANGUAGE DEBUG: Language selection completed successfully');
+    } catch (error) {
+      console.error('🔤 LANGUAGE DEBUG: Error in handleLanguageSelect:', error);
+      console.error('🔤 LANGUAGE DEBUG: Language selection failed for:', language);
+    }
   };
 
   const handleEditProfile = (type: 'name' | 'email' | 'introduction' | 'photo') => {
@@ -157,19 +181,19 @@ export default function ProfileScreen() {
 
   const handlePhotoUpload = () => {
     Alert.alert(
-      'Update Profile Photo',
-      'Choose how you want to update your profile photo:',
+      t('updateProfilePhotoTitle'),
+      t('updateProfilePhotoMessage'),
       [
         {
-          text: 'Take Photo',
+          text: t('takePhotoOption'),
           onPress: () => openCamera(),
         },
         {
-          text: 'Choose from Gallery',
+          text: t('chooseFromGalleryOption'),
           onPress: () => openImagePicker(),
         },
         {
-          text: 'Cancel',
+          text: t('cancel'),
           style: 'cancel',
         },
       ]
@@ -180,7 +204,7 @@ export default function ProfileScreen() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Camera permission is required to take photos.');
+        Alert.alert(t('permissionNeeded'), t('cameraPermissionRequired'));
         return;
       }
 
@@ -202,14 +226,14 @@ export default function ProfileScreen() {
           const newProfile = { ...localUserProfile, avatar: result.assets[0].uri };
           setLocalUserProfile(newProfile);
 
-          Alert.alert('Success', 'Profile photo updated successfully!');
+          Alert.alert(t('success'), t('profilePhotoUpdatedSuccessfully'));
         } catch (error) {
           console.error('Error updating profile photo:', error);
-          Alert.alert('Error', 'Failed to update profile photo. Please try again.');
+          Alert.alert(t('error'), t('failedToUpdateProfilePhoto'));
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to access camera');
+      Alert.alert(t('error'), t('failedToAccessCamera'));
     }
   };
 
@@ -217,7 +241,7 @@ export default function ProfileScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Media library permission is required to select photos.');
+        Alert.alert(t('permissionNeeded'), t('mediaLibraryPermissionRequired'));
         return;
       }
 
@@ -239,14 +263,14 @@ export default function ProfileScreen() {
           const newProfile = { ...localUserProfile, avatar: result.assets[0].uri };
           setLocalUserProfile(newProfile);
 
-          Alert.alert('Success', 'Profile photo updated successfully!');
+          Alert.alert(t('success'), t('profilePhotoUpdatedSuccessfully'));
         } catch (error) {
           console.error('Error updating profile photo:', error);
-          Alert.alert('Error', 'Failed to update profile photo. Please try again.');
+          Alert.alert(t('error'), t('failedToUpdateProfilePhoto'));
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to access media library');
+      Alert.alert(t('error'), t('failedToAccessMediaLibrary'));
     }
   };
 
@@ -271,34 +295,50 @@ export default function ProfileScreen() {
 
         setShowEditModal(false);
         setTempValue('');
-        Alert.alert('Success', `${editType.charAt(0).toUpperCase() + editType.slice(1)} updated successfully!`);
+        Alert.alert(t('success'), `${editType.charAt(0).toUpperCase() + editType.slice(1)} ${t('profileUpdatedSuccessfully')}`);
       } catch (error) {
         console.error('Error updating profile:', error);
-        Alert.alert('Error', 'Failed to update profile. Please try again.');
+        Alert.alert(t('error'), t('failedToUpdateProfile'));
       }
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-              Alert.alert('Logged Out', 'You have been logged out successfully.');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
-          }
-        },
-      ]
-    );
+    console.log('🚨 LOGOUT BUTTON PRESSED - handleLogout function called');
+    console.log('🚨 Current user:', user?.email);
+
+    // Check if user is authenticated
+    if (!user) {
+      console.log('🚨 No user found, cannot logout');
+      Alert.alert(t('error'), t('noUserCurrentlyLoggedIn'));
+      return;
+    }
+
+    console.log('🚨 Starting logout process immediately (skipping dialog for web)...');
+
+    try {
+      console.log('🚨 LOGOUT CONFIRMED - Starting logout process...');
+      console.log('🚨 User before signout:', user.email);
+
+      // Call signOut from auth hook
+      await signOut();
+      console.log('🚨 SIGNOUT SUCCESSFUL - User signed out from Firebase');
+
+      // Clear any stored user data
+      await AsyncStorage.multiRemove(['userProfile', 'isLoggedIn', 'notifications', 'daily_summary']);
+      console.log('🚨 DATA CLEARED - Local storage cleared');
+
+      console.log('🚨 NAVIGATING TO LANDING PAGE...');
+      // Navigate to landing page - use replace to prevent going back
+      router.replace('/landing');
+      console.log('🚨 NAVIGATION COMPLETE');
+
+    } catch (error) {
+      console.error('🚨 LOGOUT ERROR:', error);
+      console.error('🚨 Error details:', JSON.stringify(error, null, 2));
+      const errorMessage = error instanceof Error ? error.message : t('unknownError');
+      Alert.alert(t('error'), t('failedToLogout', { errorMessage: errorMessage }));
+    }
   };
 
   const handleSubscriptionSelect = async (plan: 'free' | 'pro' | 'promax') => {
@@ -314,9 +354,9 @@ export default function ProfileScreen() {
       };
       
       Alert.alert(
-        'Plan Updated',
-        `You have successfully switched to ${planNames[plan]}!`,
-        [{ text: 'OK' }]
+        t('planUpdated'),
+        t('successfullySwitchedToPlan', { planName: planNames[plan] }),
+        [{ text: t('ok') }]
       );
     } catch (error) {
       Alert.alert('Error', 'Failed to update subscription plan');
@@ -365,10 +405,25 @@ export default function ProfileScreen() {
     'German',
     'Italian',
     'Portuguese',
-    'Chinese',
+    'Chinese (Simplified)',
+    'Chinese (Traditional)',
     'Japanese',
     'Korean',
   ];
+
+  // Language mapping from display names to language codes
+  const languageMapping: { [key: string]: string } = {
+    'English': 'en',
+    'Chinese (Simplified)': 'zh_CN',
+    'Chinese (Traditional)': 'zh_TW',
+    'Spanish': 'es',
+    'French': 'fr',
+    'German': 'de',
+    'Italian': 'it',
+    'Portuguese': 'pt',
+    'Japanese': 'ja',
+    'Korean': 'ko',
+  };
 
   const getEditIcon = (type: string) => {
     switch (type) {
@@ -402,8 +457,8 @@ export default function ProfileScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Manage your account and preferences</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('profile')}</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('manageAccountPreferences')}</Text>
           </View>
 
           {/* Profile Card */}
@@ -487,13 +542,13 @@ export default function ProfileScreen() {
 
           {/* Notifications */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Notifications</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('notifications')}</Text>
             <DashboardCard>
               <View style={styles.settingsList}>
                 <View style={styles.settingItem}>
                   <View style={styles.settingLeft}>
                     <Bell size={20} color="#4F46E5" />
-                    <Text style={[styles.settingText, { color: colors.text }]}>Push Notifications</Text>
+                    <Text style={[styles.settingText, { color: colors.text }]}>{t('pushNotifications')}</Text>
                   </View>
                   <Switch
                     value={notifications}
@@ -506,7 +561,7 @@ export default function ProfileScreen() {
                 <View style={[styles.settingItem, styles.settingItemLast]}>
                   <View style={styles.settingLeft}>
                     <Settings size={20} color="#10B981" />
-                    <Text style={[styles.settingText, { color: colors.text }]}>Daily Summary</Text>
+                    <Text style={[styles.settingText, { color: colors.text }]}>{t('dailySummary')}</Text>
                   </View>
                   <Switch
                     value={dailySummary}
@@ -521,7 +576,7 @@ export default function ProfileScreen() {
 
           {/* Privacy & Security */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Privacy & Security</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('privacySecurity')}</Text>
             <DashboardCard>
               <View style={styles.settingsList}>
                 <TouchableOpacity style={styles.settingItem}>
@@ -537,7 +592,7 @@ export default function ProfileScreen() {
 
           {/* Preferences */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('accountSettings')}</Text>
             <DashboardCard>
               <View style={styles.settingsList}>
                 <View style={styles.settingItem}>
@@ -557,16 +612,31 @@ export default function ProfileScreen() {
                   />
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.settingItem, styles.settingItemLast]}
-                  onPress={() => setShowLanguageModal(true)}
+                  onPress={() => {
+                    console.log('🔤 LANGUAGE DEBUG: Language modal opening in profile.tsx...');
+                    console.log('🔤 LANGUAGE DEBUG: Current language when modal opened:', currentLanguage);
+                    setShowLanguageModal(true);
+                  }}
                 >
                   <View style={styles.settingLeft}>
                     <Globe size={20} color="#10B981" />
                     <Text style={[styles.settingText, { color: colors.text }]}>Language</Text>
                   </View>
                   <View style={styles.settingRight}>
-                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedLanguage}</Text>
+                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                      {currentLanguage === 'en' ? 'English' :
+                       currentLanguage === 'zh_CN' ? 'Chinese (Simplified)' :
+                       currentLanguage === 'zh_TW' ? 'Chinese (Traditional)' :
+                       currentLanguage === 'es' ? 'Spanish' :
+                       currentLanguage === 'fr' ? 'French' :
+                       currentLanguage === 'de' ? 'German' :
+                       currentLanguage === 'it' ? 'Italian' :
+                       currentLanguage === 'pt' ? 'Portuguese' :
+                       currentLanguage === 'ja' ? 'Japanese' :
+                       currentLanguage === 'ko' ? 'Korean' : currentLanguage}
+                    </Text>
                     <ChevronRight size={20} color={colors.textTertiary} />
                   </View>
                 </TouchableOpacity>
@@ -579,6 +649,17 @@ export default function ProfileScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Support</Text>
             <DashboardCard>
               <View style={styles.settingsList}>
+                <TouchableOpacity
+                  style={styles.settingItem}
+                  onPress={() => setShowFAQModal(true)}
+                >
+                  <View style={styles.settingLeft}>
+                    <HelpCircle size={20} color="#6B7280" />
+                    <Text style={[styles.settingText, { color: colors.text }]}>FAQ</Text>
+                  </View>
+                  <ChevronRight size={20} color={colors.textTertiary} />
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.settingItem}>
                   <View style={styles.settingLeft}>
                     <HelpCircle size={20} color="#6B7280" />
@@ -587,7 +668,7 @@ export default function ProfileScreen() {
                   <ChevronRight size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.settingItem, styles.settingItemLast]}
                   onPress={handleLogout}
                 >
@@ -660,7 +741,11 @@ export default function ProfileScreen() {
         >
           <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+              <TouchableOpacity onPress={() => {
+                console.log('🔤 LANGUAGE DEBUG: Language modal closing via X button in profile.tsx...');
+                console.log('🔤 LANGUAGE DEBUG: Current language when modal closed:', currentLanguage);
+                setShowLanguageModal(false);
+              }}>
                 <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Select Language</Text>
@@ -674,18 +759,24 @@ export default function ProfileScreen() {
                   style={[
                     styles.languageItem,
                     { backgroundColor: colors.background },
-                    selectedLanguage === language && styles.selectedLanguageItem
+                    ((language === 'Chinese (Simplified)' && currentLanguage === 'zh_CN') ||
+                    (language === 'Chinese (Traditional)' && currentLanguage === 'zh_TW') ||
+                    currentLanguage === language.toLowerCase()) && styles.selectedLanguageItem
                   ]}
                   onPress={() => handleLanguageSelect(language)}
                 >
                   <Text style={[
                     styles.languageText,
                     { color: colors.text },
-                    selectedLanguage === language && styles.selectedLanguageText
+                    ((language === 'Chinese (Simplified)' && currentLanguage === 'zh_CN') ||
+                      (language === 'Chinese (Traditional)' && currentLanguage === 'zh_TW') ||
+                      currentLanguage === language.toLowerCase()) && styles.selectedLanguageText
                   ]}>
                     {language}
                   </Text>
-                  {selectedLanguage === language && (
+                  {((language === 'Chinese (Simplified)' && currentLanguage === 'zh_CN') ||
+                    (language === 'Chinese (Traditional)' && currentLanguage === 'zh_TW') ||
+                    currentLanguage === language.toLowerCase()) && (
                     <View style={styles.checkmark}>
                       <Text style={styles.checkmarkText}>✓</Text>
                     </View>
@@ -901,6 +992,147 @@ export default function ProfileScreen() {
                     <Text style={styles.profileActionText}>Share Profile</Text>
                   </TouchableOpacity>
                 </View>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+
+        {/* FAQ Modal */}
+        <Modal
+          visible={showFAQModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowFAQModal(false)}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>FAQ</Text>
+              <View style={{ width: 24 }} />
+            </View>
+
+            <ScrollView style={styles.faqContainer}>
+              <View style={styles.faqList}>
+                {/* FAQ Item 1 */}
+                <TouchableOpacity
+                  style={[styles.faqItem, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => setExpandedFAQ(expandedFAQ === 1 ? null : 1)}
+                >
+                  <View style={styles.faqQuestion}>
+                    <Text style={[styles.faqQuestionText, { color: colors.text }]}>
+                      1. Is the plan regular or irregular?
+                    </Text>
+                    <ChevronRight
+                      size={20}
+                      color={colors.textTertiary}
+                      style={{ transform: [{ rotate: expandedFAQ === 1 ? '90deg' : '0deg' }] }}
+                    />
+                  </View>
+                  {expandedFAQ === 1 && (
+                    <View style={[styles.faqAnswer, { borderTopColor: colors.border }]}>
+                      <Text style={[styles.faqAnswerText, { color: colors.textSecondary }]}>
+                        —regular
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* FAQ Item 2 */}
+                <TouchableOpacity
+                  style={[styles.faqItem, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => setExpandedFAQ(expandedFAQ === 2 ? null : 2)}
+                >
+                  <View style={styles.faqQuestion}>
+                    <Text style={[styles.faqQuestionText, { color: colors.text }]}>
+                      2. What if I want to add more tasks/friends every day or gain a summary report?
+                    </Text>
+                    <ChevronRight
+                      size={20}
+                      color={colors.textTertiary}
+                      style={{ transform: [{ rotate: expandedFAQ === 2 ? '90deg' : '0deg' }] }}
+                    />
+                  </View>
+                  {expandedFAQ === 2 && (
+                    <View style={[styles.faqAnswer, { borderTopColor: colors.border }]}>
+                      <Text style={[styles.faqAnswerText, { color: colors.textSecondary }]}>
+                        —Upgrade to the Pro or Promax plan
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* FAQ Item 3 */}
+                <TouchableOpacity
+                  style={[styles.faqItem, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => setExpandedFAQ(expandedFAQ === 3 ? null : 3)}
+                >
+                  <View style={styles.faqQuestion}>
+                    <Text style={[styles.faqQuestionText, { color: colors.text }]}>
+                      3. What can I do without using electronic devices?
+                    </Text>
+                    <ChevronRight
+                      size={20}
+                      color={colors.textTertiary}
+                      style={{ transform: [{ rotate: expandedFAQ === 3 ? '90deg' : '0deg' }] }}
+                    />
+                  </View>
+                  {expandedFAQ === 3 && (
+                    <View style={[styles.faqAnswer, { borderTopColor: colors.border }]}>
+                      <Text style={[styles.faqAnswerText, { color: colors.textSecondary }]}>
+                        —We have recommended some mobile-free activities for users like reading books, jogging, meeting with friends…
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* FAQ Item 4 */}
+                <TouchableOpacity
+                  style={[styles.faqItem, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => setExpandedFAQ(expandedFAQ === 4 ? null : 4)}
+                >
+                  <View style={styles.faqQuestion}>
+                    <Text style={[styles.faqQuestionText, { color: colors.text }]}>
+                      4. What can I do if I have no idea how I develop a mobile-free habit?
+                    </Text>
+                    <ChevronRight
+                      size={20}
+                      color={colors.textTertiary}
+                      style={{ transform: [{ rotate: expandedFAQ === 4 ? '90deg' : '0deg' }] }}
+                    />
+                  </View>
+                  {expandedFAQ === 4 && (
+                    <View style={[styles.faqAnswer, { borderTopColor: colors.border }]}>
+                      <Text style={[styles.faqAnswerText, { color: colors.textSecondary }]}>
+                        —go to communities and learn with the people who have much motivation
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* FAQ Item 5 */}
+                <TouchableOpacity
+                  style={[styles.faqItem, { backgroundColor: colors.background, borderColor: colors.border }]}
+                  onPress={() => setExpandedFAQ(expandedFAQ === 5 ? null : 5)}
+                >
+                  <View style={styles.faqQuestion}>
+                    <Text style={[styles.faqQuestionText, { color: colors.text }]}>
+                      5. How can I gain the score?
+                    </Text>
+                    <ChevronRight
+                      size={20}
+                      color={colors.textTertiary}
+                      style={{ transform: [{ rotate: expandedFAQ === 5 ? '90deg' : '0deg' }] }}
+                    />
+                  </View>
+                  {expandedFAQ === 5 && (
+                    <View style={[styles.faqAnswer, { borderTopColor: colors.border }]}>
+                      <Text style={[styles.faqAnswerText, { color: colors.textSecondary }]}>
+                        —Finish the daily tasks and gain the corresponding points
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
               </View>
             </ScrollView>
           </SafeAreaView>

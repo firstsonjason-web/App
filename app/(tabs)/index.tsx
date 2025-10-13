@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { formatTime } from '@/lib/firebase-services';
 import { getColors } from '@/constants/Colors';
+import { useLanguage } from '@/hooks/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -119,6 +120,7 @@ export default function HomeScreen() {
   const { isDarkMode } = useDarkMode();
   const colors = getColors(isDarkMode);
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const {
     goals,
@@ -193,7 +195,7 @@ export default function HomeScreen() {
       await refreshData();
     } catch (error) {
       console.error('Error toggling goal completion:', error);
-      Alert.alert('Error', 'Failed to update goal. Please try again.');
+      Alert.alert(t('error'), t('failedToUpdateProfile'));
     }
   };
 
@@ -218,7 +220,7 @@ export default function HomeScreen() {
         setNewGoalDifficulty('medium');
         setNewGoalCategory('custom');
         setShowAddGoalModal(false);
-        Alert.alert('Success', 'New goal added to your daily awards!');
+        Alert.alert(t('success'), t('activityCompleted'));
 
         // Refresh data to get the new goal
         console.log('Refreshing data...');
@@ -226,7 +228,7 @@ export default function HomeScreen() {
         console.log('Data refreshed, final goals count:', goals.length);
       } catch (error) {
         console.error('Error adding goal:', error);
-        Alert.alert('Error', 'Failed to add goal. Please try again.');
+        Alert.alert(t('error'), t('failedToUpdateProfile'));
       }
     }
   };
@@ -238,7 +240,7 @@ export default function HomeScreen() {
       setTempPrize('');
       // Update in Firebase
       updateDailyPrize(tempPrize);
-      Alert.alert('Success', 'Your daily prize has been updated!');
+      Alert.alert(t('success'), t('activityCompleted'));
     }
   };
 
@@ -254,7 +256,7 @@ export default function HomeScreen() {
       await refreshData();
     } catch (error) {
       console.error('Error removing goal:', error);
-      Alert.alert('Error', 'Failed to remove goal. Please try again.');
+      Alert.alert(t('error'), t('failedToUpdateProfile'));
     }
   };
 
@@ -279,8 +281,8 @@ export default function HomeScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.greeting, { color: colors.text }]}>Good morning! 🌅</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Stay mindful, stay healthy</Text>
+            <Text style={[styles.greeting, { color: colors.text }]}>{t('goodMorning')}</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('stayMindful')}</Text>
           </View>
 
           {/* Inspirational Quote */}
@@ -305,7 +307,7 @@ export default function HomeScreen() {
               <View style={styles.awardsHeader}>
                 <View style={styles.awardsTitle}>
                   <Trophy size={24} color="#F59E0B" />
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>Daily Awards</Text>
+                  <Text style={[styles.cardTitle, { color: colors.text }]}>{t('dailyAwards')}</Text>
                 </View>
                 <View style={styles.awardsActions}>
                   {goals.length > 0 && (
@@ -331,8 +333,8 @@ export default function HomeScreen() {
                     onPress={() => {
                       if (showDeleteMode) {
                         Alert.alert(
-                          'Remove Goal',
-                          `Remove "${goal.title}" from today's awards?`,
+                          t('cancel'),
+                          t('confirmChanges'),
                           [
                             { text: 'Cancel', style: 'cancel' },
                             { text: 'Remove', style: 'destructive', onPress: () => removeGoal(goal.id) },
@@ -383,7 +385,7 @@ export default function HomeScreen() {
                   onPress={() => setShowAddGoalModal(true)}
                 >
                   <Plus size={20} color="#4F46E5" />
-                  <Text style={styles.addGoalText}>Add New Goal</Text>
+                  <Text style={styles.addGoalText}>{t('addNewGoal')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -395,7 +397,7 @@ export default function HomeScreen() {
               <View style={styles.prizeHeader}>
                 <View style={styles.prizeTitle}>
                   <Text style={styles.prizeIcon}>🎁</Text>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>Daily Prize</Text>
+                  <Text style={[styles.cardTitle, { color: colors.text }]}>{t('dailyPrize')}</Text>
                 </View>
                 <TouchableOpacity 
                   style={styles.editPrizeButton}
@@ -439,7 +441,7 @@ export default function HomeScreen() {
           {/* Recent Activity */}
           <DashboardCard>
             <View style={styles.activitySection}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Recent Activity</Text>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>{t('recentActivity')}</Text>
               {activities.length > 0 ? (
                 <View style={styles.activityList}>
                   {activities.map((activity) => (
@@ -457,7 +459,7 @@ export default function HomeScreen() {
               ) : (
                 <View style={styles.emptyActivityContainer}>
                   <Text style={[styles.emptyActivityText, { color: colors.textSecondary }]}>
-                    Complete your daily goals to see your achievements here! 🎯
+                    {t('yourCompletedActivities')}
                   </Text>
                 </View>
               )}
@@ -476,7 +478,7 @@ export default function HomeScreen() {
               <TouchableOpacity onPress={() => setShowAddGoalModal(false)}>
                 <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Goal</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('addNewGoal')}</Text>
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={addNewGoal}
@@ -487,10 +489,10 @@ export default function HomeScreen() {
 
             <View style={styles.modalContent}>
               <View style={styles.inputSection}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Goal Description</Text>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>{t('category')}</Text>
                 <TextInput
                   style={[styles.goalInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-                  placeholder="e.g., Read for 30 minutes, No social media before noon..."
+                  placeholder={t('shareYourJourneyAskForAdviceOrEncourageOthers')}
                   value={newGoalTitle}
                   onChangeText={setNewGoalTitle}
                   placeholderTextColor={colors.textTertiary}
@@ -499,7 +501,7 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.inputSection}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Difficulty Level</Text>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>{t('points')}</Text>
                 <View style={styles.difficultySelector}>
                   {Object.entries(difficultyPoints).map(([difficulty, points]) => (
                     <TouchableOpacity
@@ -534,7 +536,7 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.inputSection}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Category</Text>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>{t('category')}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={styles.categorySelector}>
                     {goalCategories.map((category) => {
@@ -568,7 +570,7 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.previewSection}>
-                <Text style={[styles.previewLabel, { color: colors.text }]}>Preview:</Text>
+                <Text style={[styles.previewLabel, { color: colors.text }]}>{t('points')}</Text>
                 <View style={[styles.previewGoal, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <Circle size={24} color="#D1D5DB" />
                   <View style={styles.previewInfo}>
@@ -606,7 +608,7 @@ export default function HomeScreen() {
               <TouchableOpacity onPress={() => setShowPrizeModal(false)}>
                 <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Set Daily Prize</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('dailyPrize')}</Text>
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={handleUpdateDailyPrize}
@@ -617,9 +619,9 @@ export default function HomeScreen() {
 
             <View style={styles.modalContent}>
               <View style={styles.inputSection}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Daily Reward( but not too much! )</Text>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>{t('dailyPrize')}</Text>
                 <Text style={[styles.prizeHint, { color: colors.textTertiary }]}>
-                  Set a small reward for yourself when you complete all daily tasks
+                  {t('dailyPrize')}
                 </Text>
                 <TextInput
                   style={[styles.prizeInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
@@ -632,7 +634,7 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.prizeSuggestions}>
-                <Text style={[styles.suggestionsTitle, { color: colors.text }]}>Popular Rewards:</Text>
+                <Text style={[styles.suggestionsTitle, { color: colors.text }]}>{t('dailyPrize')}</Text>
                 <View style={styles.suggestionsList}>
                   {[
                     '🍫 Eat a few candies',

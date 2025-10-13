@@ -15,10 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useLanguage } from '@/hooks/LanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const { signIn, signUp, user } = useAuth();
+  const { t } = useLanguage();
   const [isSignUp, setIsSignUp] = useState(false);
 
   // Redirect if already authenticated
@@ -37,17 +39,17 @@ export default function LoginScreen() {
 
   const handleSignUp = async () => {
     if (!email.trim() || !password.trim() || !fullName.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('error'), t('fieldRequired'));
       return;
     }
 
     if (!email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(t('error'), t('invalidEmail'));
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      Alert.alert(t('error'), t('passwordTooShort'));
       return;
     }
 
@@ -71,18 +73,18 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('isLoggedIn', 'true');
 
       Alert.alert(
-        'Account Created!',
-        'Welcome to Stay Healthy, Be Happy! Your account has been created successfully.',
+        t('accountCreated'),
+        t('welcomeToApp'),
         [
           {
-            text: 'Get Started',
+            text: t('getStarted'),
             onPress: () => router.replace('/(tabs)'),
           },
         ]
       );
     } catch (error: any) {
       console.error('Sign up error:', error);
-      Alert.alert('Sign Up Failed', error.message || 'An unexpected error occurred. Please try again.');
+      Alert.alert(t('signUpFailed'), error.message || t('error'));
     } finally {
       setLoading(false);
     }
@@ -90,12 +92,12 @@ export default function LoginScreen() {
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('error'), t('fieldRequired'));
       return;
     }
 
     if (!email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(t('error'), t('invalidEmail'));
       return;
     }
 
@@ -119,18 +121,18 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('isLoggedIn', 'true');
 
       Alert.alert(
-        'Welcome Back!',
-        'You\'re now signed in.',
+        t('welcomeBack'),
+        t('welcome'),
         [
           {
-            text: 'Continue',
+            text: t('continue'),
             onPress: () => router.replace('/(tabs)'),
           },
         ]
       );
     } catch (error: any) {
       console.error('Sign in error:', error);
-      Alert.alert('Sign In Failed', error.message || 'An unexpected error occurred. Please try again.');
+      Alert.alert(t('signInFailed'), error.message || t('error'));
     } finally {
       setLoading(false);
     }
@@ -152,9 +154,9 @@ export default function LoginScreen() {
           >
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>Stay Healthy, Be Happy</Text>
+              <Text style={styles.title}>{t('stayHealthyBeHappy')}</Text>
               <Text style={styles.subtitle}>
-                {isSignUp ? 'Create your account to get started' : 'Welcome back! Sign in to continue'}
+                {isSignUp ? t('createYourAccountToGetStarted') : t('welcomeBackSignInToContinue')}
               </Text>
             </View>
 
@@ -166,7 +168,7 @@ export default function LoginScreen() {
                     <User size={20} color="#9CA3AF" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Full Name"
+                      placeholder={t('fullName')}
                       value={fullName}
                       onChangeText={setFullName}
                       placeholderTextColor="#9CA3AF"
@@ -181,7 +183,7 @@ export default function LoginScreen() {
                   <Mail size={20} color="#9CA3AF" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Email Address"
+                    placeholder={t('emailAddress')}
                     value={email}
                     onChangeText={setEmail}
                     placeholderTextColor="#9CA3AF"
@@ -197,7 +199,7 @@ export default function LoginScreen() {
                   <Lock size={20} color="#9CA3AF" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Password"
+                    placeholder={t('password')}
                     value={password}
                     onChangeText={setPassword}
                     placeholderTextColor="#9CA3AF"
@@ -229,9 +231,9 @@ export default function LoginScreen() {
                   style={styles.submitGradient}
                 >
                   <Text style={[styles.submitText, loading && styles.submitTextDisabled]}>
-                    {loading 
-                      ? (isSignUp ? 'Creating Account...' : 'Signing In...') 
-                      : (isSignUp ? 'Create Account' : 'Sign In')
+                    {loading
+                      ? (isSignUp ? t('creatingAccount') : t('signingIn'))
+                      : (isSignUp ? t('createAccount') : t('signIn'))
                     }
                   </Text>
                 </LinearGradient>
@@ -240,11 +242,11 @@ export default function LoginScreen() {
               {/* Toggle Sign Up/Sign In */}
               <View style={styles.toggleContainer}>
                 <Text style={styles.toggleText}>
-                  {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+                  {isSignUp ? t('alreadyHaveAnAccount') : t('dontHaveAnAccount')}
                 </Text>
                 <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
                   <Text style={styles.toggleLink}>
-                    {isSignUp ? 'Sign In' : 'Sign Up'}
+                    {isSignUp ? t('signIn') : t('createAccount')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -254,15 +256,15 @@ export default function LoginScreen() {
             <View style={styles.features}>
               <View style={styles.feature}>
                 <Text style={styles.featureIcon}>🎯</Text>
-                <Text style={styles.featureText}>Set daily digital wellness goals</Text>
+                <Text style={styles.featureText}>{t('setDailyDigitalWellnessGoals')}</Text>
               </View>
               <View style={styles.feature}>
                 <Text style={styles.featureIcon}>📊</Text>
-                <Text style={styles.featureText}>Track your progress over time</Text>
+                <Text style={styles.featureText}>{t('trackYourProgressOverTime')}</Text>
               </View>
               <View style={styles.feature}>
                 <Text style={styles.featureIcon}>👥</Text>
-                <Text style={styles.featureText}>Connect with like-minded people</Text>
+                <Text style={styles.featureText}>{t('connectWithLikeMindedPeople')}</Text>
               </View>
 
             </View>

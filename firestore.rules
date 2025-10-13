@@ -47,12 +47,15 @@ service cloud.firestore {
 
     // Posts collection - community posts with proper access control
     match /posts/{postId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
-        request.auth.uid == request.resource.data.authorId;
-      allow update, delete: if isAuthenticated() &&
-        request.auth.uid == resource.data.authorId;
-    }
+       allow read: if isAuthenticated();
+       allow create: if isAuthenticated() &&
+         request.auth.uid == request.resource.data.userId;
+       allow update: if isAuthenticated() &&
+         request.auth.uid == resource.data.userId;
+       // Allow updating likes and replies arrays
+       allow update: if isAuthenticated() &&
+         (request.resource.data.diff(resource.data).affectedKeys().hasAny(['likes', 'replies']));
+     }
 
     // Comments collection - users can manage their own comments
     match /comments/{commentId} {

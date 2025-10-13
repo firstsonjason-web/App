@@ -21,7 +21,10 @@ import {
   addDoc,
   Timestamp,
   DocumentData,
-  QueryDocumentSnapshot
+  QueryDocumentSnapshot,
+  onSnapshot,
+  Query,
+  Unsubscribe
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -70,16 +73,19 @@ export interface Community {
 
 export interface Post {
   id: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar: string;
+  userId: string;
   content: string;
-  category: 'success' | 'challenge' | 'tip' | 'motivation';
-  image?: string;
-  likes: number;
-  comments: number;
-  createdAt: Timestamp;
+  timestamp: Timestamp;
+  likes: string[]; // array of user IDs
+  replies: Reply[];
   communityId?: string;
+}
+
+export interface Reply {
+  id: string;
+  userId: string;
+  content: string;
+  timestamp: Timestamp;
 }
 
 export interface Comment {
@@ -117,17 +123,12 @@ export interface Ranking {
 
 export interface CommunityPost {
   id: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar: string;
+  userId: string;
   content: string;
-  category: 'success' | 'challenge' | 'tip' | 'motivation';
-  image?: string;
-  likes: number;
-  comments: number;
-  createdAt: Timestamp;
+  timestamp: Timestamp;
+  likes: string[]; // array of user IDs
+  replies: Reply[];
   communityId?: string;
-  likedBy?: string[];
 }
 
 export interface CommunityComment {
@@ -156,6 +157,18 @@ export interface UserFriend {
     lastSeen: string;
     isOnline: boolean;
   };
+}
+
+export interface ChatMessage {
+  id: string;
+  chatId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  message: string;
+  timestamp: Timestamp;
+  isRead: boolean;
+  messageType: 'text' | 'image' | 'system';
 }
 
 // Authentication Services
@@ -355,24 +368,28 @@ export class DatabaseService {
   }
 
   // Communities and Posts Services
-  static async createPost(postData: Omit<CommunityPost, 'id' | 'createdAt' | 'likes' | 'comments'>): Promise<string> {
+  static async createPost(postData: Omit<CommunityPost, 'id' | 'timestamp' | 'likes' | 'replies'>): Promise<string> {
     const postsRef = collection(db, 'posts');
     const docRef = await addDoc(postsRef, {
       ...postData,
-      likes: 0,
-      comments: 0,
-      createdAt: Timestamp.now()
+      likes: [],
+      replies: [],
+      timestamp: Timestamp.now()
     });
     return docRef.id;
   }
 
-  static async getPosts(limitCount: number = 20): Promise<CommunityPost[]> {
+  static async getPosts(limitCount: number = 20, startAfter?: any): Promise<CommunityPost[]> {
     try {
-      const q = query(
+      let q = query(
         collection(db, 'posts'),
-        orderBy('createdAt', 'desc'),
+        orderBy('timestamp', 'desc'),
         limit(limitCount)
       );
+
+      if (startAfter) {
+        q = query(q, startAfter(startAfter));
+      }
 
       const querySnapshot = await getDocs(q);
       const posts = querySnapshot.docs.map(doc => ({
@@ -387,25 +404,54 @@ export class DatabaseService {
     }
   }
 
+  // Get single post
+  static async getPost(postId: string): Promise<CommunityPost | null> {
+    const docRef = doc(db, 'posts', postId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return {
+        id: docSnap.id,
+        ...docSnap.data()
+      } as CommunityPost;
+    }
+    return null;
+  }
+
+  // Real-time listener for posts
+  static listenToPosts(callback: (posts: CommunityPost[]) => void, limitCount: number = 20): Unsubscribe {
+    const q = query(
+      collection(db, 'posts'),
+      orderBy('timestamp', 'desc'),
+      limit(limitCount)
+    );
+
+    return onSnapshot(q, (querySnapshot) => {
+      const posts = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as CommunityPost[];
+      callback(posts);
+    });
+  }
+
   static async likePost(postId: string, userId: string): Promise<void> {
     const postRef = doc(db, 'posts', postId);
     const postDoc = await getDoc(postRef);
 
     if (postDoc.exists()) {
       const post = postDoc.data() as CommunityPost;
-      const likedBy = post.likedBy || [];
+      const likes = post.likes || [];
 
-      if (!likedBy.includes(userId)) {
+      if (!likes.includes(userId)) {
         // Add like
         await updateDoc(postRef, {
-          likes: post.likes + 1,
-          likedBy: [...likedBy, userId]
+          likes: [...likes, userId]
         });
       } else {
         // Remove like
         await updateDoc(postRef, {
-          likes: post.likes - 1,
-          likedBy: likedBy.filter(id => id !== userId)
+          likes: likes.filter(id => id !== userId)
         });
       }
     }
@@ -653,25 +699,25 @@ export class DatabaseService {
     }
   }
 
-  static async addComment(commentData: Omit<CommunityComment, 'id' | 'createdAt' | 'likes'>): Promise<string> {
-    const commentsRef = collection(db, 'comments');
-    const docRef = await addDoc(commentsRef, {
-      ...commentData,
-      likes: 0,
-      createdAt: Timestamp.now()
-    });
-
-    // Update post comment count
-    const postRef = doc(db, 'posts', commentData.postId);
+  static async addReply(postId: string, replyData: Omit<Reply, 'id' | 'timestamp'>): Promise<string> {
+    const postRef = doc(db, 'posts', postId);
     const postDoc = await getDoc(postRef);
+
     if (postDoc.exists()) {
       const post = postDoc.data() as CommunityPost;
-      await updateDoc(postRef, {
-        comments: post.comments + 1
-      });
-    }
+      const newReply: Reply = {
+        id: Date.now().toString(), // Simple ID generation
+        ...replyData,
+        timestamp: Timestamp.now()
+      };
 
-    return docRef.id;
+      await updateDoc(postRef, {
+        replies: [...post.replies, newReply]
+      });
+
+      return newReply.id;
+    }
+    throw new Error('Post not found');
   }
 
   static async getPostComments(postId: string): Promise<CommunityComment[]> {
@@ -714,6 +760,211 @@ export class DatabaseService {
           likedBy: likedBy.filter(id => id !== userId)
         });
       }
+    }
+  }
+
+  // Chat Services
+  static generateChatId(userId1: string, userId2: string): string {
+    // Create a consistent chat ID by sorting user IDs alphabetically
+    const sortedIds = [userId1, userId2].sort();
+    return sortedIds.join('_');
+  }
+
+  static async saveChatMessage(
+    senderId: string,
+    receiverId: string,
+    message: string,
+    messageType: 'text' | 'image' | 'system' = 'text'
+  ): Promise<string> {
+    if (!auth.currentUser) throw new Error('User not authenticated');
+
+    try {
+      // Get sender profile for name and avatar
+      const senderProfile = await this.getUserProfile(senderId);
+      if (!senderProfile) throw new Error('Sender profile not found');
+
+      const chatId = this.generateChatId(senderId, receiverId);
+
+      // Provide fallback values for missing avatar and display name
+      const fallbackAvatar = 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100';
+
+      const chatMessage: Omit<ChatMessage, 'id' | 'timestamp'> = {
+        chatId,
+        senderId,
+        senderName: senderProfile.displayName || senderProfile.email?.split('@')[0] || 'User',
+        senderAvatar: senderProfile.avatar || fallbackAvatar,
+        message,
+        isRead: false,
+        messageType
+      };
+
+      // Save message to subcollection: chats/{chatId}/messages/{messageId}
+      const messagesRef = collection(db, 'chats', chatId, 'messages');
+      const docRef = await addDoc(messagesRef, {
+        ...chatMessage,
+        timestamp: Timestamp.now()
+      });
+
+      console.log('✅ Chat message saved successfully');
+      return docRef.id;
+    } catch (error) {
+      console.error('Error saving chat message:', error);
+      throw error;
+    }
+  }
+
+  static async getChatHistory(
+    currentUserId: string,
+    otherUserId: string,
+    limitCount: number = 50
+  ): Promise<ChatMessage[]> {
+    try {
+      const chatId = this.generateChatId(currentUserId, otherUserId);
+
+      const messagesQuery = query(
+        collection(db, 'chats', chatId, 'messages'),
+        orderBy('timestamp', 'desc'),
+        limit(limitCount)
+      );
+
+      const querySnapshot = await getDocs(messagesQuery);
+      const messages = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatMessage[];
+
+      // Sort messages chronologically (oldest first) for display
+      const sortedMessages = messages
+        .sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis())
+        .map(message => ({
+          ...message,
+          // Mark messages as read when loading chat history
+          isRead: message.senderId === currentUserId ? message.isRead : true
+        }));
+
+      console.log('✅ Chat history loaded successfully');
+      return sortedMessages;
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+      throw error;
+    }
+  }
+
+  static setupChatListener(
+    currentUserId: string,
+    otherUserId: string,
+    callback: (messages: ChatMessage[]) => void
+  ): Unsubscribe {
+    try {
+      const chatId = this.generateChatId(currentUserId, otherUserId);
+
+      const messagesQuery = query(
+        collection(db, 'chats', chatId, 'messages'),
+        orderBy('timestamp', 'desc')
+      );
+
+      const unsubscribe = onSnapshot(messagesQuery, (querySnapshot) => {
+        const messages = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as ChatMessage[];
+
+        // Sort messages chronologically and mark current user's messages as read
+        const sortedMessages = messages
+          .sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis())
+          .map(message => ({
+            ...message,
+            isRead: message.senderId === currentUserId ? message.isRead : true
+          }));
+
+        callback(sortedMessages);
+      }, (error) => {
+        console.error('Error in chat listener:', error);
+      });
+
+      console.log('✅ Chat listener setup successfully');
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up chat listener:', error);
+      throw error;
+    }
+  }
+
+  static async markMessagesAsRead(
+    currentUserId: string,
+    otherUserId: string,
+    messageIds?: string[]
+  ): Promise<void> {
+    try {
+      const chatId = this.generateChatId(currentUserId, otherUserId);
+
+      if (messageIds && messageIds.length > 0) {
+        // Mark specific messages as read
+        const updatePromises = messageIds.map(messageId => {
+          const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+          return updateDoc(messageRef, { isRead: true });
+        });
+        await Promise.all(updatePromises);
+      } else {
+        // Mark all unread messages from other user as read
+        const messagesQuery = query(
+          collection(db, 'chats', chatId, 'messages'),
+          where('senderId', '==', otherUserId),
+          where('isRead', '==', false)
+        );
+
+        const querySnapshot = await getDocs(messagesQuery);
+        const updatePromises = querySnapshot.docs.map(doc =>
+          updateDoc(doc.ref, { isRead: true })
+        );
+        await Promise.all(updatePromises);
+      }
+
+      console.log('✅ Messages marked as read');
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      throw error;
+    }
+  }
+
+  static async getUnreadMessageCount(currentUserId: string): Promise<number> {
+    try {
+      // Get all user's chat IDs by querying messages where user is not the sender
+      const messagesQuery = query(
+        collection(db, 'chats'),
+        orderBy('timestamp', 'desc')
+      );
+
+      const chatsSnapshot = await getDocs(messagesQuery);
+      let totalUnread = 0;
+
+      for (const chatDoc of chatsSnapshot.docs) {
+        const chatId = chatDoc.id;
+
+        // Check if current user is part of this chat
+        const chatUserIds = chatId.split('_');
+        if (!chatUserIds.includes(currentUserId)) continue;
+
+        const otherUserId = chatUserIds.find(id => id !== currentUserId);
+        if (!otherUserId) continue;
+
+        const unreadQuery = query(
+          collection(db, 'chats', chatId, 'messages'),
+          where('senderId', '==', otherUserId),
+          where('isRead', '==', false),
+          limit(1) // Just need to check if any exist
+        );
+
+        const unreadSnapshot = await getDocs(unreadQuery);
+        if (!unreadSnapshot.empty) {
+          totalUnread++;
+        }
+      }
+
+      return totalUnread;
+    } catch (error) {
+      console.error('Error getting unread message count:', error);
+      throw error;
     }
   }
 }

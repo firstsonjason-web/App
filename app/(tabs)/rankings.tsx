@@ -15,6 +15,7 @@ import { DashboardCard } from '@/components/DashboardCard';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseData } from '@/hooks/useFirebaseData';
+import { useLanguage } from '@/hooks/LanguageContext';
 import { getColors } from '@/constants/Colors';
 import { DatabaseService } from '@/lib/firebase-services';
 
@@ -132,28 +133,32 @@ const initialLeaderboard: User[] = [
   }
 ];
 
-const timeframes = [
-  { id: 'daily', name: 'Today' },
-  { id: 'weekly', name: 'This Week' },
-  { id: 'monthly', name: 'This Month' },
-  { id: 'alltime', name: 'All Time' },
+const getTimeframes = (t: any) => [
+  { id: 'daily', name: t('today') },
+  { id: 'weekly', name: t('thisWeek') },
+  { id: 'monthly', name: t('thisMonth') },
+  { id: 'alltime', name: t('allTime') },
 ];
 
-const categories = [
-  { id: 'global', name: 'Global', icon: Users },
-  { id: 'friends', name: 'Friends', icon: Star },
-  { id: 'country', name: 'Country', icon: Target },
+const getCategories = (t: any) => [
+  { id: 'global', name: t('global'), icon: Users },
+  { id: 'friends', name: t('friends'), icon: Star },
+  { id: 'country', name: t('country'), icon: Target },
 ];
 
 export default function RankingsScreen() {
   const { isDarkMode } = useDarkMode();
   const { user } = useAuth();
   const { userProfile, getTotalPoints } = useFirebaseData();
+  const { t } = useLanguage();
   const colors = getColors(isDarkMode);
   const [leaderboard, setLeaderboard] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState('weekly');
   const [selectedCategory, setSelectedCategory] = useState('global');
+
+  const timeframes = getTimeframes(t);
+  const categories = getCategories(t);
 
   // Load leaderboard from Firebase
   useEffect(() => {
@@ -280,8 +285,8 @@ export default function RankingsScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Rankings</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Compete with users worldwide</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('rankings')}</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('competeWithUsersWorldwide')}</Text>
           </View>
 
           {/* Your Rank Card */}
@@ -293,7 +298,7 @@ export default function RankingsScreen() {
               >
                 <View style={styles.yourRankContent}>
                   <View style={styles.yourRankLeft}>
-                    <Text style={styles.yourRankTitle}>Your Rank</Text>
+                    <Text style={styles.yourRankTitle}>{t('yourRank')}</Text>
                     <View style={styles.yourRankInfo}>
                       <Text style={styles.yourRankPosition}>#{currentUser.rank}</Text>
                       <View style={styles.yourRankChange}>
@@ -310,10 +315,10 @@ export default function RankingsScreen() {
                         </Text>
                       </View>
                     </View>
-                    <Text style={styles.yourRankPoints}>{getTotalPoints()} points</Text>
+                    <Text style={styles.yourRankPoints}>{getTotalPoints()} {t('rankPoints')}</Text>
                   </View>
                   <View style={styles.yourRankRight}>
-                    <Image source={{ uri: currentUser.avatar }} style={styles.yourRankAvatar} />
+                    <Image source={{ uri: currentUser.avatar || 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150' }} style={styles.yourRankAvatar} />
                     <View style={styles.yourRankBadges}>
                       {currentUser.badges.map((badge, index) => (
                         <Text key={index} style={styles.badge}>{badge}</Text>
@@ -389,7 +394,7 @@ export default function RankingsScreen() {
           {/* Top 3 Podium */}
           {topUsers.length > 0 && (
             <View style={styles.podiumContainer}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Top Champions</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('topChampions')}</Text>
               <View style={styles.podium}>
                 {/* 2nd Place */}
                 {topUsers.length > 1 && (
@@ -398,7 +403,7 @@ export default function RankingsScreen() {
                       colors={isDarkMode ? ['#9CA3AF', '#6B7280'] : (getRankColors(2) as [string, string])}
                       style={styles.podiumGradient}
                     >
-                      <Image source={{ uri: topUsers[1].avatar }} style={styles.podiumAvatar} />
+                      <Image source={{ uri: topUsers[1].avatar || 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150' }} style={styles.podiumAvatar} />
                       <Medal size={20} color="#C0C0C0" />
                       <Text style={styles.podiumName}>{topUsers[1].name}</Text>
                       <Text style={styles.podiumPoints}>{topUsers[1].points}</Text>
@@ -412,7 +417,7 @@ export default function RankingsScreen() {
                     colors={isDarkMode ? ['#F59E0B', '#D97706'] : (getRankColors(1) as [string, string])}
                     style={styles.podiumGradient}
                   >
-                    <Image source={{ uri: topUsers[0].avatar }} style={styles.podiumAvatar} />
+                    <Image source={{ uri: topUsers[0].avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150' }} style={styles.podiumAvatar} />
                     <Crown size={24} color="#FFD700" />
                     <Text style={styles.podiumName}>{topUsers[0].name}</Text>
                     <Text style={styles.podiumPoints}>{topUsers[0].points}</Text>
@@ -429,7 +434,7 @@ export default function RankingsScreen() {
                       colors={isDarkMode ? ['#CD7F32', '#A0522D'] : (getRankColors(3) as [string, string])}
                       style={styles.podiumGradient}
                     >
-                      <Image source={{ uri: topUsers[2].avatar }} style={styles.podiumAvatar} />
+                      <Image source={{ uri: topUsers[2].avatar || 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150' }} style={styles.podiumAvatar} />
                       <Medal size={20} color="#CD7F32" />
                       <Text style={styles.podiumName}>{topUsers[2].name}</Text>
                       <Text style={styles.podiumPoints}>{topUsers[2].points}</Text>
@@ -442,7 +447,7 @@ export default function RankingsScreen() {
 
           {/* Leaderboard */}
           <View style={styles.leaderboardContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Leaderboard</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('leaderboard')}</Text>
             <DashboardCard>
               <View style={styles.leaderboardContent}>
                 {otherUsers.map((user) => (
@@ -455,7 +460,7 @@ export default function RankingsScreen() {
                   >
                     <View style={styles.leaderboardLeft}>
                       {getRankIcon(user.rank)}
-                      <Image source={{ uri: user.avatar }} style={styles.leaderboardAvatar} />
+                      <Image source={{ uri: user.avatar || 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150' }} style={styles.leaderboardAvatar} />
                       <View style={styles.leaderboardInfo}>
                         <View style={styles.leaderboardNameRow}>
                           <Text style={[
@@ -506,22 +511,22 @@ export default function RankingsScreen() {
 
           {/* Competition Stats */}
           <View style={styles.statsContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Competition Stats</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('competitionStats')}</Text>
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
                 <Users size={24} color="#4F46E5" />
                 <Text style={styles.statValue}>2.4M</Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Active Users</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('activeUsers')}</Text>
               </View>
               <View style={styles.statCard}>
                 <Trophy size={24} color="#F59E0B" />
                 <Text style={styles.statValue}>156</Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Countries</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('countries')}</Text>
               </View>
               <View style={styles.statCard}>
                 <Target size={24} color="#10B981" />
                 <Text style={styles.statValue}>89%</Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Goal Success</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('goalSuccess')}</Text>
               </View>
             </View>
           </View>
@@ -529,22 +534,22 @@ export default function RankingsScreen() {
           {/* Rewards Preview */}
           <DashboardCard style={styles.rewardsCard}>
             <View style={styles.rewardsContent}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Weekly Rewards</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('weeklyRewards')}</Text>
               <Text style={[styles.rewardsDescription, { color: colors.textSecondary }]}>
-                Top performers earn exclusive badges and unlock special features!
+                {t('topPerformersEarnExclusiveBadgesAndUnlockSpecialFeatures')}
               </Text>
               <View style={styles.rewardsList}>
                 <View style={styles.rewardItem}>
                   <Text style={styles.rewardBadge}>🏆</Text>
-                  <Text style={[styles.rewardText, { color: colors.text }]}>Top 1: Golden Crown Badge</Text>
+                  <Text style={[styles.rewardText, { color: colors.text }]}>{t('top1GoldenCrownBadge')}</Text>
                 </View>
                 <View style={styles.rewardItem}>
                   <Text style={styles.rewardBadge}>🥈</Text>
-                  <Text style={[styles.rewardText, { color: colors.text }]}>Top 10: Silver Star Badge</Text>
+                  <Text style={[styles.rewardText, { color: colors.text }]}>{t('top10SilverStarBadge')}</Text>
                 </View>
                 <View style={styles.rewardItem}>
                   <Text style={styles.rewardBadge}>🎯</Text>
-                  <Text style={[styles.rewardText, { color: colors.text }]}>Top 100: Focus Master Badge</Text>
+                  <Text style={[styles.rewardText, { color: colors.text }]}>{t('top100FocusMasterBadge')}</Text>
                 </View>
               </View>
             </View>

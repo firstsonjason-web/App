@@ -23,6 +23,7 @@ import {
 import { router } from 'expo-router';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useAuth } from '@/hooks/useFirebaseAuth';
+import { useLanguage } from '@/hooks/LanguageContext';
 import { getColors } from '@/constants/Colors';
 
 const { width } = Dimensions.get('window');
@@ -30,6 +31,7 @@ const { width } = Dimensions.get('window');
 export default function LandingScreen() {
   const { isDarkMode } = useDarkMode();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const colors = getColors(isDarkMode);
 
   // Redirect if already authenticated
@@ -42,49 +44,49 @@ export default function LandingScreen() {
   const features = [
     {
       icon: Target,
-      title: 'Set Daily Goals',
-      description: 'Create personalized digital wellness goals that matter to you',
+      titleKey: 'setDailyGoals',
+      descriptionKey: 'createPersonalizedDigitalWellnessGoalsThatMatterToYou',
       color: '#4F46E5',
     },
     {
       icon: Trophy,
-      title: 'Earn Points',
-      description: 'Get rewarded for completing goals and building healthy habits',
+      titleKey: 'earnPoints',
+      descriptionKey: 'getRewardedForCompletingGoalsAndBuildingHealthyHabits',
       color: '#F59E0B',
     },
     {
       icon: TrendingUp,
-      title: 'Track Progress',
-      description: 'Monitor your digital wellness journey with detailed insights',
+      titleKey: 'trackProgress',
+      descriptionKey: 'monitorYourDigitalWellnessJourneyWithDetailedInsights',
       color: '#10B981',
     },
     {
       icon: Users,
-      title: 'Join Community',
-      description: 'Connect with others on the same wellness journey',
+      titleKey: 'joinCommunity',
+      descriptionKey: 'connectWithOthersOnTheSameWellnessJourney',
       color: '#EC4899',
     },
     {
       icon: Heart,
-      title: 'Stay Mindful',
-      description: 'Build awareness around your digital habits and screen time',
+      titleKey: 'stayMindful',
+      descriptionKey: 'buildAwarenessAroundYourDigitalHabitsAndScreenTime',
       color: '#8B5CF6',
     },
     {
       icon: Star,
-      title: 'Daily Rewards',
-      description: 'Set personal rewards to celebrate your achievements',
+      titleKey: 'dailyRewards',
+      descriptionKey: 'setPersonalRewardsToCelebrateYourAchievements',
       color: '#F97316',
     },
   ];
 
   const benefits = [
-    'Reduce screen time anxiety',
-    'Build healthier digital habits',
-    'Increase productivity and focus',
-    'Improve sleep quality',
-    'Strengthen real-world connections',
-    'Achieve personal wellness goals',
+    'reduceScreenTimeAnxiety',
+    'buildHealthierDigitalHabits',
+    'increaseProductivityAndFocus',
+    'improveSleepQuality',
+    'strengthenRealWorldConnections',
+    'achievePersonalWellnessGoals',
   ];
 
   return (
@@ -102,9 +104,9 @@ export default function LandingScreen() {
           <View style={styles.heroSection}>
             <View style={styles.heroContent}>
               <Text style={styles.heroEmoji}>🌅</Text>
-              <Text style={styles.heroTitle}>Stay Healthy, Be Happy</Text>
+              <Text style={styles.heroTitle}>{t('stayHealthyBeHappy')}</Text>
               <Text style={styles.heroSubtitle}>
-                Transform your relationship with technology and build healthier digital habits
+                {t('transformYourRelationshipWithTechnologyAndBuildHealthierDigitalHabits')}
               </Text>
             </View>
 
@@ -117,7 +119,7 @@ export default function LandingScreen() {
                 colors={['#FFFFFF', '#F3F4F6']}
                 style={styles.getStartedGradient}
               >
-                <Text style={styles.getStartedText}>Get Started</Text>
+                <Text style={styles.getStartedText}>{t('getStarted')}</Text>
                 <ArrowRight size={20} color="#4F46E5" />
               </LinearGradient>
             </TouchableOpacity>
@@ -126,7 +128,7 @@ export default function LandingScreen() {
           {/* Features Section */}
           <View style={styles.featuresSection}>
             <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>
-              Your Digital Wellness Journey
+              {t('yourDigitalWellnessJourney')}
             </Text>
 
             <View style={styles.featuresGrid}>
@@ -143,10 +145,10 @@ export default function LandingScreen() {
                       <IconComponent size={32} color={feature.color} />
                     </View>
                     <Text style={[styles.featureTitle, { color: '#FFFFFF' }]}>
-                      {feature.title}
+                      {t(feature.titleKey)}
                     </Text>
                     <Text style={[styles.featureDescription, { color: 'rgba(255, 255, 255, 0.8)' }]}>
-                      {feature.description}
+                      {t(feature.descriptionKey)}
                     </Text>
                   </View>
                 );
@@ -157,7 +159,7 @@ export default function LandingScreen() {
           {/* Benefits Section */}
           <View style={styles.benefitsSection}>
             <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>
-              Why Choose Stay Healthy, Be Happy?
+              {t('whyChooseStayHealthyBeHappy')}
             </Text>
 
             <View style={styles.benefitsList}>
@@ -165,7 +167,7 @@ export default function LandingScreen() {
                 <View key={index} style={styles.benefitItem}>
                   <CheckCircle size={20} color="#10B981" />
                   <Text style={[styles.benefitText, { color: '#FFFFFF' }]}>
-                    {benefit}
+                    {t(benefit.toLowerCase().replace(/\s+/g, '').replace(/[^\w\s]/g, ''))}
                   </Text>
                 </View>
               ))}
@@ -175,26 +177,26 @@ export default function LandingScreen() {
           {/* Stats Section */}
           <View style={styles.statsSection}>
             <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>
-              Join Thousands of Happy Users
+              {t('joinThousandsOfHappyUsers')}
             </Text>
 
             <View style={styles.statsGrid}>
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>10K+</Text>
                 <Text style={[styles.statLabel, { color: 'rgba(255, 255, 255, 0.8)' }]}>
-                  Active Users
+                  {t('activeUsers')}
                 </Text>
               </View>
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>500K+</Text>
                 <Text style={[styles.statLabel, { color: 'rgba(255, 255, 255, 0.8)' }]}>
-                  Goals Completed
+                  {t('goalsCompleted')}
                 </Text>
               </View>
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>4.8★</Text>
                 <Text style={[styles.statLabel, { color: 'rgba(255, 255, 255, 0.8)' }]}>
-                  App Rating
+                  {t('appRating')}
                 </Text>
               </View>
             </View>
@@ -203,10 +205,10 @@ export default function LandingScreen() {
           {/* CTA Section */}
           <View style={styles.ctaSection}>
             <Text style={[styles.ctaTitle, { color: '#FFFFFF' }]}>
-              Ready to Transform Your Digital Life?
+              {t('readyToTransformYourDigitalLife')}
             </Text>
             <Text style={[styles.ctaSubtitle, { color: 'rgba(255, 255, 255, 0.8)' }]}>
-              Join our community of mindful technology users today
+              {t('joinOurCommunityOfMindfulTechnologyUsersToday')}
             </Text>
 
             <TouchableOpacity
@@ -217,7 +219,7 @@ export default function LandingScreen() {
                 colors={['#10B981', '#059669']}
                 style={styles.ctaGradient}
               >
-                <Text style={styles.ctaButtonText}>Start Your Journey</Text>
+                <Text style={styles.ctaButtonText}>{t('startYourJourney')}</Text>
                 <ArrowRight size={20} color="#FFFFFF" />
               </LinearGradient>
             </TouchableOpacity>

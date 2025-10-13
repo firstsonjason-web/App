@@ -37,8 +37,8 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { getColors } from '@/constants/Colors';
-import { UserFriend, DatabaseService } from '@/lib/firebase-services';
-import { formatTime } from '@/lib/firebase-services';
+import { UserFriend, DatabaseService, ChatMessage , formatTime } from '@/lib/firebase-services';
+import { useLanguage } from '@/hooks/LanguageContext';
 
 interface Friend {
   id: string;
@@ -55,13 +55,6 @@ interface Friend {
   userId: string;
 }
 
-interface ChatMessage {
-  id: number;
-  senderId: number;
-  message: string;
-  timestamp: string;
-  isRead: boolean;
-}
 
 const friends: Friend[] = [
   {
@@ -150,6 +143,7 @@ export default function FriendsScreen() {
   const { user } = useAuth();
   const { userProfile, getTotalPoints } = useFirebaseData();
   const colors = getColors(isDarkMode);
+  const { t } = useLanguage();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [suggestedFriends, setSuggestedFriends] = useState<any[]>([]);
   const [friendRequests, setFriendRequests] = useState<UserFriend[]>([]);
@@ -161,6 +155,7 @@ export default function FriendsScreen() {
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatListener, setChatListener] = useState<(() => void) | null>(null);
   const [isProcessingRequest, setIsProcessingRequest] = useState(false);
   const [profileShareUrl, setProfileShareUrl] = useState('');
 
@@ -235,7 +230,7 @@ export default function FriendsScreen() {
     setIsProcessingRequest(true);
     try {
       await DatabaseService.sendFriendRequest(friendId);
-      Alert.alert('✅ Friend Request Sent', 'Your friend request has been sent successfully!');
+      Alert.alert(t('success'), t('activityCompleted'));
       // Reload data to update suggestions
       loadFriendsData();
     } catch (error: any) {
@@ -243,9 +238,9 @@ export default function FriendsScreen() {
 
       let errorMessage = 'Failed to send friend request. Please try again.';
       if (error.message === 'Friend request already sent') {
-        errorMessage = 'You have already sent a friend request to this user.';
+        errorMessage = t('failedToUpdateProfile');
       } else if (error.message === 'Already friends with this user') {
-        errorMessage = 'You are already friends with this user.';
+        errorMessage = t('failedToUpdateProfile');
       }
 
       Alert.alert('❌ Error', errorMessage);
@@ -261,8 +256,8 @@ export default function FriendsScreen() {
     try {
       await DatabaseService.respondToFriendRequest(requestId, accept);
       Alert.alert(
-        accept ? '✅ Friend Added!' : '❌ Request Declined',
-        accept ? 'Friend request accepted! You can now chat with your new friend.' : 'Friend request declined.'
+        accept ? t('success') : t('error'),
+        accept ? t('activityCompleted') : t('failedToUpdateProfile')
       );
       // Reload data to update friends list and requests
       loadFriendsData();
@@ -271,57 +266,101 @@ export default function FriendsScreen() {
 
       let errorMessage = 'Failed to respond to friend request. Please try again.';
       if (error.message === 'Friend request not found') {
-        errorMessage = 'Friend request not found. It may have already been processed.';
+        errorMessage = t('failedToUpdateProfile');
       }
 
-      Alert.alert('❌ Error', errorMessage);
+      Alert.alert(t('error'), errorMessage);
     } finally {
       setIsProcessingRequest(false);
     }
   };
 
-  const openChat = (friend: Friend) => {
+  const openChat = async (friend: Friend) => {
+    if (!user) return;
+
     setSelectedFriend(friend);
     setShowChatModal(true);
+
+    try {
+      // Load chat history
+      const history = await DatabaseService.getChatHistory(user.uid, friend.userId);
+      setChatMessages(history);
+
+      // Set up real-time listener
+      const unsubscribe = DatabaseService.setupChatListener(
+        user.uid,
+        friend.userId,
+        (messages) => {
+          setChatMessages(messages);
+        }
+      );
+
+      // Clean up previous listener if exists
+      if (chatListener) {
+        chatListener();
+      }
+
+      setChatListener(() => unsubscribe);
+    } catch (error) {
+      console.error('Error opening chat:', error);
+      Alert.alert(t('error'), t('failedToUpdateProfile'));
+    }
   };
 
-  const sendMessage = () => {
-    if (chatMessage.trim() && selectedFriend) {
-      const newMessage: ChatMessage = {
-        id: chatMessages.length + 1,
-        senderId: 0, // Current user
-        message: chatMessage,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isRead: false,
-      };
-      setChatMessages([...chatMessages, newMessage]);
-      setChatMessage('');
+  const closeChat = () => {
+    // Clean up chat listener
+    if (chatListener) {
+      chatListener();
+      setChatListener(null);
+    }
+
+    // Clear chat state
+    setShowChatModal(false);
+    setSelectedFriend(null);
+    setChatMessages([]);
+    setChatMessage('');
+  };
+
+  const sendMessage = async () => {
+    if (chatMessage.trim() && selectedFriend && user) {
+      try {
+        await DatabaseService.saveChatMessage(
+          user.uid,
+          selectedFriend.userId,
+          chatMessage.trim(),
+          'text'
+        );
+        setChatMessage('');
+      } catch (error) {
+        console.error('Error sending message:', error);
+        Alert.alert(t('error'), t('failedToUpdateProfile'));
+      }
     }
   };
 
   const shareProfile = async () => {
     if (!profileShareUrl) {
-      Alert.alert('❌ Error', 'Unable to generate profile link. Please try again.');
+      Alert.alert(t('error'), t('failedToUpdateProfile'));
       return;
     }
 
     try {
-      const shareMessage = `🌟 Check out my profile on this amazing app!\n\n${profileShareUrl}\n\nJoin me in tracking goals and building positive habits! 🎯`;
+      const shareMessage = t('profileShareMessage', { url: profileShareUrl });
 
       // Show the shareable link in an alert for easy copying
       Alert.alert(
-        '📋 Share Your Profile',
-        `Copy and share this link with your friends:\n\n${profileShareUrl}\n\nMessage suggestion:\n${shareMessage}`,
+        t('shareProfileHeading'),
+        `${t('shareProfileDescription')}\n\n${profileShareUrl}\n\n${t('messageSuggestion')}\n${t('profileShareMessage', { url: profileShareUrl })}`,
         [
           {
-            text: 'Copy Link',
+            text: t('copyLink'),
             onPress: async () => {
               try {
                 if (navigator.clipboard) {
                   await navigator.clipboard.writeText(profileShareUrl);
-                  Alert.alert('✅ Success!', 'Profile link copied to clipboard!');
+                  Alert.alert('✅', t('copyLinkSuccess'));
                 } else {
-                  Alert.alert('✅', 'Link is ready to share!');
+                  Alert.alert('✅', t('linkReadyToShare'));
                 }
               } catch (error) {
                 Alert.alert('❌ Error', 'Unable to copy to clipboard');
@@ -333,7 +372,7 @@ export default function FriendsScreen() {
       );
     } catch (error) {
       console.error('Error sharing profile:', error);
-      Alert.alert('❌ Error', 'Unable to share profile. Please try again.');
+      Alert.alert(t('error'), t('failedToUpdateProfile'));
     }
   };
 
@@ -379,7 +418,7 @@ export default function FriendsScreen() {
     const config = platformConfig[platform as keyof typeof platformConfig];
 
     if (!config) {
-      Alert.alert('❌ Error', 'Unknown platform selected');
+      Alert.alert(t('error'), t('failedToUpdateProfile'));
       return;
     }
 
@@ -387,33 +426,33 @@ export default function FriendsScreen() {
       // Try to open the app first, but wrap in try-catch since canOpenURL can be misleading
       try {
         await Linking.openURL(config.appUrl);
-        Alert.alert('✅ Success', config.message);
+        Alert.alert('✅', t('socialOpenSuccess', { platform: config.name }));
       } catch (appError) {
         // App URL failed, try web version for social platforms
         if (platform !== 'email') {
           try {
             const webUrl = config.webUrl;
             await Linking.openURL(webUrl);
-            Alert.alert('✅ Browser Opened', `Opening ${config.name} in your browser. Search for "${config.searchQuery}" to find friends using goal tracking apps!`);
+            Alert.alert('✅', t('socialBrowserOpened', { platform: config.name, query: config.searchQuery }));
           } catch (webError) {
             Alert.alert(
-              '❌ Platform Not Available',
-              `${config.name} app is not installed or not accessible. Please visit ${config.name}.com and search for "${config.searchQuery}" to find friends.`
+              '❌',
+              t('socialPlatformUnavailable', { platform: config.name, query: config.searchQuery })
             );
           }
         } else {
           // For email, open the tutorial
           try {
             await Linking.openURL(config.webUrl);
-            Alert.alert('✅ Tutorial Opened', 'Learn how to share your profile with friends!');
+            Alert.alert('✅', t('tutorialOpened'));
           } catch (emailError) {
-            Alert.alert('❌ Error', 'Unable to open tutorial. Please search for "how to share app profile" online.');
+            Alert.alert('❌', t('tutorialOpenError'));
           }
         }
       }
     } catch (error) {
       console.error(`Error opening ${platform}:`, error);
-      Alert.alert('❌ Error', `Unable to open ${config.name}. Please try again or check if the app is installed.`);
+      Alert.alert(t('error'), t('failedToUpdateProfile'));
     }
   };
 
@@ -434,8 +473,8 @@ export default function FriendsScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Friends</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Connect and grow together</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('friends')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('connectAndGrowTogether')}</Text>
         </View>
 
         {/* Search Bar */}
@@ -444,7 +483,7 @@ export default function FriendsScreen() {
             <Search size={20} color={colors.textTertiary} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search friends..."
+              placeholder={t('searchPostsOrUsers')}
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor={colors.textTertiary}
@@ -465,7 +504,7 @@ export default function FriendsScreen() {
             onPress={() => setSelectedTab('friends')}
           >
             <Text style={[styles.tabText, { color: selectedTab === 'friends' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'friends' && styles.activeTabText]}>
-              My Friends ({friends.length})
+              {t('myFriends')} ({friends.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -473,7 +512,7 @@ export default function FriendsScreen() {
             onPress={() => setSelectedTab('requests')}
           >
             <Text style={[styles.tabText, { color: selectedTab === 'requests' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'requests' && styles.activeTabText]}>
-              Requests ({friendRequests.length})
+              {t('friendRequestsTab')} ({friendRequests.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -481,7 +520,7 @@ export default function FriendsScreen() {
             onPress={() => setSelectedTab('suggestions')}
           >
             <Text style={[styles.tabText, { color: selectedTab === 'suggestions' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'suggestions' && styles.activeTabText]}>
-              Suggestions
+              {t('suggestionsTab')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -492,7 +531,7 @@ export default function FriendsScreen() {
               {/* Online Friends */}
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  Online ({friends.filter(f => f.isOnline).length})
+                  {t('onlineCountLabel', { count: friends.filter(f => f.status === 'online').length })}
                 </Text>
                 {filteredFriends
                   .filter(friend => friend.isOnline)
@@ -512,12 +551,12 @@ export default function FriendsScreen() {
                           </View>
                           <View style={styles.friendInfo}>
                             <Text style={[styles.friendName, { color: colors.text }]}>{friend.name}</Text>
-                            <Text style={styles.friendLevel}>{friend.level}</Text>
-                            <Text style={[styles.lastMessage, { color: colors.textSecondary }]}>{friend.lastMessage}</Text>
+                            <Text style={[styles.friendLevel]}>{friend.level}</Text>
+                            <Text style={[styles.lastMessage, { color: colors.textSecondary }]}>{friend.lastMessage || t('connectedAsFriends')}</Text>
                           </View>
                         </View>
                         <View style={styles.friendRight}>
-                          <Text style={[styles.lastSeen, { color: colors.textTertiary }]}>{friend.lastSeen}</Text>
+                          <Text style={[styles.lastSeen, { color: colors.textTertiary }]}>{t('lastSeenLabel', { time: friend.lastSeen })}</Text>
                           {friend.unreadCount && friend.unreadCount > 0 && (
                             <View style={styles.unreadBadge}>
                               <Text style={styles.unreadText}>{friend.unreadCount}</Text>
@@ -540,7 +579,7 @@ export default function FriendsScreen() {
               {/* Offline Friends */}
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  Offline ({friends.filter(f => !f.isOnline).length})
+                  {t('offlineCountLabel', { count: friends.filter(f => f.status !== 'online').length })}
                 </Text>
                 {filteredFriends
                   .filter(friend => !friend.isOnline)
@@ -560,8 +599,8 @@ export default function FriendsScreen() {
                           </View>
                           <View style={styles.friendInfo}>
                             <Text style={[styles.friendName, { color: colors.text }]}>{friend.name}</Text>
-                            <Text style={styles.friendLevel}>{friend.level}</Text>
-                            <Text style={[styles.lastSeen, { color: colors.textSecondary }]}>Last seen {friend.lastSeen}</Text>
+                            <Text style={[styles.friendLevel]}>{friend.level}</Text>
+                            <Text style={[styles.lastSeen, { color: colors.textSecondary }]}>{t('lastSeenLabel', { time: friend.lastSeen })}</Text>
                           </View>
                         </View>
                         <View style={styles.friendRight}>
@@ -580,15 +619,13 @@ export default function FriendsScreen() {
 
           {selectedTab === 'requests' && (
             <View style={styles.requestsContainer}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Friend Requests ({friendRequests.length})
-              </Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('friendRequestsTitle', { count: friendRequests.length })}</Text>
               {friendRequests.map((request) => (
                 <DashboardCard key={request.id} style={styles.requestCard}>
                   <View style={styles.requestItem}>
                     <View style={styles.requestInfo}>
                       <Text style={[styles.requestText, { color: colors.text }]}>
-                        {request.friendProfile?.name || 'Someone'} wants to be your friend
+                        {t('wantsToBeYourFriend', { name: request.friendProfile?.name || 'Someone' })}
                       </Text>
                       <Text style={[styles.requestTime, { color: colors.textSecondary }]}>
                         {formatTime(request.createdAt)}
@@ -605,7 +642,7 @@ export default function FriendsScreen() {
                         disabled={isProcessingRequest}
                       >
                         <Text style={styles.requestButtonText}>
-                          {isProcessingRequest ? '...' : 'Accept'}
+                          {isProcessingRequest ? '...' : t('accept')}
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -618,7 +655,7 @@ export default function FriendsScreen() {
                         disabled={isProcessingRequest}
                       >
                         <Text style={[styles.requestButtonText, styles.declineButtonText]}>
-                          {isProcessingRequest ? '...' : 'Decline'}
+                          {isProcessingRequest ? '...' : t('decline')}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -630,7 +667,7 @@ export default function FriendsScreen() {
 
           {selectedTab === 'suggestions' && (
             <View style={styles.suggestionsContainer}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>People You May Know</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('peopleYouMayKnow')}</Text>
               {suggestedFriends.map((person) => (
                 <DashboardCard key={person.id} style={styles.suggestionCard}>
                   <View style={styles.suggestionItem}>
@@ -639,7 +676,7 @@ export default function FriendsScreen() {
                       <Text style={[styles.suggestionName, { color: colors.text }]}>{person.displayName || person.email?.split('@')[0] || 'User'}</Text>
                       <Text style={styles.suggestionLevel}>Level {Math.floor((person.totalPoints || 0) / 100) + 1}</Text>
                       <Text style={[styles.mutualFriends, { color: colors.textSecondary }]}>
-                        {Math.floor(Math.random() * 5) + 1} mutual friends
+                        {t('mutualFriendsCount', { count: Math.floor(Math.random() * 5) + 1 })}
                       </Text>
                       <View style={styles.commonInterests}>
                         <View style={[styles.interestTag, { backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF' }]}>
@@ -679,13 +716,13 @@ export default function FriendsScreen() {
               <TouchableOpacity onPress={() => setShowAddFriendModal(false)}>
                 <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Add Friends</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('shareWithCommunity')}</Text>
               <View style={{ width: 24 }} />
             </View>
 
             <View style={styles.modalContent}>
               <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
-                Connect with friends from your social media accounts
+                {t('connectShareGrowTogether')}
               </Text>
 
               <View style={styles.socialPlatforms}>
@@ -713,14 +750,14 @@ export default function FriendsScreen() {
               </View>
 
               <View style={styles.inviteSection}>
-                <Text style={[styles.inviteTitle, { color: colors.textSecondary }]}>Or invite by sharing your profile</Text>
+                <Text style={[styles.inviteTitle, { color: colors.textSecondary }]}>{t('connectShareGrowTogether')}</Text>
                 <TouchableOpacity
                   style={[styles.shareButton, isProcessingRequest && styles.disabledButton]}
                   onPress={shareProfile}
                   disabled={isProcessingRequest}
                 >
                   <Share size={20} color="#FFFFFF" />
-                  <Text style={styles.shareButtonText}>Share Profile Link</Text>
+                  <Text style={styles.shareButtonText}>{t('share')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -735,7 +772,7 @@ export default function FriendsScreen() {
         >
           <SafeAreaView style={[styles.chatContainer, { backgroundColor: colors.cardBackground }]}>
             <View style={styles.chatHeader}>
-              <TouchableOpacity onPress={() => setShowChatModal(false)}>
+              <TouchableOpacity onPress={closeChat}>
                 <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
               <View style={styles.chatHeaderInfo}>
@@ -743,7 +780,7 @@ export default function FriendsScreen() {
                 <View>
                   <Text style={[styles.chatName, { color: colors.text }]}>{selectedFriend?.name}</Text>
                   <Text style={styles.chatStatus}>
-                    {selectedFriend?.isOnline ? 'Active now' : selectedFriend?.lastSeen}
+                    {selectedFriend?.isOnline ? t('activeNow') : selectedFriend?.lastSeen}
                   </Text>
                 </View>
               </View>
@@ -763,16 +800,23 @@ export default function FriendsScreen() {
                   key={message.id}
                   style={[
                     styles.messageItem,
-                    message.senderId === 0 ? styles.sentMessage : styles.receivedMessage
+                    message.senderId === user?.uid ? styles.sentMessage : styles.receivedMessage
                   ]}
                 >
+                  {message.senderId !== user?.uid && (
+                    <Text style={[styles.senderName, { color: colors.textSecondary }]}>
+                      {message.senderName}
+                    </Text>
+                  )}
                   <Text style={[
                     styles.messageText,
-                    message.senderId === 0 ? styles.sentMessageText : [styles.receivedMessageText, { backgroundColor: colors.background, color: colors.text }]
+                    message.senderId === user?.uid ? styles.sentMessageText : [styles.receivedMessageText, { backgroundColor: colors.background, color: colors.text }]
                   ]}>
                     {message.message}
                   </Text>
-                  <Text style={[styles.messageTime, { color: colors.textTertiary }]}>{message.timestamp}</Text>
+                  <Text style={[styles.messageTime, { color: colors.textTertiary }]}>
+                    {formatTime(message.timestamp)}
+                  </Text>
                 </View>
               ))}
             </ScrollView>
@@ -780,7 +824,7 @@ export default function FriendsScreen() {
             <View style={styles.messageInputContainer}>
               <TextInput
                 style={[styles.messageInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-                placeholder="Type a message..."
+                placeholder={t('typeMessagePlaceholder')}
                 value={chatMessage}
                 onChangeText={setChatMessage}
                 placeholderTextColor={colors.textTertiary}
@@ -1155,6 +1199,11 @@ const styles = StyleSheet.create({
   messageTime: {
     fontSize: 12,
     textAlign: 'center',
+  },
+  senderName: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   messageInputContainer: {
     flexDirection: 'row',

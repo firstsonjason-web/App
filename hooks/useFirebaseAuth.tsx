@@ -94,6 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await AuthService.signOut();
       setUserProfile(null);
+      setUser(null);
     } catch (error) {
       setLoading(false);
       throw error;

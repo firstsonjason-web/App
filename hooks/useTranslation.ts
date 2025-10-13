@@ -1,41 +1,12 @@
-import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Language, TranslationKey, getTranslation } from '@/lib/translations';
+import { useLanguage } from './LanguageContext';
 
+// Custom hook for translations
 export const useTranslation = () => {
-  const [currentLanguage, setCurrentLanguage] = useState<Language>('en');
+  console.log('🔤 LANGUAGE DEBUG: useTranslation hook called');
+  const { t } = useLanguage();
+  console.log('🔤 LANGUAGE DEBUG: useTranslation hook returning translation function');
 
-  useEffect(() => {
-    loadSavedLanguage();
-  }, []);
-
-  const loadSavedLanguage = async () => {
-    try {
-      const savedLanguage = await AsyncStorage.getItem('language');
-      if (savedLanguage && savedLanguage in ['en', 'zh', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko']) {
-        setCurrentLanguage(savedLanguage as Language);
-      }
-    } catch (error) {
-      console.log('Error loading saved language:', error);
-    }
-  };
-
-  const changeLanguage = async (language: Language) => {
-    try {
-      await AsyncStorage.setItem('language', language);
-      setCurrentLanguage(language);
-    } catch (error) {
-      console.log('Error saving language:', error);
-    }
-  };
-
-  const t = (key: TranslationKey): string => {
-    return getTranslation(currentLanguage, key);
-  };
-
-  return {
-    currentLanguage,
-    changeLanguage,
-    t,
-  };
+  return { t };
 };
+
+console.log('🔤 LANGUAGE DEBUG: useTranslation.ts loaded');

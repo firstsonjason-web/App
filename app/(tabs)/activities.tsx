@@ -39,6 +39,7 @@ import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { formatTime, Activity as FirebaseActivity, DatabaseService } from '@/lib/firebase-services';
 import { getColors } from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLanguage } from '@/hooks/LanguageContext';
 
 interface ActivityTemplate {
   id: number;
@@ -170,15 +171,6 @@ const activityTemplates: ActivityTemplate[] = [
   },
 ];
 
-const categories = [
-  { id: 'all', name: 'All Activities', color: '#6B7280' },
-  { id: 'Physical', name: 'Physical', color: '#10B981' },
-  { id: 'Creative', name: 'Creative', color: '#8B5CF6' },
-  { id: 'Social', name: 'Social', color: '#EF4444' },
-  { id: 'Mindful', name: 'Mindful', color: '#4F46E5' },
-  { id: 'Learning', name: 'Learning', color: '#06B6D4' },
-];
-
 const difficultyColors = {
   Easy: '#10B981',
   Medium: '#F59E0B',
@@ -190,6 +182,18 @@ export default function ActivitiesScreen() {
   const { user } = useAuth();
   const { activities, userProfile } = useFirebaseData();
   const colors = getColors(isDarkMode);
+  const { t } = useLanguage();
+  const categories = React.useMemo(
+    () => [
+      { id: 'all', name: t('allActivities'), color: '#6B7280' },
+      { id: 'Physical', name: t('categoryPhysical'), color: '#10B981' },
+      { id: 'Creative', name: t('categoryCreative'), color: '#8B5CF6' },
+      { id: 'Social', name: t('categorySocial'), color: '#EF4444' },
+      { id: 'Mindful', name: t('categoryMindful'), color: '#4F46E5' },
+      { id: 'Learning', name: t('categoryLearning'), color: '#06B6D4' },
+    ],
+    [t]
+  );
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandedActivity, setExpandedActivity] = useState<number | null>(null);
   const [userAddictionLevel, setUserAddictionLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
@@ -266,9 +270,9 @@ export default function ActivitiesScreen() {
       await Linking.openURL(youtubeUrl);
     } else {
       Alert.alert(
-        'Unable to open video',
-        `Please search for "${videoTitle}" on YouTube manually.`,
-        [{ text: 'OK' }]
+        t('unableToOpenVideoTitle'),
+        t('unableToOpenVideoMessage', { title: videoTitle }),
+        [{ text: t('ok') }]
       );
     }
   };
@@ -279,7 +283,7 @@ export default function ActivitiesScreen() {
 
   const completeActivity = async (activity: ActivityTemplate) => {
     if (!user) {
-      Alert.alert('Authentication Required', 'Please log in to track your activities.');
+      Alert.alert(t('error'), t('failedToUpdateProfile'));
       return;
     }
 
@@ -293,13 +297,21 @@ export default function ActivitiesScreen() {
       });
 
       Alert.alert(
-        'Activity Completed! 🎉',
-        `Great job completing "${activity.title}"! You've earned ${activity.difficulty === 'Easy' ? 10 : activity.difficulty === 'Medium' ? 20 : 30} points.`,
-        [{ text: 'OK' }]
+        t('activityCompleted'),
+        t('activityCompletionMessage', {
+          title: activity.title,
+          points:
+            activity.difficulty === 'Easy'
+              ? 10
+              : activity.difficulty === 'Medium'
+              ? 20
+              : 30,
+        }),
+        [{ text: t('ok') }]
       );
     } catch (error) {
       console.error('Error completing activity:', error);
-      Alert.alert('Error', 'Failed to save activity. Please try again.');
+      Alert.alert(t('error'), t('failedToUpdateProfile'));
     }
   };
 
@@ -315,11 +327,11 @@ export default function ActivitiesScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Device-Free Activities</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('activities')}</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              {userAddictionLevel 
-                ? `Personalized activities for your ${userAddictionLevel} digital dependency level`
-                : 'Discover meaningful ways to spend your time offline'
+              {userAddictionLevel
+                ? `${t('personalizedActivities')} ${userAddictionLevel} ${t('digitalDependencyLevel')}`
+                : t('discoverOfflineActivities')
               }
             </Text>
           </View>
@@ -335,10 +347,10 @@ export default function ActivitiesScreen() {
                   </Text>
                   <View style={styles.noticeText}>
                     <Text style={[styles.noticeTitle, { color: colors.text }]}>
-                      Personalized for You
+                      {t('personalizedForYou')}
                     </Text>
                     <Text style={[styles.noticeDescription, { color: colors.textSecondary }]}>
-                      These activities are recommended based on your digital wellness assessment
+                      {t('wellnessAssessmentRecommendation')}
                     </Text>
                   </View>
                 </View>
@@ -357,12 +369,12 @@ export default function ActivitiesScreen() {
               >
                 <View style={styles.featuredContent}>
                   <View style={styles.featuredText}>
-                    <Text style={styles.featuredTitle}>Activity of the Day</Text>
+                    <Text style={styles.featuredTitle}>{t('activityOfTheDay')}</Text>
                     <Text style={styles.featuredSubtitle}>
-                      Take a 20-minute nature walk
+                      {t('takeNatureWalk')}
                     </Text>
                     <Text style={styles.featuredDescription}>
-                      Step outside and reconnect with the natural world around you
+                      {t('reconnectWithNature')}
                     </Text>
                   </View>
                   <View style={styles.featuredIcon}>
@@ -428,7 +440,15 @@ export default function ActivitiesScreen() {
                           styles.difficultyBadge,
                           { backgroundColor: difficultyColors[activityData.difficulty as keyof typeof difficultyColors] }
                         ]}>
-                          <Text style={styles.difficultyText}>{activityData.difficulty}</Text>
+                          <Text style={styles.difficultyText}>
+                            {t(
+                              activityData.difficulty === 'Easy'
+                                ? 'difficultyEasy'
+                                : activityData.difficulty === 'Medium'
+                                ? 'difficultyMedium'
+                                : 'difficultyHard'
+                            )}
+                          </Text>
                         </View>
                         <View style={styles.durationContainer}>
                           <Clock size={14} color={colors.textSecondary} />
@@ -443,7 +463,7 @@ export default function ActivitiesScreen() {
                       <Text style={[styles.activityDescription, { color: colors.text }]}>{activityData.description}</Text>
 
                       <View style={styles.benefitsSection}>
-                        <Text style={[styles.benefitsTitle, { color: colors.text }]}>Benefits:</Text>
+                        <Text style={[styles.benefitsTitle, { color: colors.text }]}>{t('benefitsLabel')}</Text>
                         <View style={styles.benefitsList}>
                           {activityData.benefits.map((benefit: string, index: number) => (
                             <View key={index} style={styles.benefitItem}>
@@ -456,7 +476,7 @@ export default function ActivitiesScreen() {
 
                       {activityData.videoId && (
                         <View style={styles.videoSection}>
-                          <Text style={[styles.videoSectionTitle, { color: colors.text }]}>Learn More:</Text>
+                          <Text style={[styles.videoSectionTitle, { color: colors.text }]}>{t('learnMore')}</Text>
                           <TouchableOpacity
                             style={[styles.videoCard, { backgroundColor: colors.background, borderColor: colors.border }]}
                             onPress={() => openYouTubeVideo(activityData.videoId, activityData.videoTitle)}
@@ -472,7 +492,7 @@ export default function ActivitiesScreen() {
                               <Text style={[styles.videoTitle, { color: colors.text }]}>{activityData.videoTitle}</Text>
                               <View style={styles.videoMeta}>
                                 <ExternalLink size={14} color={colors.textSecondary} />
-                                <Text style={[styles.videoSource, { color: colors.textSecondary }]}>Watch on YouTube</Text>
+                                <Text style={[styles.videoSource, { color: colors.textSecondary }]}>{t('watchOnYouTube')}</Text>
                               </View>
                             </View>
                           </TouchableOpacity>
@@ -485,7 +505,7 @@ export default function ActivitiesScreen() {
                         onPress={() => completeActivity(activityData)}
                       >
                         <CheckCircle size={20} color="#FFFFFF" />
-                        <Text style={styles.completeButtonText}>Mark as Complete</Text>
+                        <Text style={styles.completeButtonText}>{t('markAsComplete')}</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -498,7 +518,7 @@ export default function ActivitiesScreen() {
           {user && activities.length > 0 && (
             <View style={styles.completedSection}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Your Completed Activities
+                {t('yourCompletedActivities')}
               </Text>
               <View style={styles.activitiesContainer}>
                 {activities.slice(0, 3).map((firebaseActivity, index) => {
@@ -538,19 +558,18 @@ export default function ActivitiesScreen() {
           <View style={styles.challengeContainer}>
             <DashboardCard>
               <View style={styles.challengeContent}>
-                <Text style={[styles.challengeTitle, { color: colors.text }]}>Today's Challenge</Text>
+                <Text style={[styles.challengeTitle, { color: colors.text }]}>{t('todaysChallenge')}</Text>
                 <Text style={[styles.challengeDescription, { color: colors.textSecondary }]}>
-                  Try one new activity from the list above for at least 15 minutes.
-                  Notice how you feel before and after!
+                  {t('tryNewActivity')}
                 </Text>
                 <View style={styles.challengeStats}>
                   <View style={styles.challengeStat}>
                     <Text style={styles.challengeStatValue}>3</Text>
-                    <Text style={[styles.challengeStatLabel, { color: colors.textSecondary }]}>Activities Tried</Text>
+                    <Text style={[styles.challengeStatLabel, { color: colors.textSecondary }]}>{t('activitiesTried')}</Text>
                   </View>
                   <View style={styles.challengeStat}>
                     <Text style={styles.challengeStatValue}>45</Text>
-                    <Text style={[styles.challengeStatLabel, { color: colors.textSecondary }]}>Minutes Offline</Text>
+                    <Text style={[styles.challengeStatLabel, { color: colors.textSecondary }]}>{t('minutesOffline')}</Text>
                   </View>
                 </View>
               </View>
