@@ -25,21 +25,24 @@ import * as ImagePicker from 'expo-image-picker';
 import { CommunityPost, CommunityComment, DatabaseService , formatTime, Reply } from '@/lib/firebase-services';
 import { Timestamp, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { uploadPostMedia } from '@/lib/storage-service';
 import { useRouter } from 'expo-router';
 // import NetInfo from '@react-native-community/netinfo'; // Uncomment when package is installed
 
 interface Post extends Omit<CommunityPost, 'timestamp'> {
-  isLiked: boolean;
-  timestamp: string;
-  author: {
-    name: string;
-    avatar: string;
-    streak: number;
-    level: string;
-  };
-  likesCount: number;
-  repliesCount: number;
-}
+   isLiked: boolean;
+   timestamp: string;
+   author: {
+     name: string;
+     avatar: string;
+     streak: number;
+     level: string;
+   };
+   likesCount: number;
+   repliesCount: number;
+   mediaUrl?: string;
+   mediaType?: 'image' | 'video';
+ }
 
 interface Comment {
   id: string;
@@ -100,6 +103,10 @@ const PostItem = memo(function PostItem({ post, colors, t, handleLikePost, toggl
   // State to store reply authors
   const [replyAuthors, setReplyAuthors] = useState<{ [replyId: string]: { name: string; avatar: string } }>({});
 
+  // State for media loading and error handling
+  const [mediaLoading, setMediaLoading] = useState(post.mediaUrl ? true : false);
+  const [mediaError, setMediaError] = useState(false);
+
   // Fetch reply authors when replies are expanded
   useEffect(() => {
     const fetchReplyAuthors = async () => {
@@ -154,6 +161,85 @@ const PostItem = memo(function PostItem({ post, colors, t, handleLikePost, toggl
       </View>
 
       <Text style={[styles.postContent, { color: colors.text }]}>{post.content}</Text>
+
+      {/* Media Display Section */}
+      {post.mediaUrl && post.mediaType && (
+        <View style={styles.mediaContainer}>
+          {mediaLoading && (
+            <View style={[styles.postImage, styles.mediaLoadingContainer]}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.mediaLoadingText, { color: colors.textSecondary }]}>
+                {t('loadingMedia')}
+              </Text>
+            </View>
+          )}
+
+          {mediaError && !mediaLoading && (
+            <View style={[styles.postImage, styles.mediaErrorContainer]}>
+              <Text style={[styles.mediaErrorText, { color: colors.textSecondary }]}>
+                {t('failedToLoadMedia')}
+              </Text>
+              <TouchableOpacity
+                style={[styles.mediaRetryButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setMediaError(false);
+                  setMediaLoading(true);
+                }}
+                accessible={true}
+                accessibilityLabel={t('retryLoadingMedia')}
+                accessibilityHint={t('retryLoadingTheMediaContent')}
+                accessibilityRole="button"
+              >
+                <Text style={styles.mediaRetryButtonText}>{t('retry')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!mediaLoading && !mediaError && post.mediaType === 'image' && (
+            <Image
+              source={{ uri: post.mediaUrl }}
+              style={styles.postImage}
+              resizeMode="cover"
+              accessible={true}
+              accessibilityLabel={`Image attached to post by ${post.author.name}`}
+              accessibilityHint="Displays an image shared in this community post"
+              onLoadStart={() => setMediaLoading(true)}
+              onLoadEnd={() => setMediaLoading(false)}
+              onError={() => {
+                setMediaLoading(false);
+                setMediaError(true);
+              }}
+            />
+          )}
+
+          {!mediaLoading && !mediaError && post.mediaType === 'video' && (
+            <TouchableOpacity
+              style={styles.videoContainer}
+              accessible={true}
+              accessibilityLabel={`Video attached to post by ${post.author.name}`}
+              accessibilityHint="Tap to play video shared in this community post"
+              accessibilityRole="button"
+            >
+              <Image
+                source={{ uri: post.mediaUrl }}
+                style={styles.videoThumbnail}
+                resizeMode="cover"
+                onLoadStart={() => setMediaLoading(true)}
+                onLoadEnd={() => setMediaLoading(false)}
+                onError={() => {
+                  setMediaLoading(false);
+                  setMediaError(true);
+                }}
+              />
+              <View style={styles.videoOverlay}>
+                <View style={styles.playButton}>
+                  <Text style={styles.playButtonText}>▶</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       <View style={styles.postActions}>
         <TouchableOpacity
@@ -308,6 +394,7 @@ export default function CommunitiesScreen() {
     encouragements: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   // Debounced search query
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -810,7 +897,7 @@ export default function CommunitiesScreen() {
 
   const handleCreatePost = async () => {
     const trimmedContent = newPostContent.trim();
-    if (!trimmedContent) {
+    if (!trimmedContent && !selectedMedia) {
       Alert.alert(t('error'), t('postContentCannotBeEmpty'));
       return;
     }
@@ -835,6 +922,9 @@ export default function CommunitiesScreen() {
       return;
     }
 
+    // Set loading state for media upload
+    setUploadingMedia(true);
+
     // Optimistic UI update: Add post immediately to local state
     const tempId = `temp_${Date.now()}`;
     const optimisticPost: Post = {
@@ -858,20 +948,68 @@ export default function CommunitiesScreen() {
     setPosts(prev => [optimisticPost, ...prev]);
 
     try {
-      const postId = await DatabaseService.createPost({
+      let mediaUrl: string | undefined;
+
+      // Upload media if selected
+      if (selectedMedia) {
+        try {
+          mediaUrl = await uploadPostMedia(
+            user.uid,
+            selectedMedia.uri,
+            selectedMedia.type
+          );
+        } catch (mediaError) {
+          console.error('Error uploading media:', mediaError);
+          // Ask user if they want to post without media
+          Alert.alert(
+            t('mediaUploadFailed'),
+            t('mediaUploadFailedMessage'),
+            [
+              {
+                text: t('postWithoutMedia'),
+                onPress: () => {
+                  // Continue with post creation without media
+                },
+              },
+              {
+                text: t('cancel'),
+                style: 'cancel',
+                onPress: () => {
+                  // Remove optimistic post and return
+                  setPosts(prev => prev.filter(post => post.id !== tempId));
+                  setUploadingMedia(false);
+                  return;
+                },
+              },
+            ]
+          );
+        }
+      }
+
+      // Create post with media URL if available
+      const postData: any = {
         userId: user.uid,
         content: trimmedContent,
-      });
+      };
+
+      if (mediaUrl) {
+        postData.mediaUrl = mediaUrl;
+        postData.mediaType = selectedMedia?.type;
+      }
+
+      const postId = await DatabaseService.createPost(postData);
 
       // Clear form and close modal
       setNewPostContent('');
       setSelectedMedia(null);
       setShowNewPostModal(false);
+      setUploadingMedia(false);
       Alert.alert(t('success'), t('postCreatedSuccessfully'));
     } catch (error) {
       console.error('Error creating post:', error);
       // Remove optimistic post on error
       setPosts(prev => prev.filter(post => post.id !== tempId));
+      setUploadingMedia(false);
 
       // Enhanced error handling for different scenarios
       const firebaseError = error as any;
@@ -1177,16 +1315,24 @@ export default function CommunitiesScreen() {
                 accessibilityHint="Enter your post content here"
               />
               <TouchableOpacity
-                style={[styles.newPostButton, { backgroundColor: colors.primary }]}
+                style={[
+                  styles.newPostButton,
+                  { backgroundColor: colors.primary },
+                  uploadingMedia && styles.newPostButtonDisabled
+                ]}
                 onPress={handleCreatePost}
-                disabled={!newPostContent.trim()}
+                disabled={!newPostContent.trim() || uploadingMedia}
                 accessible={true}
                 accessibilityLabel="Send post"
                 accessibilityHint={t('createAndPublishYourNewPost')}
                 accessibilityRole="button"
-                accessibilityState={{ disabled: !newPostContent.trim() }}
+                accessibilityState={{ disabled: !newPostContent.trim() || uploadingMedia }}
               >
-                <Send size={20} color="#FFFFFF" />
+                {uploadingMedia ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Send size={20} color="#FFFFFF" />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1280,9 +1426,9 @@ export default function CommunitiesScreen() {
               </View>
             ) : null
           }
-          renderItem={useMemo(() => ({ item: post }) => (
+          renderItem={useMemo(() => ({ item }: { item: Post }) => (
             <PostItem
-              post={post}
+              post={item}
               colors={colors}
               t={t}
               handleLikePost={handleLikePost}
@@ -1320,14 +1466,24 @@ export default function CommunitiesScreen() {
               </TouchableOpacity>
               <Text style={[styles.modalTitle, { color: colors.text }]}>{t('shareWithCommunity')}</Text>
               <TouchableOpacity
-                style={styles.postButton}
+                style={[
+                  styles.postButton,
+                  uploadingMedia && styles.postButtonDisabled
+                ]}
                 onPress={handleCreatePost}
+                disabled={uploadingMedia}
                 accessible={true}
                 accessibilityLabel={t('postToCommunity')}
                 accessibilityHint="Create and publish your new post"
                 accessibilityRole="button"
+                accessibilityState={{ disabled: uploadingMedia }}
               >
-                <Text style={styles.postButtonText}>{t('post')}</Text>
+                <Text style={[
+                  styles.postButtonText,
+                  uploadingMedia && styles.postButtonTextDisabled
+                ]}>
+                  {uploadingMedia ? t('uploading') : t('post')}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -1653,6 +1809,75 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
   },
+  mediaContainer: {
+    marginBottom: 12,
+  },
+  videoContainer: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  videoThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  videoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playButtonText: {
+    fontSize: 24,
+    color: '#1F2937',
+    fontWeight: 'bold',
+  },
+  mediaLoadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  mediaLoadingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 8,
+  },
+  mediaErrorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  mediaErrorText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  mediaRetryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  mediaRetryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   postActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -1697,6 +1922,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
+  },
+  postButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  postButtonTextDisabled: {
+    color: '#D1D5DB',
   },
   modalContent: {
     flex: 1,
@@ -1939,6 +2170,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 12,
     backgroundColor: '#4F46E5',
+  },
+  newPostButtonDisabled: {
+    backgroundColor: '#9CA3AF',
   },
   repliesContainer: {
     marginTop: 12,

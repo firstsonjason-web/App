@@ -6,6 +6,36 @@ import { DarkModeContext, useDarkModeState } from '@/hooks/useDarkMode';
 import { AuthProvider, useAuth } from '@/hooks/useFirebaseAuth';
 import { LanguageProvider } from '@/hooks/LanguageContext';
 
+// Configure linking for deeplink handling
+export const unstable_settings = {
+  initialRouteName: 'landing',
+};
+
+// Define linking configuration for profile sharing
+const linking = {
+  prefixes: ['myapp://', 'https://myapp.com'],
+  config: {
+    screens: {
+      landing: 'landing',
+      login: 'login',
+      '(tabs)': {
+        screens: {
+          index: '',
+          profile: 'profile',
+          friends: 'friends',
+          communities: 'communities',
+          activities: 'activities',
+          progress: 'progress',
+          rankings: 'rankings',
+        },
+      },
+      // Profile sharing deeplink route
+      'profile/:userId': 'profile/:userId',
+      '+not-found': '*',
+    },
+  },
+};
+
 function AppNavigator() {
   const { user, loading } = useAuth();
 
@@ -19,6 +49,7 @@ function AppNavigator() {
       <Stack.Screen name="landing" />
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="profile/:userId" />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

@@ -26,7 +26,6 @@ import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { useScreenTimeTracking } from '@/hooks/useScreenTimeTracking';
 import { getColors } from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLanguage } from '@/hooks/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -36,7 +35,6 @@ export default function ProgressScreen() {
   const { userProfile, goals, activities, getTotalPoints } = useFirebaseData();
   const { todayScreenTime, weeklyData, averageDailyScreenTime } = useScreenTimeTracking();
   const colors = getColors(isDarkMode);
-  const { t } = useLanguage();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [showAchievements, setShowAchievements] = useState(true);
 
@@ -58,9 +56,9 @@ export default function ProgressScreen() {
   };
 
   const periods = [
-    { id: 'week', name: t('periodWeek') },
-    { id: 'month', name: t('periodMonth') },
-    { id: 'year', name: t('periodYear') },
+    { id: 'week', name: 'Week' },
+    { id: 'month', name: 'Month' },
+    { id: 'year', name: 'Year' },
   ];
 
   const maxScreenTime = Math.max(...weeklyData.map(d => d.screenTime));
@@ -76,8 +74,8 @@ export default function ProgressScreen() {
   const achievements = [
     {
       id: 1,
-      title: t('focusMasterTitle'),
-      description: t('focusMasterDescription'),
+      title: 'Focus Master',
+      description: '7 days of consistent focus sessions',
       icon: Target,
       color: '#4F46E5',
       unlocked: focusSessions >= 7,
@@ -85,8 +83,8 @@ export default function ProgressScreen() {
     },
     {
       id: 2,
-      title: t('digitalMinimalistTitle'),
-      description: t('digitalMinimalistDescription'),
+      title: 'Digital Minimalist',
+      description: 'Reduced screen time by 25%',
       icon: TrendingDown,
       color: '#10B981',
       unlocked: avgScreenTime < 3.5, // Assuming 25% reduction from 4.2h
@@ -94,8 +92,8 @@ export default function ProgressScreen() {
     },
     {
       id: 3,
-      title: t('mindfulWarriorTitle'),
-      description: t('mindfulWarriorDescription'),
+      title: 'Mindful Warrior',
+      description: 'Completed 50 mindfulness sessions',
       icon: Brain,
       color: '#F59E0B',
       unlocked: false,
@@ -103,8 +101,8 @@ export default function ProgressScreen() {
     },
     {
       id: 4,
-      title: t('timeGuardianTitle'),
-      description: t('timeGuardianDescription'),
+      title: 'Time Guardian',
+      description: 'Maintained goals for 30 days',
       icon: Award,
       color: '#8B5CF6',
       unlocked: false,
@@ -124,8 +122,8 @@ export default function ProgressScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>{t('progress')}</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('trackDigitalWellnessJourney')}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Progress</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Track your digital wellness journey</Text>
           </View>
 
           {/* Key Metrics */}
@@ -137,7 +135,7 @@ export default function ProgressScreen() {
               >
                 <Smartphone size={24} color="#FFFFFF" />
                 <Text style={styles.metricValue}>{avgScreenTime}h</Text>
-                <Text style={styles.metricLabel}>{t('avgDaily')}</Text>
+                <Text style={styles.metricLabel}>Avg Daily</Text>
                 <View style={styles.metricChange}>
                   <TrendingDown size={12} color="#FFFFFF" />
                   <Text style={styles.metricChangeText}>{avgScreenTime < 4.2 ? '-18%' : '+5%'}</Text>
@@ -152,7 +150,7 @@ export default function ProgressScreen() {
               >
                 <Target size={24} color="#FFFFFF" />
                 <Text style={styles.metricValue}>{focusSessions}</Text>
-                <Text style={styles.metricLabel}>{t('focusSessionsLabel')}</Text>
+                <Text style={styles.metricLabel}>Focus Sessions</Text>
                 <View style={styles.metricChange}>
                   <TrendingUp size={12} color="#FFFFFF" />
                   <Text style={styles.metricChangeText}>+{Math.floor(focusSessions * 0.12)}%</Text>
@@ -188,19 +186,19 @@ export default function ProgressScreen() {
           {/* Charts */}
           <DashboardCard style={styles.chartCard}>
             <View style={styles.chartHeader}>
-              <Text style={[styles.chartTitle, { color: colors.text }]}>{t('screenTimeVsFocusTime')}</Text>
-              <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>{t('thisWeeksOverview')}</Text>
+              <Text style={[styles.chartTitle, { color: colors.text }]}>Screen Time vs Focus Time</Text>
+              <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>This week's overview</Text>
             </View>
 
             <View style={styles.chart}>
               <View style={styles.chartLegend}>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: '#4F46E5' }]} />
-                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>{t('screenTimeLabel')}</Text>
+                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Screen Time</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>{t('focusTimeLabel')}</Text>
+                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Focus Time</Text>
                 </View>
               </View>
 
@@ -238,7 +236,7 @@ export default function ProgressScreen() {
           {/* Achievements */}
           {showAchievements && (
             <View style={styles.achievementsContainer}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('achievements')}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Achievements</Text>
               <View style={styles.achievementsList}>
                 {achievements.map((achievement) => {
                   const IconComponent = achievement.icon;
@@ -271,7 +269,7 @@ export default function ProgressScreen() {
                           
                           {achievement.unlocked ? (
                             <Text style={styles.achievementDate}>
-                              {t('unlockedOn', { date: achievement.date })}
+                              Unlocked {achievement.date}
                             </Text>
                           ) : (
                             <View style={styles.progressContainer}>
@@ -284,7 +282,7 @@ export default function ProgressScreen() {
                                 />
                               </View>
                               <Text style={[styles.progressText, { color: colors.textSecondary }]}>
-                                {t('progressCounter', { current: achievement.progress || 0, total: 50 })}
+                                {achievement.progress || 0}/50
                               </Text>
                             </View>
                           )}
@@ -304,7 +302,7 @@ export default function ProgressScreen() {
           {/* Weekly Summary */}
           <DashboardCard style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('weeklySummary')}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Weekly Summary</Text>
               <Calendar size={20} color={colors.textSecondary} />
             </View>
 
@@ -313,11 +311,9 @@ export default function ProgressScreen() {
                 <Text style={[styles.summaryValue, { color: colors.text }]}>
                   {Math.round(weeklyData.reduce((total, day) => total + day.screenTime, 0) * 10) / 10}h
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('totalScreenTime')}</Text>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Screen Time</Text>
                 <Text style={styles.summaryChange}>
-                  {Math.round(weeklyData.reduce((total, day) => total + day.screenTime, 0) * 10) / 10 < 29.6
-                    ? t('decreaseFromLastWeek', { value: '4.2h' })
-                    : t('increaseFromLastWeek', { value: '1.2h' })}
+                  {Math.round(weeklyData.reduce((total, day) => total + day.screenTime, 0) * 10) / 10 < 29.6 ? '-4.2h from last week' : '+1.2h from last week'}
                 </Text>
               </View>
 
@@ -327,18 +323,17 @@ export default function ProgressScreen() {
                 <Text style={[styles.summaryValue, { color: colors.text }]}>
                   {Math.round(weeklyData.reduce((total, day) => total + day.focusTime, 0) * 10) / 10}h
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('focusTimeTotal')}</Text>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Focus Time</Text>
                 <Text style={styles.summaryChangePositive}>
-                  {Math.round(weeklyData.reduce((total, day) => total + day.focusTime, 0) * 10) / 10 > 17.8
-                    ? t('increaseFromLastWeek', { value: '2.5h' })
-                    : t('increaseFromLastWeek', { value: '1.1h' })}
+                  {Math.round(weeklyData.reduce((total, day) => total + day.focusTime, 0) * 10) / 10 > 17.8 ? '+2.5h from last week' : '+1.1h from last week'}
                 </Text>
               </View>
             </View>
 
             <View style={[styles.summaryInsight, { backgroundColor: isDarkMode ? '#1E293B' : '#F0F9FF', borderLeftColor: '#4F46E5' }]}>
               <Text style={[styles.insightText, { color: colors.text }]}>
-                {t('progressInsightMessage')}
+                🎉 Great progress! You've reduced screen time by 18% while 
+                increasing focus sessions. Keep up the momentum!
               </Text>
             </View>
           </DashboardCard>

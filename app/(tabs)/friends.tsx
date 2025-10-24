@@ -33,12 +33,14 @@ import {
  } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DashboardCard } from '@/components/DashboardCard';
+import { UserSearchCard } from '@/components/UserSearchCard';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { getColors } from '@/constants/Colors';
 import { UserFriend, DatabaseService, ChatMessage , formatTime } from '@/lib/firebase-services';
 import { useLanguage } from '@/hooks/LanguageContext';
+import { useUserSearch } from '@/hooks/useUserSearch';
 
 interface Friend {
   id: string;
@@ -149,7 +151,7 @@ export default function FriendsScreen() {
   const [friendRequests, setFriendRequests] = useState<UserFriend[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTab, setSelectedTab] = useState<'friends' | 'suggestions' | 'requests'>('friends');
+  const [selectedTab, setSelectedTab] = useState<'friends' | 'suggestions' | 'requests' | 'search'>('friends');
   const [showChatModal, setShowChatModal] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
@@ -157,7 +159,18 @@ export default function FriendsScreen() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatListener, setChatListener] = useState<(() => void) | null>(null);
   const [isProcessingRequest, setIsProcessingRequest] = useState(false);
+  const [requestFeedback, setRequestFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [profileShareUrl, setProfileShareUrl] = useState('');
+
+  // User search functionality
+  const {
+    results: searchResults,
+    loading: searchLoading,
+    error: searchError,
+    hasSearched,
+    searchUsers,
+    clearSearch,
+  } = useUserSearch(300);
 
   useEffect(() => {
     if (user) {
@@ -228,22 +241,41 @@ export default function FriendsScreen() {
     if (!user || isProcessingRequest) return;
 
     setIsProcessingRequest(true);
+    setRequestFeedback(null);
+
     try {
       await DatabaseService.sendFriendRequest(friendId);
-      Alert.alert(t('success'), t('activityCompleted'));
-      // Reload data to update suggestions
+
+      // Show success feedback
+      setRequestFeedback({
+        type: 'success',
+        message: 'Friend request sent successfully!'
+      });
+
+      // Reload data to update suggestions and search results
       loadFriendsData();
+
+      // Clear feedback after 3 seconds
+      setTimeout(() => setRequestFeedback(null), 3000);
+
     } catch (error: any) {
       console.error('Error sending friend request:', error);
 
       let errorMessage = 'Failed to send friend request. Please try again.';
       if (error.message === 'Friend request already sent') {
-        errorMessage = t('failedToUpdateProfile');
+        errorMessage = 'Friend request already sent to this user.';
       } else if (error.message === 'Already friends with this user') {
-        errorMessage = t('failedToUpdateProfile');
+        errorMessage = 'You are already friends with this user.';
       }
 
-      Alert.alert('❌ Error', errorMessage);
+      // Show error feedback
+      setRequestFeedback({
+        type: 'error',
+        message: errorMessage
+      });
+
+      // Clear feedback after 5 seconds for errors
+      setTimeout(() => setRequestFeedback(null), 5000);
     } finally {
       setIsProcessingRequest(false);
     }
@@ -483,11 +515,25 @@ export default function FriendsScreen() {
             <Search size={20} color={colors.textTertiary} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('searchPostsOrUsers')}
+              placeholder={t('searchUsersByUsername')}
               value={searchQuery}
-              onChangeText={setSearchQuery}
+              onChangeText={(text) => {
+                setSearchQuery(text);
+                searchUsers(text);
+              }}
               placeholderTextColor={colors.textTertiary}
             />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchQuery('');
+                  clearSearch();
+                }}
+                style={styles.clearSearchButton}
+              >
+                <X size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
           </View>
           <TouchableOpacity
             style={styles.addButton}
@@ -497,6 +543,7 @@ export default function FriendsScreen() {
           </TouchableOpacity>
         </View>
 
+
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -505,6 +552,14 @@ export default function FriendsScreen() {
           >
             <Text style={[styles.tabText, { color: selectedTab === 'friends' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'friends' && styles.activeTabText]}>
               {t('myFriends')} ({friends.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'search' && styles.activeTab]}
+            onPress={() => setSelectedTab('search')}
+          >
+            <Text style={[styles.tabText, { color: selectedTab === 'search' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'search' && styles.activeTabText]}>
+              {t('searchUsers')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -526,6 +581,116 @@ export default function FriendsScreen() {
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {selectedTab === 'search' && (
+            <View style={styles.searchTabContainer}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('searchUsersDescription')}
+              </Text>
+
+              {/* Search Input for Search Tab */}
+              <View style={styles.searchTabInputContainer}>
+                <View style={[styles.searchBar, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                  <Search size={20} color={colors.textTertiary} />
+                  <TextInput
+                    style={[styles.searchInput, { color: colors.text }]}
+                    placeholder={t('searchUsersByUsername')}
+                    value={searchQuery}
+                    onChangeText={(text) => {
+                      setSearchQuery(text);
+                      searchUsers(text);
+                    }}
+                    placeholderTextColor={colors.textTertiary}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSearchQuery('');
+                        clearSearch();
+                      }}
+                      style={styles.clearSearchButton}
+                    >
+                      <X size={16} color={colors.textTertiary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              {/* Request Feedback */}
+              {requestFeedback && (
+                <View style={[
+                  styles.feedbackContainer,
+                  requestFeedback.type === 'success' ? styles.feedbackSuccess : styles.feedbackError
+                ]}>
+                  <Text style={[
+                    styles.feedbackText,
+                    { color: requestFeedback.type === 'success' ? '#10B981' : '#EF4444' }
+                  ]}>
+                    {requestFeedback.message}
+                  </Text>
+                </View>
+              )}
+
+              {/* Search Results in Tab */}
+              {searchLoading && (
+                <View style={styles.searchStatusContainer}>
+                  <Text style={[styles.searchStatusText, { color: colors.textSecondary }]}>
+                    {t('searchingUsers')}
+                  </Text>
+                </View>
+              )}
+
+              {searchError && (
+                <View style={styles.searchStatusContainer}>
+                  <Text style={[styles.searchErrorText, { color: '#EF4444' }]}>
+                    {searchError}
+                  </Text>
+                </View>
+              )}
+
+              {hasSearched && !searchLoading && searchResults.length === 0 && searchQuery.length >= 2 && (
+                <View style={styles.emptyStateContainer}>
+                  <Search size={48} color={colors.textTertiary} />
+                  <Text style={[styles.emptyStateTitle, { color: colors.textSecondary }]}>
+                    {t('noUsersFound')}
+                  </Text>
+                  <Text style={[styles.emptyStateSubtitle, { color: colors.textTertiary }]}>
+                    {t('tryDifferentSearchTerm')}
+                  </Text>
+                </View>
+              )}
+
+              {searchResults.length > 0 && (
+                <View style={styles.searchResultsList}>
+                  <Text style={[styles.searchResultsTitle, { color: colors.text }]}>
+                    {t('searchResults', { count: searchResults.length })}
+                  </Text>
+                  {searchResults.map((user) => (
+                    <UserSearchCard
+                      key={user.id}
+                      user={user}
+                      onSendRequest={handleSendFriendRequest}
+                      isLoading={isProcessingRequest}
+                      currentUserId={user?.id || ''}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Initial State */}
+              {!hasSearched && searchQuery.length === 0 && (
+                <View style={styles.emptyStateContainer}>
+                  <Search size={48} color={colors.textTertiary} />
+                  <Text style={[styles.emptyStateTitle, { color: colors.textSecondary }]}>
+                    {t('searchUsersTitle')}
+                  </Text>
+                  <Text style={[styles.emptyStateSubtitle, { color: colors.textTertiary }]}>
+                    {t('searchUsersDescription')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
           {selectedTab === 'friends' && (
             <View style={styles.friendsContainer}>
               {/* Online Friends */}
@@ -1285,4 +1450,114 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
- });
+  clearSearchButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  searchResultsContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  searchStatusContainer: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  searchStatusText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  searchErrorText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  searchResultsList: {
+    marginTop: 8,
+  },
+  searchResultsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  searchResultCard: {
+    marginBottom: 8,
+    padding: 12,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchResultAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  searchResultLevel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  searchResultEmail: {
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  searchTabContainer: {
+    paddingBottom: 24,
+    flex: 1,
+  },
+  searchTabInputContainer: {
+    marginBottom: 16,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+    textAlign: 'center',
+    paddingHorizontal: 32,
+    lineHeight: 20,
+  },
+  feedbackContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    marginHorizontal: 24,
+  },
+  feedbackSuccess: {
+    backgroundColor: '#D1FAE5',
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  feedbackError: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  feedbackText: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+});

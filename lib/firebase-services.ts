@@ -27,6 +27,15 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import {
+  deleteMediaWithAuth,
+  deleteMediaBatch,
+  deleteOldProfileImage,
+  cleanupOrphanedMedia,
+  cleanupOldMedia,
+  cleanupTempMedia,
+  getStorageStats
+} from './storage-service';
 
 // Types for our app
 export interface Goal {
@@ -122,14 +131,16 @@ export interface Ranking {
 }
 
 export interface CommunityPost {
-  id: string;
-  userId: string;
-  content: string;
-  timestamp: Timestamp;
-  likes: string[]; // array of user IDs
-  replies: Reply[];
-  communityId?: string;
-}
+   id: string;
+   userId: string;
+   content: string;
+   timestamp: Timestamp;
+   likes: string[]; // array of user IDs
+   replies: Reply[];
+   communityId?: string;
+   mediaUrl?: string;
+   mediaType?: 'image' | 'video';
+ }
 
 export interface CommunityComment {
   id: string;
@@ -230,10 +241,41 @@ export class DatabaseService {
 
   static async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<void> {
     const docRef = doc(db, 'users', userId);
-    await updateDoc(docRef, {
-      ...updates,
-      updatedAt: Timestamp.now()
-    });
+
+    // Handle avatar update with old image cleanup
+    if (updates.avatar) {
+      try {
+        // Get current profile to get the old avatar URL
+        const currentProfile = await this.getUserProfile(userId);
+        const oldAvatarUrl = currentProfile?.avatar;
+
+        // Update profile first
+        await updateDoc(docRef, {
+          ...updates,
+          updatedAt: Timestamp.now()
+        });
+
+        // Delete old avatar image if it exists and is not a default/placeholder
+        if (oldAvatarUrl && oldAvatarUrl !== updates.avatar) {
+          try {
+            await deleteOldProfileImage(oldAvatarUrl, userId);
+            console.log(`✅ Old avatar cleaned up for user: ${userId}`);
+          } catch (cleanupError) {
+            console.error(`Failed to cleanup old avatar for user ${userId}:`, cleanupError);
+            // Don't throw error - profile update succeeded
+          }
+        }
+      } catch (error) {
+        console.error('Error updating user profile with avatar cleanup:', error);
+        throw error;
+      }
+    } else {
+      // Standard profile update without avatar changes
+      await updateDoc(docRef, {
+        ...updates,
+        updatedAt: Timestamp.now()
+      });
+    }
   }
 
   // Goals Services
@@ -638,6 +680,76 @@ export class DatabaseService {
     }
   }
 
+  // User Search Services
+  static async searchUsersByUsername(searchQuery: string, limitCount: number = 20): Promise<UserProfile[]> {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      return [];
+    }
+
+    try {
+      console.log('Searching users by username:', searchQuery);
+
+      // Get current user ID to exclude from results
+      const currentUser = auth.currentUser;
+      const currentUserId = currentUser?.uid;
+
+      // Query users collection - we'll search in displayName and email fields
+      // Note: For case-insensitive search, we need to query both fields
+      const usersRef = collection(db, 'users');
+
+      // Get all users first (in a real app with many users, you'd want to implement
+      // a more sophisticated search with indexes)
+      const usersQuery = query(usersRef, limit(limitCount * 2));
+      const usersSnapshot = await getDocs(usersQuery);
+
+      const allUsers = usersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserProfile[];
+
+      // Filter users based on search query (client-side filtering)
+      const searchTerm = searchQuery.toLowerCase().trim();
+      const matchingUsers = allUsers.filter(user => {
+        // Skip current user
+        if (currentUserId && user.id === currentUserId) {
+          return false;
+        }
+
+        // Search in displayName and email
+        const displayName = (user.displayName || '').toLowerCase();
+        const email = (user.email || '').toLowerCase();
+
+        return displayName.includes(searchTerm) || email.includes(searchTerm);
+      });
+
+      // Limit results and sort by relevance (displayName matches first, then email matches)
+      const sortedUsers = matchingUsers
+        .sort((a, b) => {
+          const aDisplayName = (a.displayName || '').toLowerCase();
+          const bDisplayName = (b.displayName || '').toLowerCase();
+          const aEmail = (a.email || '').toLowerCase();
+          const bEmail = (b.email || '').toLowerCase();
+
+          // Prioritize displayName matches over email matches
+          const aHasDisplayNameMatch = aDisplayName.includes(searchTerm);
+          const bHasDisplayNameMatch = bDisplayName.includes(searchTerm);
+
+          if (aHasDisplayNameMatch && !bHasDisplayNameMatch) return -1;
+          if (!aHasDisplayNameMatch && bHasDisplayNameMatch) return 1;
+
+          // For same match type, sort alphabetically
+          return aDisplayName.localeCompare(bDisplayName);
+        })
+        .slice(0, limitCount);
+
+      console.log(`Found ${sortedUsers.length} users matching "${searchQuery}"`);
+      return sortedUsers;
+    } catch (error) {
+      console.error('Error searching users by username:', error);
+      throw error;
+    }
+  }
+
   // Rankings/Leaderboard Services
   static async getLeaderboard(limitCount: number = 50): Promise<any[]> {
     try {
@@ -737,6 +849,72 @@ export class DatabaseService {
       return comments;
     } catch (error) {
       console.error('Error fetching comments from Firebase:', error);
+      throw error;
+    }
+  }
+
+  static async createCommunity(communityData: Omit<Community, 'id' | 'createdAt' | 'memberCount'>): Promise<string> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      const community: Omit<Community, 'id'> = {
+        ...communityData,
+        memberCount: 1, // Creator is the first member
+        createdAt: Timestamp.now()
+      };
+
+      const communitiesRef = collection(db, 'communities');
+      const docRef = await addDoc(communitiesRef, community);
+
+      console.log('✅ Community created successfully with ID:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating community in Firebase:', error);
+      throw error;
+    }
+  }
+
+  static async getCommunity(communityId: string): Promise<Community | null> {
+    try {
+      const communitiesQuery = query(
+        collection(db, 'communities'),
+        where('id', '==', communityId)
+      );
+
+      const communitiesSnapshot = await getDocs(communitiesQuery);
+      if (!communitiesSnapshot.empty) {
+        const communityDoc = communitiesSnapshot.docs[0];
+        return {
+          id: communityDoc.id,
+          ...communityDoc.data()
+        } as Community;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching community from Firebase:', error);
+      throw error;
+    }
+  }
+
+  static async getUserCommunities(userId: string): Promise<Community[]> {
+    try {
+      const communitiesQuery = query(
+        collection(db, 'communities'),
+        where('createdBy', '==', userId)
+      );
+
+      const communitiesSnapshot = await getDocs(communitiesQuery);
+      const communities = communitiesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Community[];
+
+      return communities;
+    } catch (error) {
+      console.error('Error fetching user communities from Firebase:', error);
       throw error;
     }
   }
@@ -923,6 +1101,352 @@ export class DatabaseService {
       console.log('✅ Messages marked as read');
     } catch (error) {
       console.error('Error marking messages as read:', error);
+      throw error;
+    }
+  }
+
+  // Post Management with Media Cleanup
+  static async deletePost(postId: string, userId: string): Promise<void> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get the post first to verify ownership and get media URL
+      const post = await this.getPost(postId);
+      if (!post) {
+        throw new Error('Post not found');
+      }
+
+      // Check if user owns the post
+      if (post.userId !== userId) {
+        throw new Error('Unauthorized: User does not own this post');
+      }
+
+      // Delete associated media if it exists
+      if (post.mediaUrl) {
+        try {
+          await deleteMediaWithAuth(post.mediaUrl, userId, userId);
+          console.log(`✅ Post media deleted: ${post.mediaUrl}`);
+        } catch (mediaError) {
+          console.error('Error deleting post media:', mediaError);
+          // Continue with post deletion even if media deletion fails
+        }
+      }
+
+      // Delete the post from database
+      await deleteDoc(doc(db, 'posts', postId));
+
+      console.log(`✅ Post deleted successfully: ${postId} by user: ${userId}`);
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      throw error;
+    }
+  }
+
+  static async deleteUserPosts(userId: string): Promise<{ successful: string[], failed: string[] }> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify the current user is deleting their own posts or is an admin
+      if (auth.currentUser.uid !== userId) {
+        throw new Error('Unauthorized: Can only delete own posts');
+      }
+
+      const results = {
+        successful: [] as string[],
+        failed: [] as string[]
+      };
+
+      // Get all posts by the user
+      const postsQuery = query(
+        collection(db, 'posts'),
+        where('userId', '==', userId)
+      );
+
+      const postsSnapshot = await getDocs(postsQuery);
+      const posts = postsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as CommunityPost[];
+
+      if (posts.length === 0) {
+        console.log(`✅ No posts found for user: ${userId}`);
+        return results;
+      }
+
+      // Collect all media URLs for batch deletion
+      const mediaUrls: string[] = [];
+      posts.forEach(post => {
+        if (post.mediaUrl) {
+          mediaUrls.push(post.mediaUrl);
+        }
+      });
+
+      // Delete all media files in batch
+      if (mediaUrls.length > 0) {
+        try {
+          const mediaResults = await deleteMediaBatch(mediaUrls, userId, userId);
+          console.log(`✅ Media deletion completed: ${mediaResults.successful.length} successful, ${mediaResults.failed.length} failed`);
+        } catch (mediaError) {
+          console.error('Error during batch media deletion:', mediaError);
+        }
+      }
+
+      // Delete all posts (use batch writes for better performance)
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < posts.length; i += BATCH_SIZE) {
+        const batch = posts.slice(i, i + BATCH_SIZE);
+
+        // For simplicity, we'll delete posts individually
+        // In a production app, you might want to use Firestore batch writes
+        const deletePromises = batch.map(async (post) => {
+          try {
+            await deleteDoc(doc(db, 'posts', post.id));
+            results.successful.push(post.id);
+          } catch (error) {
+            console.error(`Failed to delete post ${post.id}:`, error);
+            results.failed.push(post.id);
+          }
+        });
+
+        await Promise.allSettled(deletePromises);
+      }
+
+      console.log(`✅ User posts deletion completed: ${results.successful.length} successful, ${results.failed.length} failed`);
+      return results;
+    } catch (error) {
+      console.error('Error deleting user posts:', error);
+      throw error;
+    }
+  }
+
+  static async deleteCommunityPosts(communityId: string, userId: string): Promise<{ successful: string[], failed: string[] }> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify community ownership or moderator permissions
+      const community = await this.getCommunity(communityId);
+      if (!community) {
+        throw new Error('Community not found');
+      }
+
+      // Check if user is the community owner
+      if (community.createdBy !== userId) {
+        throw new Error('Unauthorized: Only community owners can delete community posts');
+      }
+
+      const results = {
+        successful: [] as string[],
+        failed: [] as string[]
+      };
+
+      // Get all posts in the community
+      const postsQuery = query(
+        collection(db, 'posts'),
+        where('communityId', '==', communityId)
+      );
+
+      const postsSnapshot = await getDocs(postsQuery);
+      const posts = postsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as CommunityPost[];
+
+      if (posts.length === 0) {
+        console.log(`✅ No posts found for community: ${communityId}`);
+        return results;
+      }
+
+      // Collect all media URLs for batch deletion
+      const mediaUrls: string[] = [];
+      posts.forEach(post => {
+        if (post.mediaUrl) {
+          mediaUrls.push(post.mediaUrl);
+        }
+      });
+
+      // Delete all media files in batch
+      if (mediaUrls.length > 0) {
+        try {
+          const mediaResults = await deleteMediaBatch(mediaUrls, userId);
+          console.log(`✅ Community media deletion completed: ${mediaResults.successful.length} successful, ${mediaResults.failed.length} failed`);
+        } catch (mediaError) {
+          console.error('Error during community batch media deletion:', mediaError);
+        }
+      }
+
+      // Delete all posts
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < posts.length; i += BATCH_SIZE) {
+        const batch = posts.slice(i, i + BATCH_SIZE);
+
+        const deletePromises = batch.map(async (post) => {
+          try {
+            await deleteDoc(doc(db, 'posts', post.id));
+            results.successful.push(post.id);
+          } catch (error) {
+            console.error(`Failed to delete community post ${post.id}:`, error);
+            results.failed.push(post.id);
+          }
+        });
+
+        await Promise.allSettled(deletePromises);
+      }
+
+      console.log(`✅ Community posts deletion completed: ${results.successful.length} successful, ${results.failed.length} failed`);
+      return results;
+    } catch (error) {
+      console.error('Error deleting community posts:', error);
+      throw error;
+    }
+  }
+
+  // Media Cleanup and Management Functions
+  static async cleanupUserOrphanedMedia(userId: string): Promise<{ cleaned: string[], errors: string[] }> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify user is cleaning up their own media
+      if (auth.currentUser.uid !== userId) {
+        throw new Error('Unauthorized: Can only cleanup own media');
+      }
+
+      console.log(`🧹 Starting orphaned media cleanup for user: ${userId}`);
+      const results = await cleanupOrphanedMedia(userId);
+
+      console.log(`✅ Orphaned media cleanup completed for user ${userId}: ${results.cleaned.length} cleaned, ${results.errors.length} errors`);
+      return results;
+    } catch (error) {
+      console.error('Error during user orphaned media cleanup:', error);
+      throw error;
+    }
+  }
+
+  static async cleanupOldUserMedia(userId: string, daysOld: number = 30): Promise<{ cleaned: string[], errors: string[] }> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify user is cleaning up their own media
+      if (auth.currentUser.uid !== userId) {
+        throw new Error('Unauthorized: Can only cleanup own media');
+      }
+
+      console.log(`🧹 Starting old media cleanup for user: ${userId} (older than ${daysOld} days)`);
+      const results = await cleanupOldMedia(daysOld, userId);
+
+      console.log(`✅ Old media cleanup completed for user ${userId}: ${results.cleaned.length} cleaned, ${results.errors.length} errors`);
+      return results;
+    } catch (error) {
+      console.error('Error during old media cleanup:', error);
+      throw error;
+    }
+  }
+
+  static async cleanupTempUserMedia(userId: string): Promise<{ cleaned: string[], errors: string[] }> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify user is cleaning up their own media
+      if (auth.currentUser.uid !== userId) {
+        throw new Error('Unauthorized: Can only cleanup own media');
+      }
+
+      console.log(`🧹 Starting temp media cleanup for user: ${userId}`);
+      const results = await cleanupTempMedia(userId);
+
+      console.log(`✅ Temp media cleanup completed for user ${userId}: ${results.cleaned.length} cleaned, ${results.errors.length} errors`);
+      return results;
+    } catch (error) {
+      console.error('Error during temp media cleanup:', error);
+      throw error;
+    }
+  }
+
+  static async getUserStorageStats(userId: string): Promise<{ totalFiles: number, totalSize: number, oldestFile?: Date, newestFile?: Date }> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify user is getting stats for their own media
+      if (auth.currentUser.uid !== userId) {
+        throw new Error('Unauthorized: Can only get stats for own media');
+      }
+
+      console.log(`📊 Getting storage stats for user: ${userId}`);
+      const stats = await getStorageStats(userId);
+
+      console.log(`✅ Storage stats retrieved for user ${userId}: ${stats.totalFiles} files, ${stats.totalSize} bytes`);
+      return stats;
+    } catch (error) {
+      console.error('Error getting user storage stats:', error);
+      throw error;
+    }
+  }
+
+  static async comprehensiveUserCleanup(userId: string): Promise<{
+    orphaned: { cleaned: string[], errors: string[] },
+    old: { cleaned: string[], errors: string[] },
+    temp: { cleaned: string[], errors: string[] }
+  }> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify user is cleaning up their own media
+      if (auth.currentUser.uid !== userId) {
+        throw new Error('Unauthorized: Can only cleanup own media');
+      }
+
+      console.log(`🧹 Starting comprehensive cleanup for user: ${userId}`);
+
+      const results = {
+        orphaned: { cleaned: [] as string[], errors: [] as string[] },
+        old: { cleaned: [] as string[], errors: [] as string[] },
+        temp: { cleaned: [] as string[], errors: [] as string[] }
+      };
+
+      // Run all cleanup operations
+      try {
+        results.orphaned = await cleanupOrphanedMedia(userId);
+      } catch (error) {
+        console.error('Error in orphaned cleanup:', error);
+        results.orphaned.errors.push(error instanceof Error ? error.message : 'Unknown error');
+      }
+
+      try {
+        results.old = await cleanupOldMedia(30, userId); // 30 days
+      } catch (error) {
+        console.error('Error in old media cleanup:', error);
+        results.old.errors.push(error instanceof Error ? error.message : 'Unknown error');
+      }
+
+      try {
+        results.temp = await cleanupTempMedia(userId);
+      } catch (error) {
+        console.error('Error in temp media cleanup:', error);
+        results.temp.errors.push(error instanceof Error ? error.message : 'Unknown error');
+      }
+
+      const totalCleaned = results.orphaned.cleaned.length + results.old.cleaned.length + results.temp.cleaned.length;
+      const totalErrors = results.orphaned.errors.length + results.old.errors.length + results.temp.errors.length;
+
+      console.log(`✅ Comprehensive cleanup completed for user ${userId}: ${totalCleaned} cleaned, ${totalErrors} errors`);
+      return results;
+    } catch (error) {
+      console.error('Error during comprehensive cleanup:', error);
       throw error;
     }
   }

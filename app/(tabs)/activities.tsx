@@ -171,6 +171,15 @@ const activityTemplates: ActivityTemplate[] = [
   },
 ];
 
+const categories = [
+  { id: 'all', name: 'All Activities', color: '#6B7280' },
+  { id: 'Physical', name: 'Physical', color: '#10B981' },
+  { id: 'Creative', name: 'Creative', color: '#8B5CF6' },
+  { id: 'Social', name: 'Social', color: '#EF4444' },
+  { id: 'Mindful', name: 'Mindful', color: '#4F46E5' },
+  { id: 'Learning', name: 'Learning', color: '#06B6D4' },
+];
+
 const difficultyColors = {
   Easy: '#10B981',
   Medium: '#F59E0B',
@@ -183,17 +192,6 @@ export default function ActivitiesScreen() {
   const { activities, userProfile } = useFirebaseData();
   const colors = getColors(isDarkMode);
   const { t } = useLanguage();
-  const categories = React.useMemo(
-    () => [
-      { id: 'all', name: t('allActivities'), color: '#6B7280' },
-      { id: 'Physical', name: t('categoryPhysical'), color: '#10B981' },
-      { id: 'Creative', name: t('categoryCreative'), color: '#8B5CF6' },
-      { id: 'Social', name: t('categorySocial'), color: '#EF4444' },
-      { id: 'Mindful', name: t('categoryMindful'), color: '#4F46E5' },
-      { id: 'Learning', name: t('categoryLearning'), color: '#06B6D4' },
-    ],
-    [t]
-  );
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandedActivity, setExpandedActivity] = useState<number | null>(null);
   const [userAddictionLevel, setUserAddictionLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
@@ -270,9 +268,9 @@ export default function ActivitiesScreen() {
       await Linking.openURL(youtubeUrl);
     } else {
       Alert.alert(
-        t('unableToOpenVideoTitle'),
-        t('unableToOpenVideoMessage', { title: videoTitle }),
-        [{ text: t('ok') }]
+        'Unable to open video',
+        `Please search for "${videoTitle}" on YouTube manually.`,
+        [{ text: 'OK' }]
       );
     }
   };
@@ -298,16 +296,8 @@ export default function ActivitiesScreen() {
 
       Alert.alert(
         t('activityCompleted'),
-        t('activityCompletionMessage', {
-          title: activity.title,
-          points:
-            activity.difficulty === 'Easy'
-              ? 10
-              : activity.difficulty === 'Medium'
-              ? 20
-              : 30,
-        }),
-        [{ text: t('ok') }]
+        `${t('success')} completing "${activity.title}"! ${t('pointsEarned')} ${activity.difficulty === 'Easy' ? 10 : activity.difficulty === 'Medium' ? 20 : 30} ${t('points')}.`,
+        [{ text: 'OK' }]
       );
     } catch (error) {
       console.error('Error completing activity:', error);
@@ -440,15 +430,7 @@ export default function ActivitiesScreen() {
                           styles.difficultyBadge,
                           { backgroundColor: difficultyColors[activityData.difficulty as keyof typeof difficultyColors] }
                         ]}>
-                          <Text style={styles.difficultyText}>
-                            {t(
-                              activityData.difficulty === 'Easy'
-                                ? 'difficultyEasy'
-                                : activityData.difficulty === 'Medium'
-                                ? 'difficultyMedium'
-                                : 'difficultyHard'
-                            )}
-                          </Text>
+                          <Text style={styles.difficultyText}>{activityData.difficulty}</Text>
                         </View>
                         <View style={styles.durationContainer}>
                           <Clock size={14} color={colors.textSecondary} />
@@ -463,7 +445,7 @@ export default function ActivitiesScreen() {
                       <Text style={[styles.activityDescription, { color: colors.text }]}>{activityData.description}</Text>
 
                       <View style={styles.benefitsSection}>
-                        <Text style={[styles.benefitsTitle, { color: colors.text }]}>{t('benefitsLabel')}</Text>
+                        <Text style={[styles.benefitsTitle, { color: colors.text }]}>Benefits:</Text>
                         <View style={styles.benefitsList}>
                           {activityData.benefits.map((benefit: string, index: number) => (
                             <View key={index} style={styles.benefitItem}>
@@ -476,7 +458,7 @@ export default function ActivitiesScreen() {
 
                       {activityData.videoId && (
                         <View style={styles.videoSection}>
-                          <Text style={[styles.videoSectionTitle, { color: colors.text }]}>{t('learnMore')}</Text>
+                          <Text style={[styles.videoSectionTitle, { color: colors.text }]}>Learn More:</Text>
                           <TouchableOpacity
                             style={[styles.videoCard, { backgroundColor: colors.background, borderColor: colors.border }]}
                             onPress={() => openYouTubeVideo(activityData.videoId, activityData.videoTitle)}
@@ -492,7 +474,7 @@ export default function ActivitiesScreen() {
                               <Text style={[styles.videoTitle, { color: colors.text }]}>{activityData.videoTitle}</Text>
                               <View style={styles.videoMeta}>
                                 <ExternalLink size={14} color={colors.textSecondary} />
-                                <Text style={[styles.videoSource, { color: colors.textSecondary }]}>{t('watchOnYouTube')}</Text>
+                                <Text style={[styles.videoSource, { color: colors.textSecondary }]}>Watch on YouTube</Text>
                               </View>
                             </View>
                           </TouchableOpacity>
@@ -505,7 +487,7 @@ export default function ActivitiesScreen() {
                         onPress={() => completeActivity(activityData)}
                       >
                         <CheckCircle size={20} color="#FFFFFF" />
-                        <Text style={styles.completeButtonText}>{t('markAsComplete')}</Text>
+                        <Text style={styles.completeButtonText}>Mark as Complete</Text>
                       </TouchableOpacity>
                     </View>
                   )}

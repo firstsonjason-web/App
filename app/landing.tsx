@@ -167,7 +167,7 @@ export default function LandingScreen() {
                 <View key={index} style={styles.benefitItem}>
                   <CheckCircle size={20} color="#10B981" />
                   <Text style={[styles.benefitText, { color: '#FFFFFF' }]}>
-                    {t(benefit.toLowerCase().replace(/\s+/g, '').replace(/[^\w\s]/g, ''))}
+                    {t(benefit)}
                   </Text>
                 </View>
               ))}

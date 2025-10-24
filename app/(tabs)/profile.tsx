@@ -24,7 +24,10 @@ import { getColors } from '@/constants/Colors';
 import { DatabaseService } from '@/lib/firebase-services';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { useLanguage } from '@/hooks/LanguageContext';
+import { uploadProfileImage, StorageUploadError } from '@/lib/storage-service';
+import * as Sharing from 'expo-sharing';
 
 interface UserProfile {
   name: string;
@@ -61,7 +64,8 @@ export default function ProfileScreen() {
   const [selectedFAQCategory, setSelectedFAQCategory] = useState('general');
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [showProfileDetailsModal, setShowProfileDetailsModal] = useState(false);
-  
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
   const [localUserProfile, setLocalUserProfile] = useState<UserProfile>({
     name: 'Alex Johnson',
     email: 'alex@example.com',
@@ -179,35 +183,73 @@ export default function ProfileScreen() {
     }
   };
 
-  const handlePhotoUpload = () => {
-    Alert.alert(
-      t('updateProfilePhotoTitle'),
-      t('updateProfilePhotoMessage'),
-      [
-        {
-          text: t('takePhotoOption'),
-          onPress: () => openCamera(),
-        },
-        {
-          text: t('chooseFromGalleryOption'),
-          onPress: () => openImagePicker(),
-        },
-        {
-          text: t('cancel'),
-          style: 'cancel',
-        },
-      ]
-    );
+  const handlePhotoUpload = async () => {
+    console.log('📸 handlePhotoUpload called - showing photo options');
+
+    // Check if we're on web
+    const isWeb = require('react-native').Platform.OS === 'web';
+
+    if (isWeb) {
+      console.log('🌐 Web detected - using web-compatible image picker');
+      // On web, directly open file picker since camera isn't available
+      await openImagePicker();
+    } else {
+      // On mobile, show the alert with both options
+      Alert.alert(
+        t('updateProfilePhotoTitle'),
+        t('updateProfilePhotoMessage'),
+        [
+          {
+            text: t('takePhotoOption'),
+            onPress: () => {
+              console.log('📸 Camera option selected');
+              openCamera();
+            },
+          },
+          {
+            text: t('chooseFromGalleryOption'),
+            onPress: () => {
+              console.log('📸 Gallery option selected');
+              openImagePicker();
+            },
+          },
+          {
+            text: t('cancel'),
+            style: 'cancel',
+          },
+        ]
+      );
+    }
   };
 
   const openCamera = async () => {
     try {
+      console.log('📷 Opening camera...');
+
+      // Check if we're on web - camera not available
+      const isWeb = require('react-native').Platform.OS === 'web';
+      if (isWeb) {
+        console.log('🌐 Web detected - camera not available, redirecting to gallery');
+        Alert.alert(
+          'Camera Not Available',
+          'Camera access is not available on web. Please use the Gallery option instead.',
+          [
+            { text: 'Use Gallery', onPress: openImagePicker },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+        return;
+      }
+
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      console.log('📷 Camera permission status:', status);
       if (status !== 'granted') {
+        console.log('📷 Camera permission denied');
         Alert.alert(t('permissionNeeded'), t('cameraPermissionRequired'));
         return;
       }
 
+      console.log('📷 Launching camera...');
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -215,36 +257,144 @@ export default function ProfileScreen() {
         quality: 0.8,
       });
 
+      console.log('📷 Camera result:', result);
       if (!result.canceled && result.assets[0] && user) {
+        setIsUploadingAvatar(true);
         try {
-          // Update profile in Firebase
+          console.log('📤 Starting avatar upload...');
+          // Upload to Firebase Storage using the storage service
+          // For React Native, we need to handle file:// URIs differently
+          const fileUri = result.assets[0].uri;
+          console.log('📤 File URI:', fileUri);
+          const downloadURL = await uploadProfileImage(user.uid, fileUri, {
+            contentType: 'image/jpeg',
+            customMetadata: {
+              uploadedBy: user.uid,
+              uploadSource: 'camera'
+            }
+          });
+          console.log('📤 Upload successful, download URL:', downloadURL);
+
+          // Update profile in Firebase with the Storage URL
+          console.log('📤 Updating user profile in database...');
           await DatabaseService.updateUserProfile(user.uid, {
-            avatar: result.assets[0].uri
+            avatar: downloadURL
           });
 
           // Update local state
-          const newProfile = { ...localUserProfile, avatar: result.assets[0].uri };
+          const newProfile = { ...localUserProfile, avatar: downloadURL };
           setLocalUserProfile(newProfile);
 
+          console.log('📤 Avatar update completed successfully');
           Alert.alert(t('success'), t('profilePhotoUpdatedSuccessfully'));
         } catch (error) {
-          console.error('Error updating profile photo:', error);
-          Alert.alert(t('error'), t('failedToUpdateProfilePhoto'));
+          console.error('Error uploading profile photo:', error);
+
+          let errorMessage = t('failedToUpdateProfilePhoto');
+          if (error instanceof StorageUploadError) {
+            switch (error.code) {
+              case 'INVALID_PARAMS':
+                errorMessage = 'Invalid upload parameters';
+                break;
+              case 'INVALID_FILE_TYPE':
+                errorMessage = 'Invalid file type. Please select an image file.';
+                break;
+              case 'UPLOAD_FAILED':
+                errorMessage = 'Failed to upload image. Please try again.';
+                break;
+              default:
+                errorMessage = error.message;
+            }
+          }
+
+          Alert.alert(t('error'), errorMessage);
+        } finally {
+          setIsUploadingAvatar(false);
         }
       }
     } catch (error) {
+      setIsUploadingAvatar(false);
+      console.error('Error accessing camera:', error);
       Alert.alert(t('error'), t('failedToAccessCamera'));
+    }
+  };
+
+  // Helper function to process image files (for web compatibility)
+  const processImageFile = async (file: File, userId: string, source: 'camera' | 'gallery') => {
+    try {
+      console.log('📁 Processing image file:', file.name, 'Size:', file.size);
+
+      if (!file.type.startsWith('image/')) {
+        Alert.alert(t('error'), 'Please select a valid image file.');
+        return;
+      }
+
+      // For web, create a blob URL that the storage service can handle
+      const blobUrl = URL.createObjectURL(file);
+      console.log('📁 Created blob URL for web:', blobUrl);
+
+      const downloadURL = await uploadProfileImage(userId, blobUrl, {
+        contentType: file.type || 'image/jpeg',
+        customMetadata: {
+          uploadedBy: userId,
+          uploadSource: source
+        }
+      });
+
+      console.log('📁 Web upload successful, download URL:', downloadURL);
+
+      // Update profile in Firebase with the Storage URL
+      console.log('📁 Updating user profile in database...');
+      await DatabaseService.updateUserProfile(userId, {
+        avatar: downloadURL
+      });
+
+      // Update local state
+      const newProfile = { ...localUserProfile, avatar: downloadURL };
+      setLocalUserProfile(newProfile);
+
+      console.log('📁 Web avatar update completed successfully');
+      Alert.alert(t('success'), t('profilePhotoUpdatedSuccessfully'));
+
+    } catch (error) {
+      console.error('📁 Error processing web image file:', error);
+      Alert.alert(t('error'), 'Failed to upload image. Please try again.');
     }
   };
 
   const openImagePicker = async () => {
     try {
+      console.log('🖼️ Opening image picker...');
+
+      // Check if we're on web
+      const isWeb = require('react-native').Platform.OS === 'web';
+
+      if (isWeb) {
+        console.log('🌐 Web detected - using web file input');
+        // On web, we need to use a different approach for file selection
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (file && user) {
+            console.log('🖼️ Web file selected:', file.name);
+            await processImageFile(file, user.uid, 'gallery');
+          }
+        };
+        input.click();
+        return;
+      }
+
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('🖼️ Media library permission status:', status);
       if (status !== 'granted') {
+        console.log('🖼️ Media library permission denied');
         Alert.alert(t('permissionNeeded'), t('mediaLibraryPermissionRequired'));
         return;
       }
 
+      console.log('🖼️ Launching image library...');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -252,24 +402,66 @@ export default function ProfileScreen() {
         quality: 0.8,
       });
 
+      console.log('🖼️ Image picker result:', result);
       if (!result.canceled && result.assets[0] && user) {
+        setIsUploadingAvatar(true);
         try {
-          // Update profile in Firebase
+          console.log('🖼️ Starting gallery avatar upload...');
+          // Upload to Firebase Storage using the storage service
+          const fileUri = result.assets[0].uri;
+          console.log('🖼️ Gallery file URI:', fileUri);
+          const downloadURL = await uploadProfileImage(user.uid, fileUri, {
+            contentType: 'image/jpeg',
+            customMetadata: {
+              uploadedBy: user.uid,
+              uploadSource: 'gallery'
+            }
+          });
+          console.log('🖼️ Gallery upload successful, download URL:', downloadURL);
+
+          // Update profile in Firebase with the Storage URL
+          console.log('🖼️ Updating user profile in database...');
           await DatabaseService.updateUserProfile(user.uid, {
-            avatar: result.assets[0].uri
+            avatar: downloadURL
           });
 
           // Update local state
-          const newProfile = { ...localUserProfile, avatar: result.assets[0].uri };
+          const newProfile = { ...localUserProfile, avatar: downloadURL };
           setLocalUserProfile(newProfile);
 
+          console.log('🖼️ Gallery avatar update completed successfully');
           Alert.alert(t('success'), t('profilePhotoUpdatedSuccessfully'));
         } catch (error) {
-          console.error('Error updating profile photo:', error);
-          Alert.alert(t('error'), t('failedToUpdateProfilePhoto'));
+          console.error('Error uploading profile photo:', error);
+
+          let errorMessage = t('failedToUpdateProfilePhoto');
+          if (error instanceof StorageUploadError) {
+            switch (error.code) {
+              case 'INVALID_PARAMS':
+                errorMessage = 'Invalid upload parameters';
+                break;
+              case 'INVALID_FILE_TYPE':
+                errorMessage = 'Invalid file type. Please select an image file.';
+                break;
+              case 'UPLOAD_FAILED':
+                errorMessage = 'Failed to upload image. Please try again.';
+                break;
+              case 'FILE_READ_FAILED':
+                errorMessage = 'Failed to read image file. Please try again.';
+                break;
+              default:
+                errorMessage = error.message;
+            }
+          }
+
+          Alert.alert(t('error'), errorMessage);
+        } finally {
+          setIsUploadingAvatar(false);
         }
       }
     } catch (error) {
+      setIsUploadingAvatar(false);
+      console.error('Error accessing media library:', error);
       Alert.alert(t('error'), t('failedToAccessMediaLibrary'));
     }
   };
@@ -400,15 +592,8 @@ export default function ProfileScreen() {
 
   const languages = [
     'English',
-    'Spanish',
-    'French',
-    'German',
-    'Italian',
-    'Portuguese',
     'Chinese (Simplified)',
     'Chinese (Traditional)',
-    'Japanese',
-    'Korean',
   ];
 
   // Language mapping from display names to language codes
@@ -416,13 +601,6 @@ export default function ProfileScreen() {
     'English': 'en',
     'Chinese (Simplified)': 'zh_CN',
     'Chinese (Traditional)': 'zh_TW',
-    'Spanish': 'es',
-    'French': 'fr',
-    'German': 'de',
-    'Italian': 'it',
-    'Portuguese': 'pt',
-    'Japanese': 'ja',
-    'Korean': 'ko',
   };
 
   const getEditIcon = (type: string) => {
@@ -442,6 +620,26 @@ export default function ProfileScreen() {
       case 'introduction': return 'Edit Introduction';
       case 'photo': return 'Upload Photo';
       default: return 'Edit';
+    }
+  };
+
+  const handleShareProfile = async () => {
+    if (!user?.uid) {
+      Alert.alert(t('error'), 'Unable to share profile. Please try logging in again.');
+      return;
+    }
+
+    try {
+      // Generate deeplink URL with current user's ID
+      const shareUrl = `myapp://profile/${user.uid}`;
+
+      // Share the profile link
+      await Sharing.shareAsync(shareUrl);
+
+      console.log('Profile shared successfully');
+    } catch (error) {
+      console.error('Error sharing profile:', error);
+      Alert.alert(t('error'), t('failedToShareProfile') || 'Failed to share profile. Please try again.');
     }
   };
 
@@ -471,10 +669,16 @@ export default function ProfileScreen() {
                  <View style={styles.profileContent}>
                    <View style={styles.profileLeft}>
                      <View style={styles.avatarContainer}>
-                       <Image
-                         source={{ uri: userProfile?.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100' }}
-                         style={styles.profileAvatar}
-                       />
+                       {isUploadingAvatar ? (
+                         <View style={[styles.profileAvatar, styles.avatarLoading]}>
+                           <Text style={styles.loadingText}>...</Text>
+                         </View>
+                       ) : (
+                         <Image
+                           source={{ uri: userProfile?.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100' }}
+                           style={styles.profileAvatar}
+                         />
+                       )}
                      </View>
                      <View style={styles.profileInfo}>
                        <Text style={styles.profileName}>{userProfile?.displayName || user?.email?.split('@')[0] || 'User'}</Text>
@@ -488,21 +692,45 @@ export default function ProfileScreen() {
                    </View>
                    <View style={styles.profileRight}>
                      <TouchableOpacity
-                       style={styles.editButton}
+                       style={[
+                         styles.editButton,
+                         isUploadingAvatar && styles.disabledButton,
+                         { zIndex: 10 } // Ensure button is on top
+                       ]}
                        onPress={(e) => {
                          e.stopPropagation();
+                         if (isUploadingAvatar) {
+                           console.log('🔧 Edit button pressed but upload in progress');
+                           return;
+                         }
+
+                         console.log('🔧 Edit button pressed - showing profile edit options');
                          Alert.alert(
                            'Edit Profile',
                            'What would you like to update?',
                            [
-                             { text: 'Name', onPress: () => handleEditProfile('name') },
-                             { text: 'Email', onPress: () => handleEditProfile('email') },
-                             { text: 'Introduction', onPress: () => handleEditProfile('introduction') },
-                             { text: 'Profile Photo', onPress: () => handleEditProfile('photo') },
+                             { text: 'Name', onPress: () => {
+                               console.log('🔧 Name edit selected');
+                               handleEditProfile('name');
+                             }},
+                             { text: 'Email', onPress: () => {
+                               console.log('🔧 Email edit selected');
+                               handleEditProfile('email');
+                             }},
+                             { text: 'Introduction', onPress: () => {
+                               console.log('🔧 Introduction edit selected');
+                               handleEditProfile('introduction');
+                             }},
+                             { text: 'Profile Photo', onPress: () => {
+                               console.log('🔧 Profile Photo edit selected');
+                               handleEditProfile('photo');
+                             }},
                              { text: 'Cancel', style: 'cancel' },
                            ]
                          );
                        }}
+                       disabled={isUploadingAvatar}
+                       activeOpacity={0.7}
                      >
                        <Edit3 size={16} color="#FFFFFF" />
                      </TouchableOpacity>
@@ -517,7 +745,7 @@ export default function ProfileScreen() {
           <DashboardCard style={styles.subscriptionCard}>
             <View style={styles.subscriptionContent}>
               <View style={styles.subscriptionHeader}>
-                <Text style={[styles.subscriptionTitle, { color: colors.text }]}>Subscription Plan</Text>
+                <Text style={[styles.subscriptionTitle, { color: colors.text }]}>{t('subscriptionPlan')}</Text>
                 <View style={[styles.currentPlanBadge, { backgroundColor: currentPlan === 'free' ? '#10B981' : currentPlan === 'pro' ? '#4F46E5' : '#8B5CF6' }]}>
                   <Text style={styles.currentPlanText}>
                     {currentPlan === 'free' ? 'FREE' : currentPlan === 'pro' ? 'PRO' : 'PRO MAX'}
@@ -582,7 +810,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity style={styles.settingItem}>
                   <View style={styles.settingLeft}>
                     <Shield size={20} color="#F59E0B" />
-                    <Text style={[styles.settingText, { color: colors.text }]}>Transparency</Text>
+                    <Text style={[styles.settingText, { color: colors.text }]}>{t('transparency')}</Text>
                   </View>
                   <ChevronRight size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
@@ -602,7 +830,7 @@ export default function ProfileScreen() {
                     ) : (
                       <Sun size={20} color="#F59E0B" />
                     )}
-                    <Text style={[styles.settingText, { color: colors.text }]}>Dark Mode</Text>
+                    <Text style={[styles.settingText, { color: colors.text }]}>{t('darkMode')}</Text>
                   </View>
                   <Switch
                     value={isDarkMode}
@@ -622,7 +850,7 @@ export default function ProfileScreen() {
                 >
                   <View style={styles.settingLeft}>
                     <Globe size={20} color="#10B981" />
-                    <Text style={[styles.settingText, { color: colors.text }]}>Language</Text>
+                    <Text style={[styles.settingText, { color: colors.text }]}>{t('language')}</Text>
                   </View>
                   <View style={styles.settingRight}>
                     <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
@@ -646,7 +874,7 @@ export default function ProfileScreen() {
 
           {/* Support */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Support</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('support')}</Text>
             <DashboardCard>
               <View style={styles.settingsList}>
                 <TouchableOpacity
@@ -655,7 +883,7 @@ export default function ProfileScreen() {
                 >
                   <View style={styles.settingLeft}>
                     <HelpCircle size={20} color="#6B7280" />
-                    <Text style={[styles.settingText, { color: colors.text }]}>FAQ</Text>
+                    <Text style={[styles.settingText, { color: colors.text }]}>{t('faq')}</Text>
                   </View>
                   <ChevronRight size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
@@ -663,7 +891,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity style={styles.settingItem}>
                   <View style={styles.settingLeft}>
                     <HelpCircle size={20} color="#6B7280" />
-                    <Text style={[styles.settingText, { color: colors.text }]}>Help & Support</Text>
+                    <Text style={[styles.settingText, { color: colors.text }]}>{t('helpAndSupport')}</Text>
                   </View>
                   <ChevronRight size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
@@ -674,7 +902,7 @@ export default function ProfileScreen() {
                 >
                   <View style={styles.settingLeft}>
                     <LogOut size={20} color="#EF4444" />
-                    <Text style={[styles.settingText, { color: '#EF4444' }]}>Logout</Text>
+                    <Text style={[styles.settingText, { color: '#EF4444' }]}>{t('logout')}</Text>
                   </View>
                   <ChevronRight size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
@@ -898,13 +1126,32 @@ export default function ProfileScreen() {
             <ScrollView style={styles.modalContent}>
               <View style={styles.profileDetailsContent}>
                 <View style={styles.profileDetailsAvatarContainer}>
-                  <Image
-                    source={{ uri: userProfile?.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150' }}
-                    style={styles.profileDetailsAvatar}
-                  />
+                  {isUploadingAvatar ? (
+                    <View style={[styles.profileDetailsAvatar, styles.avatarLoading]}>
+                      <Text style={styles.loadingText}>...</Text>
+                    </View>
+                  ) : (
+                    <Image
+                      source={{ uri: userProfile?.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150' }}
+                      style={styles.profileDetailsAvatar}
+                    />
+                  )}
                   <TouchableOpacity
-                    style={styles.editPhotoButton}
-                    onPress={() => handleEditProfile('photo')}
+                    style={[
+                      styles.editPhotoButton,
+                      isUploadingAvatar && styles.disabledButton,
+                      { zIndex: 10, elevation: 5 } // Ensure button is on top for Android
+                    ]}
+                    onPress={() => {
+                      console.log('📸 Edit photo button pressed in profile details modal');
+                      if (!isUploadingAvatar) {
+                        handleEditProfile('photo');
+                      } else {
+                        console.log('📸 Edit photo button pressed but upload in progress');
+                      }
+                    }}
+                    disabled={isUploadingAvatar}
+                    activeOpacity={0.7}
                   >
                     <Camera size={16} color="#FFFFFF" />
                   </TouchableOpacity>
@@ -963,15 +1210,28 @@ export default function ProfileScreen() {
                   <TouchableOpacity
                     style={[styles.profileActionButton, { backgroundColor: '#4F46E5' }]}
                     onPress={() => {
+                      console.log('🔧 Edit Profile button pressed in profile actions');
                       setShowProfileDetailsModal(false);
                       Alert.alert(
                         'Edit Profile',
                         'What would you like to update?',
                         [
-                          { text: 'Name', onPress: () => handleEditProfile('name') },
-                          { text: 'Email', onPress: () => handleEditProfile('email') },
-                          { text: 'Introduction', onPress: () => handleEditProfile('introduction') },
-                          { text: 'Profile Photo', onPress: () => handleEditProfile('photo') },
+                          { text: 'Name', onPress: () => {
+                            console.log('🔧 Name edit selected from profile actions');
+                            handleEditProfile('name');
+                          }},
+                          { text: 'Email', onPress: () => {
+                            console.log('🔧 Email edit selected from profile actions');
+                            handleEditProfile('email');
+                          }},
+                          { text: 'Introduction', onPress: () => {
+                            console.log('🔧 Introduction edit selected from profile actions');
+                            handleEditProfile('introduction');
+                          }},
+                          { text: 'Profile Photo', onPress: () => {
+                            console.log('🔧 Profile Photo edit selected from profile actions');
+                            handleEditProfile('photo');
+                          }},
                           { text: 'Cancel', style: 'cancel' },
                         ]
                       );
@@ -983,10 +1243,7 @@ export default function ProfileScreen() {
 
                   <TouchableOpacity
                     style={[styles.profileActionButton, { backgroundColor: '#10B981' }]}
-                    onPress={() => {
-                      // Share profile functionality
-                      Alert.alert('Share Profile', 'Share your profile with friends!');
-                    }}
+                    onPress={handleShareProfile}
                   >
                     <UserPlus size={20} color="#FFFFFF" />
                     <Text style={styles.profileActionText}>Share Profile</Text>
@@ -1199,6 +1456,19 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  avatarLoading: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   profileStats: {
     flexDirection: 'row',
