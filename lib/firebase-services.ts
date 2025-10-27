@@ -26,7 +26,8 @@ import {
   Query,
   Unsubscribe
 } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { httpsCallable } from 'firebase/functions';
+import { auth, db, functions } from './firebase-config';
 import {
   deleteMediaWithAuth,
   deleteMediaBatch,
@@ -59,6 +60,8 @@ export interface UserProfile {
   dailyPrize?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  isPrivate?: boolean; // Default false (public)
+  subscriptionPlan?: 'free' | 'pro' | 'promax'; // Subscription plan
 }
 
 export interface Activity {
@@ -223,6 +226,7 @@ export class DatabaseService {
       dailyPrize: '',
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
+      isPrivate: false, // Default to public
       ...additionalData
     };
 
@@ -1488,6 +1492,35 @@ export class DatabaseService {
       return totalUnread;
     } catch (error) {
       console.error('Error getting unread message count:', error);
+      throw error;
+    }
+  }
+
+  // Payment Services
+  static async createPaymentIntent(plan: 'pro' | 'promax'): Promise<{ clientSecret: string, paymentIntentId: string }> {
+    try {
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      const createPaymentIntentCallable = httpsCallable(functions, 'createPaymentIntent');
+      const result = await createPaymentIntentCallable({ plan });
+
+      return result.data as { clientSecret: string, paymentIntentId: string };
+    } catch (error) {
+      console.error('Error creating payment intent:', error);
+
+      // Handle specific Firebase errors
+      if (error instanceof Error) {
+        if (error.message.includes('unauthenticated')) {
+          throw new Error('Please log in to proceed with payment.');
+        } else if (error.message.includes('invalid-argument')) {
+          throw new Error('Invalid subscription plan selected.');
+        } else if (error.message.includes('internal')) {
+          throw new Error('Payment service is temporarily unavailable. Please try again later.');
+        }
+      }
+
       throw error;
     }
   }

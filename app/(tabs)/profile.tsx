@@ -10,9 +10,11 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Settings, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, Moon, Sun, Globe, X, Camera, CreditCard as Edit3, Mail, FileText, Upload, UserPlus } from 'lucide-react-native';
+import { User, Settings, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, Moon, Sun, Globe, X, Camera, CreditCard as Edit3, Mail, FileText, Upload, UserPlus, CreditCard } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { DashboardCard } from '@/components/DashboardCard';
@@ -21,7 +23,7 @@ import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { useNotifications } from '@/hooks/useNotifications';
 import { getColors } from '@/constants/Colors';
-import { DatabaseService } from '@/lib/firebase-services';
+import { DatabaseService, UserProfile } from '@/lib/firebase-services';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
@@ -29,16 +31,40 @@ import { useLanguage } from '@/hooks/LanguageContext';
 import { uploadProfileImage, StorageUploadError } from '@/lib/storage-service';
 import * as Sharing from 'expo-sharing';
 
-interface UserProfile {
-  name: string;
-  email: string;
-  introduction: string;
-  avatar: string;
-  streak: number;
-  level: string;
+// Conditional import for Stripe - only on native platforms
+let initStripe, useStripe, StripeProvider;
+if (Platform.OS !== 'web') {
+  const stripeModule = require('@stripe/stripe-react-native');
+  initStripe = stripeModule.initStripe;
+  useStripe = stripeModule.useStripe;
+  StripeProvider = stripeModule.StripeProvider;
+  
+  // Initialize Stripe with the publishable key
+  initStripe({
+    publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51SJwQ0BXjOxrF9eiUDKWbDcs0ZrjrIE6asS3mCt9Tj9PHWmNq4XVo5VzHOCvbUvH9ENxwEx2ioBlZ4eKyrl0XkCJ00200nBwlX',
+    merchantIdentifier: 'merchant.com.yourapp.digitwellness',
+    threeDSecureParams: {
+      backgroundColor: '#FFFFFF',
+      appBar: {
+        title: 'Secure Payment',
+        subtitle: 'Your purchase',
+        backgroundColor: '#4F46E5',
+        textColor: '#FFFFFF',
+        subtitleTextColor: '#D1D5DB',
+      },
+    },
+  });
+} else {
+  // Mock implementations for web
+  initStripe = () => {};
+  useStripe = () => ({
+    initPaymentSheet: () => Promise.resolve({ error: null }),
+    presentPaymentSheet: () => Promise.resolve({ error: null }),
+  });
+  StripeProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 }
 
-export default function ProfileScreen() {
+function ProfileScreen() {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const { user, signOut } = useAuth();
   const { userProfile, getTotalPoints } = useFirebaseData();
@@ -51,6 +77,13 @@ export default function ProfileScreen() {
   } = useNotifications();
   const { t, currentLanguage, changeLanguage } = useLanguage();
   const colors = getColors(isDarkMode);
+  
+  // Only use Stripe hook on native platforms
+  const stripe = Platform.OS !== 'web' ? useStripe() : null;
+  const { initPaymentSheet, presentPaymentSheet } = Platform.OS !== 'web' && stripe ? stripe : {
+    initPaymentSheet: () => Promise.resolve({ error: null }),
+    presentPaymentSheet: () => Promise.resolve({ error: null }),
+  };
 
   const [notifications, setNotifications] = useState(isNotificationsEnabled);
   const [dailySummary, setDailySummary] = useState(isDailySummaryEnabled);
@@ -65,8 +98,12 @@ export default function ProfileScreen() {
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [showProfileDetailsModal, setShowProfileDetailsModal] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'pro' | 'promax' | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
 
-  const [localUserProfile, setLocalUserProfile] = useState<UserProfile>({
+  const [localUserProfile, setLocalUserProfile] = useState<any>({
     name: 'Alex Johnson',
     email: 'alex@example.com',
     introduction: 'Digital wellness enthusiast on a journey to mindful technology use.',
@@ -86,7 +123,8 @@ export default function ProfileScreen() {
       const savedDailySummary = await AsyncStorage.getItem('daily_summary');
       const savedLanguage = await AsyncStorage.getItem('language');
       const savedProfile = await AsyncStorage.getItem('userProfile');
-      
+      const savedPrivacy = await AsyncStorage.getItem('isPrivate');
+
       if (savedNotifications !== null) {
         setNotifications(JSON.parse(savedNotifications));
       }
@@ -97,20 +135,45 @@ export default function ProfileScreen() {
       if (savedProfile !== null) {
         setLocalUserProfile(JSON.parse(savedProfile));
       }
+      if (savedPrivacy !== null) {
+        setIsPrivate(JSON.parse(savedPrivacy));
+      } else if (user) {
+        // Load from Firebase if not in AsyncStorage
+        const profile = await DatabaseService.getUserProfile(user.uid);
+        if (profile) {
+          setIsPrivate(profile.isPrivate || false);
+        }
+      }
     } catch (error) {
       console.log('Error loading settings:', error);
     }
   };
 
   const loadSubscriptionPlan = async () => {
+    console.log('🔄 [Subscription Debug] Starting to load subscription plan...');
     try {
+      if (user?.uid) {
+        const profile = await DatabaseService.getUserProfile(user.uid);
+        if (profile?.subscriptionPlan) {
+          console.log('🔄 [Subscription Debug] Retrieved plan from Firebase:', profile.subscriptionPlan);
+          setCurrentPlan(profile.subscriptionPlan);
+          await AsyncStorage.setItem('subscriptionPlan', profile.subscriptionPlan);
+          console.log('🔄 [Subscription Debug] Set current plan to:', profile.subscriptionPlan);
+          return;
+        }
+      }
       const savedPlan = await AsyncStorage.getItem('subscriptionPlan');
+      console.log('🔄 [Subscription Debug] Retrieved plan from storage:', savedPlan);
       if (savedPlan) {
         setCurrentPlan(savedPlan as 'free' | 'pro' | 'promax');
+        console.log('🔄 [Subscription Debug] Set current plan to:', savedPlan);
+      } else {
+        console.log('🔄 [Subscription Debug] No saved plan found, keeping default (free)');
       }
     } catch (error) {
-      console.log('Error loading subscription plan:', error);
+      console.error('🔄 [Subscription Debug] Error loading subscription plan:', error);
     }
+    console.log('🔄 [Subscription Debug] Subscription plan loading complete');
   };
 
   const saveSettings = async (key: string, value: any) => {
@@ -141,35 +204,40 @@ export default function ProfileScreen() {
     updateNotificationSettings(notifications, value);
   };
 
-  const handleLanguageSelect = async (language: string) => {
-    console.log('🔤 LANGUAGE DEBUG: Language selection started in profile.tsx');
-    console.log('🔤 LANGUAGE DEBUG: Selected language value:', language);
-    console.log('🔤 LANGUAGE DEBUG: Current language before change:', currentLanguage);
+  const handlePrivacyToggle = async (value: boolean) => {
+    if (!user) {
+      Alert.alert(t('error'), t('userNotAuthenticated'));
+      return;
+    }
 
+    try {
+      setIsPrivate(value);
+      await DatabaseService.updateUserProfile(user.uid, { isPrivate: value });
+      await AsyncStorage.setItem('isPrivate', JSON.stringify(value));
+      Alert.alert(t('success'), value ? t('profileSetToPrivate') : t('profileSetToPublic'));
+    } catch (error) {
+      console.error('Error updating privacy setting:', error);
+      setIsPrivate(!value); // Revert on error
+      Alert.alert(t('error'), t('failedToUpdatePrivacySetting'));
+    }
+  };
+
+  const handleLanguageSelect = async (language: string) => {
     try {
       // Map display name to language code
       const languageCode = languageMapping[language] as any;
 
       if (!languageCode) {
-        console.error('🔤 LANGUAGE DEBUG: No mapping found for language:', language);
-        Alert.alert(t('error'), `Unsupported language: ${language}`);
+        Alert.alert(t('error'), t('unsupportedLanguage', { language }));
         return;
       }
 
-      console.log('🔤 LANGUAGE DEBUG: Mapped display name to language code:', language, '->', languageCode);
-      console.log('🔤 LANGUAGE DEBUG: Calling changeLanguage function...');
       await changeLanguage(languageCode);
 
-      console.log('🔤 LANGUAGE DEBUG: Language modal closing...');
       setShowLanguageModal(false);
 
-      console.log('🔤 LANGUAGE DEBUG: Showing success alert...');
-      Alert.alert(t('success'), `Language changed to ${language}`);
-
-      console.log('🔤 LANGUAGE DEBUG: Language selection completed successfully');
+      Alert.alert(t('success'), t('languageChangedTo', { language }));
     } catch (error) {
-      console.error('🔤 LANGUAGE DEBUG: Error in handleLanguageSelect:', error);
-      console.error('🔤 LANGUAGE DEBUG: Language selection failed for:', language);
     }
   };
 
@@ -231,11 +299,11 @@ export default function ProfileScreen() {
       if (isWeb) {
         console.log('🌐 Web detected - camera not available, redirecting to gallery');
         Alert.alert(
-          'Camera Not Available',
-          'Camera access is not available on web. Please use the Gallery option instead.',
+          t('cameraNotAvailable'),
+          t('cameraAccessNotAvailableOnWeb'),
           [
-            { text: 'Use Gallery', onPress: openImagePicker },
-            { text: 'Cancel', style: 'cancel' }
+            { text: t('chooseFromGalleryOption'), onPress: openImagePicker },
+            { text: t('cancel'), style: 'cancel' }
           ]
         );
         return;
@@ -325,7 +393,7 @@ export default function ProfileScreen() {
       console.log('📁 Processing image file:', file.name, 'Size:', file.size);
 
       if (!file.type.startsWith('image/')) {
-        Alert.alert(t('error'), 'Please select a valid image file.');
+        Alert.alert(t('error'), t('pleaseSelectValidImageFile'));
         return;
       }
 
@@ -358,7 +426,7 @@ export default function ProfileScreen() {
 
     } catch (error) {
       console.error('📁 Error processing web image file:', error);
-      Alert.alert(t('error'), 'Failed to upload image. Please try again.');
+      Alert.alert(t('error'), t('failedToUploadImage'));
     }
   };
 
@@ -533,25 +601,224 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSubscriptionSelect = async (plan: 'free' | 'pro' | 'promax') => {
-    try {
-      await AsyncStorage.setItem('subscriptionPlan', plan);
-      setCurrentPlan(plan);
-      setShowSubscriptionModal(false);
-      
-      const planNames = {
-        free: 'Normal Plan (Free)',
-        pro: 'Pro Plan ($15/month)',
-        promax: 'ProMax Plan ($30/month)'
-      };
-      
+  const initializePaymentSheet = async (plan: 'pro' | 'promax', retryCount: number = 0): Promise<boolean> => {
+    console.log('💳 [Payment Debug] Initializing payment sheet for plan:', plan, 'Retry:', retryCount);
+    if (!user?.uid) {
+      console.error('💳 [Payment Debug] User not authenticated');
+      Alert.alert('Error', 'User not authenticated');
+      return false;
+    }
+
+    // On web, we'll show a message about redirecting to a payment page
+    if (Platform.OS === 'web') {
+      console.log('💳 [Payment Debug] Web platform detected, showing redirect alert');
       Alert.alert(
-        t('planUpdated'),
-        t('successfullySwitchedToPlan', { planName: planNames[plan] }),
-        [{ text: t('ok') }]
+        t('paymentProcessing'),
+        t('redirectToSecurePaymentPage'),
+        [
+          {
+            text: t('continue'),
+            onPress: () => {
+              console.log('💳 [Payment Debug] User proceeded with web payment simulation');
+              // On web, we would redirect to a payment page
+              // For now we'll simulate a successful payment
+              setTimeout(() => {
+                console.log('💳 [Payment Debug] Simulating successful payment for web');
+                handleSuccessfulPayment(plan);
+              }, 1000); // Simulate processing delay
+            }
+          },
+          { text: t('cancel'), style: 'cancel' }
+        ]
       );
+      return true;
+    }
+
+    try {
+      // Create payment intent and get client secret
+      console.log('💳 [Payment Debug] Creating payment intent for plan:', plan);
+      const { clientSecret } = await DatabaseService.createPaymentIntent(plan);
+      console.log('💳 [Payment Debug] Payment intent created, client secret received');
+
+      const planAmount = plan === 'pro' ? 1500 : 3000; // in cents
+      const planCurrency = 'usd';
+      console.log('💳 [Payment Debug] Plan details - Amount:', planAmount, 'Currency:', planCurrency);
+
+      // Initialize payment sheet with the payment intent
+      console.log('💳 [Payment Debug] Calling initPaymentSheet...');
+      const { error } = await initPaymentSheet({
+        merchantDisplayName: 'Digital Wellness App',
+        paymentIntentClientSecret: clientSecret,
+        allowsDelayedPaymentMethods: true,
+        returnURL: 'your-app://stripe-redirect', // Deep link for redirect-based payment methods
+        appearance: {
+          colors: {
+            primary: '#4F46E5',
+            background: isDarkMode ? '#1F2937' : '#FFFFFF',
+            componentBackground: isDarkMode ? '#374151' : '#F9FAFB',
+            componentBorder: isDarkMode ? '#4B5563' : '#E5E7EB',
+            componentDivider: isDarkMode ? '#4B5563' : '#E5E7EB',
+            primaryText: isDarkMode ? '#F9FAFB' : '#111827',
+            secondaryText: isDarkMode ? '#D1D5DB' : '#6B7280',
+            componentText: isDarkMode ? '#F9FAFB' : '#111827',
+            placeholderText: isDarkMode ? '#9CA3AF' : '#9CA3AF',
+            icon: isDarkMode ? '#9CA3AF' : '#6B7280',
+            error: '#EF4444',
+          },
+          shapes: {
+            borderRadius: 12,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('💳 [Payment Debug] Payment sheet initialization error:', error);
+        Alert.alert(t('error'), t('failedToInitializePaymentSheet', { errorMessage: error.message }));
+        return false;
+      }
+
+      console.log('💳 [Payment Debug] Payment sheet initialized successfully');
+      return true;
     } catch (error) {
-      Alert.alert('Error', 'Failed to update subscription plan');
+      console.error('💳 [Payment Debug] Exception during payment sheet initialization:', error);
+
+      // Check if it's a network or temporary error and retry up to 2 times
+      if (retryCount < 2 && (error instanceof Error && (error.message?.includes('network') || error.message?.includes('timeout')))) {
+        console.log('💳 [Payment Debug] Retrying payment initialization...');
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        return initializePaymentSheet(plan, retryCount + 1);
+      }
+
+      Alert.alert(t('error'), t('failedToInitializePaymentSheetSimple'));
+      return false;
+    }
+  };
+
+  const handleSubscriptionSelect = async (plan: 'free' | 'pro' | 'promax') => {
+    console.log('📋 [Subscription Debug] User selected plan:', plan);
+    if (plan === 'free') {
+      console.log('📋 [Subscription Debug] Processing free plan selection');
+      try {
+        if (user?.uid) {
+          await DatabaseService.updateUserProfile(user.uid, { subscriptionPlan: plan });
+        }
+        await AsyncStorage.setItem('subscriptionPlan', plan);
+        setCurrentPlan(plan);
+        setShowSubscriptionModal(false);
+        console.log('📋 [Subscription Debug] Free plan saved to Firebase and storage, modal closed');
+
+        const planNames = {
+          free: 'Normal Plan (Free)',
+          pro: 'Pro Plan ($15/month)',
+          promax: 'ProMax Plan ($30/month)'
+        };
+
+        Alert.alert(
+          t('planUpdated'),
+          t('successfullySwitchedToPlan', { planName: planNames[plan] }),
+          [{ text: t('ok') }]
+        );
+        console.log('📋 [Subscription Debug] Free plan alert shown');
+      } catch (error) {
+        console.error('📋 [Subscription Debug] Error updating to free plan:', error);
+        Alert.alert('Error', 'Failed to update subscription plan');
+      }
+    } else {
+      // For paid plans, show payment modal
+      console.log('📋 [Subscription Debug] Processing paid plan selection:', plan);
+      setSelectedPlan(plan as 'pro' | 'promax');
+      setShowSubscriptionModal(false);
+      setShowPaymentModal(true);
+      console.log('📋 [Subscription Debug] Payment modal opened for plan:', plan);
+    }
+  };
+
+  const handleSuccessfulPayment = async (plan: 'pro' | 'promax') => {
+    console.log('✅ [Payment Debug] Handling successful payment for plan:', plan);
+    // Payment successful
+    if (user?.uid) {
+      await DatabaseService.updateUserProfile(user.uid, { subscriptionPlan: plan });
+    }
+    await AsyncStorage.setItem('subscriptionPlan', plan);
+    setCurrentPlan(plan);
+    setShowPaymentModal(false);
+    console.log('✅ [Payment Debug] Plan saved to Firebase and storage, state updated');
+
+    const planNames = {
+      pro: 'Pro Plan ($15/month)',
+      promax: 'ProMax Plan ($30/month)'
+    };
+
+    Alert.alert(
+      'Payment Successful',
+      `You've successfully upgraded to the ${planNames[plan]}!`,
+      [{ text: 'OK' }]
+    );
+    console.log('✅ [Payment Debug] Success alert shown and payment modal closed');
+  };
+
+  const openPaymentSheet = async () => {
+    console.log('💰 [Payment Debug] Starting payment sheet process for plan:', selectedPlan);
+    if (!selectedPlan) {
+      console.error('💰 [Payment Debug] No plan selected');
+      Alert.alert(t('error'), t('noPlanSelected'));
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    try {
+      console.log('💰 [Payment Debug] Initializing payment sheet...');
+      const isInitialized = await initializePaymentSheet(selectedPlan);
+      if (!isInitialized) {
+        console.log('💰 [Payment Debug] Payment sheet initialization failed');
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      // Only use Stripe payment sheet on native platforms
+      if (Platform.OS !== 'web') {
+        console.log('💰 [Payment Debug] Presenting payment sheet on native platform');
+        try {
+          const { error } = await presentPaymentSheet();
+
+          if (error) {
+            console.error('💰 [Payment Debug] Payment failed:', error);
+            Alert.alert(t('error'), t('paymentFailed', { errorMessage: error.message }));
+          } else {
+            console.log('💰 [Payment Debug] Payment successful, processing...');
+            // Payment successful
+            if (user?.uid) {
+              await DatabaseService.updateUserProfile(user.uid, { subscriptionPlan: selectedPlan });
+            }
+            await AsyncStorage.setItem('subscriptionPlan', selectedPlan);
+            setCurrentPlan(selectedPlan);
+            setShowPaymentModal(false);
+
+            const planNames = {
+              pro: 'Pro Plan ($15/month)',
+              promax: 'ProMax Plan ($30/month)'
+            };
+
+            Alert.alert(
+              t('paymentSuccessful'),
+              t('upgradedToPlan', { planName: planNames[selectedPlan] }),
+              [{ text: t('ok') }]
+            );
+            console.log('💰 [Payment Debug] Payment success alert shown and modal closed');
+          }
+        } catch (error) {
+          console.error('💰 [Payment Debug] Unexpected error during payment presentation:', error);
+          Alert.alert(t('error'), t('unexpectedErrorDuringPayment'));
+        }
+      } else {
+        console.log('💰 [Payment Debug] Web platform - payment handled separately');
+      }
+    } catch (error) {
+      console.error('💰 [Payment Debug] Unexpected error during payment:', error);
+      Alert.alert(t('error'), t('unexpectedErrorDuringPayment'));
+    } finally {
+      setIsProcessingPayment(false);
+      console.log('💰 [Payment Debug] Payment process completed');
     }
   };
 
@@ -559,32 +826,32 @@ export default function ProfileScreen() {
     switch (plan) {
       case 'free':
         return {
-          name: 'Normal Plan',
-          price: 'Free',
-          goals: '3 daily goals',
-          posts: '2 posts per day',
-          friends: '5 friends total',
-          reports: 'Basic progress reports',
+          name: t('normalPlan'),
+          price: t('freePrice'),
+          goals: `3 ${t('goalsLabel')}`,
+          posts: `2 ${t('postsLabel')}`,
+          friends: `5 ${t('friendsLabel')}`,
+          reports: t('basicReports'),
           color: '#10B981'
         };
       case 'pro':
         return {
-          name: 'Pro Plan',
-          price: '$15/month',
-          goals: '6 daily goals',
-          posts: '10 posts per day',
-          friends: '20 friends total',
-          reports: 'Enhanced progress reports',
+          name: t('proPlan'),
+          price: t('proPrice'),
+          goals: `6 ${t('goalsLabel')}`,
+          posts: `10 ${t('postsLabel')}`,
+          friends: `20 ${t('friendsLabel')}`,
+          reports: t('enhancedReports'),
           color: '#4F46E5'
         };
       case 'promax':
         return {
-          name: 'ProMax Plan',
-          price: '$30/month',
-          goals: '20 daily goals',
-          posts: '25 posts per day',
-          friends: 'Unlimited friends',
-          reports: 'Comprehensive detailed reports',
+          name: t('proMaxPlan'),
+          price: t('proMaxPrice'),
+          goals: `20 ${t('goalsLabel')}`,
+          posts: `25 ${t('postsLabel')}`,
+          friends: t('unlimitedFriends'),
+          reports: t('comprehensiveReports'),
           color: '#8B5CF6'
         };
     }
@@ -625,7 +892,7 @@ export default function ProfileScreen() {
 
   const handleShareProfile = async () => {
     if (!user?.uid) {
-      Alert.alert(t('error'), 'Unable to share profile. Please try logging in again.');
+      Alert.alert(t('error'), t('unableToShareProfile'));
       return;
     }
 
@@ -706,26 +973,26 @@ export default function ProfileScreen() {
 
                          console.log('🔧 Edit button pressed - showing profile edit options');
                          Alert.alert(
-                           'Edit Profile',
-                           'What would you like to update?',
+                           t('editProfile'),
+                           t('whatWouldYouLikeToUpdate'),
                            [
-                             { text: 'Name', onPress: () => {
+                             { text: t('nameOption'), onPress: () => {
                                console.log('🔧 Name edit selected');
                                handleEditProfile('name');
                              }},
-                             { text: 'Email', onPress: () => {
+                             { text: t('emailOption'), onPress: () => {
                                console.log('🔧 Email edit selected');
                                handleEditProfile('email');
                              }},
-                             { text: 'Introduction', onPress: () => {
+                             { text: t('introductionOption'), onPress: () => {
                                console.log('🔧 Introduction edit selected');
                                handleEditProfile('introduction');
                              }},
-                             { text: 'Profile Photo', onPress: () => {
+                             { text: t('profilePhotoOption'), onPress: () => {
                                console.log('🔧 Profile Photo edit selected');
                                handleEditProfile('photo');
                              }},
-                             { text: 'Cancel', style: 'cancel' },
+                             { text: t('cancelOption'), style: 'cancel' },
                            ]
                          );
                        }}
@@ -754,14 +1021,17 @@ export default function ProfileScreen() {
               </View>
               <TouchableOpacity
                 style={styles.subscribeButton}
-                onPress={() => setShowSubscriptionModal(true)}
+                onPress={() => {
+                  console.log('📋 [Subscription Debug] Subscription modal opened');
+                  setShowSubscriptionModal(true);
+                }}
               >
                 <LinearGradient
                   colors={['#4F46E5', '#7C3AED']}
                   style={styles.subscribeGradient}
                 >
                   <Text style={styles.subscribeButtonText}>
-                    {currentPlan === 'free' ? 'Upgrade Plan' : 'Change Plan'}
+                    {currentPlan === 'free' ? t('upgradePlan') : t('changePlan')}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -807,13 +1077,18 @@ export default function ProfileScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('privacySecurity')}</Text>
             <DashboardCard>
               <View style={styles.settingsList}>
-                <TouchableOpacity style={styles.settingItem}>
+                <View style={styles.settingItem}>
                   <View style={styles.settingLeft}>
                     <Shield size={20} color="#F59E0B" />
                     <Text style={[styles.settingText, { color: colors.text }]}>{t('transparency')}</Text>
                   </View>
-                  <ChevronRight size={20} color={colors.textTertiary} />
-                </TouchableOpacity>
+                  <Switch
+                    value={isPrivate}
+                    onValueChange={handlePrivacyToggle}
+                    trackColor={{ false: '#E5E7EB', true: '#F59E0B' }}
+                    thumbColor={isPrivate ? '#FFFFFF' : '#FFFFFF'}
+                  />
+                </View>
               </View>
             </DashboardCard>
           </View>
@@ -843,8 +1118,6 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={[styles.settingItem, styles.settingItemLast]}
                   onPress={() => {
-                    console.log('🔤 LANGUAGE DEBUG: Language modal opening in profile.tsx...');
-                    console.log('🔤 LANGUAGE DEBUG: Current language when modal opened:', currentLanguage);
                     setShowLanguageModal(true);
                   }}
                 >
@@ -970,13 +1243,11 @@ export default function ProfileScreen() {
           <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => {
-                console.log('🔤 LANGUAGE DEBUG: Language modal closing via X button in profile.tsx...');
-                console.log('🔤 LANGUAGE DEBUG: Current language when modal closed:', currentLanguage);
                 setShowLanguageModal(false);
               }}>
                 <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Language</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('selectLanguage')}</Text>
               <View style={{ width: 24 }} />
             </View>
 
@@ -1026,7 +1297,7 @@ export default function ProfileScreen() {
               <TouchableOpacity onPress={() => setShowSubscriptionModal(false)}>
                 <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Your Plan</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('chooseYourPlan')}</Text>
               <View style={{ width: 24 }} />
             </View>
 
@@ -1079,7 +1350,7 @@ export default function ProfileScreen() {
                     {!isCurrentPlan && (
                       <View style={[styles.selectPlanButton, { backgroundColor: features.color }]}>
                         <Text style={styles.selectPlanText}>
-                          {plan === 'free' ? 'Downgrade' : 'Upgrade'}
+                          {plan === 'free' ? t('downgrade') : t('upgrade')}
                         </Text>
                       </View>
                     )}
@@ -1101,20 +1372,20 @@ export default function ProfileScreen() {
               <TouchableOpacity onPress={() => setShowProfileDetailsModal(false)}>
                 <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Profile Details</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('profileDetails')}</Text>
               <TouchableOpacity
                 style={styles.editButton}
                 onPress={() => {
                   setShowProfileDetailsModal(false);
                   Alert.alert(
-                    'Edit Profile',
-                    'What would you like to update?',
+                    t('editProfile'),
+                    t('whatWouldYouLikeToUpdate'),
                     [
-                      { text: 'Name', onPress: () => handleEditProfile('name') },
-                      { text: 'Email', onPress: () => handleEditProfile('email') },
-                      { text: 'Introduction', onPress: () => handleEditProfile('introduction') },
-                      { text: 'Profile Photo', onPress: () => handleEditProfile('photo') },
-                      { text: 'Cancel', style: 'cancel' },
+                      { text: t('nameOption'), onPress: () => handleEditProfile('name') },
+                      { text: t('emailOption'), onPress: () => handleEditProfile('email') },
+                      { text: t('introductionOption'), onPress: () => handleEditProfile('introduction') },
+                      { text: t('profilePhotoOption'), onPress: () => handleEditProfile('photo') },
+                      { text: t('cancelOption'), style: 'cancel' },
                     ]
                   );
                 }}
@@ -1265,7 +1536,7 @@ export default function ProfileScreen() {
               <TouchableOpacity onPress={() => setShowFAQModal(false)}>
                 <X size={24} color={colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>FAQ</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('faq')}</Text>
               <View style={{ width: 24 }} />
             </View>
 
@@ -1394,8 +1665,95 @@ export default function ProfileScreen() {
             </ScrollView>
           </SafeAreaView>
         </Modal>
+
+        {/* Payment Modal */}
+        <Modal
+          visible={showPaymentModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('upgradePlan')}</Text>
+              <View style={{ width: 24 }} />
+            </View>
+
+            <View style={styles.modalContent}>
+              {selectedPlan && (
+                <View style={[styles.planCard, { backgroundColor: colors.background }]}>
+                  <View style={styles.planHeader}>
+                    <View>
+                      <Text style={[styles.planName, { color: colors.text }]}>
+                        {t(selectedPlan === 'pro' ? 'proPlan' : 'proMaxPlan')}
+                      </Text>
+                      <Text style={[styles.planPrice, { color: selectedPlan === 'pro' ? '#4F46E5' : '#8B5CF6' }]}>
+                        {t(selectedPlan === 'pro' ? 'proPrice' : 'proMaxPrice')}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.planFeatures}>
+                    <View style={styles.featureItem}>
+                      <Text style={styles.featureIcon}>🎯</Text>
+                      <Text style={[styles.featureText, { color: colors.textSecondary }]}>
+                        {`${selectedPlan === 'pro' ? 6 : 20} ${t('goalsLabel')}`}
+                      </Text>
+                    </View>
+                    <View style={styles.featureItem}>
+                      <Text style={styles.featureIcon}>📝</Text>
+                      <Text style={[styles.featureText, { color: colors.textSecondary }]}>
+                        {`${selectedPlan === 'pro' ? 10 : 25} ${t('postsLabel')}`}
+                      </Text>
+                    </View>
+                    <View style={styles.featureItem}>
+                      <Text style={styles.featureIcon}>👥</Text>
+                      <Text style={[styles.featureText, { color: colors.textSecondary }]}>
+                        {selectedPlan === 'pro' ? `20 ${t('friendsLabel')}` : t('unlimitedFriends')}
+                      </Text>
+                    </View>
+                    <View style={styles.featureItem}>
+                      <Text style={styles.featureIcon}>📊</Text>
+                      <Text style={[styles.featureText, { color: colors.textSecondary }]}>
+                        {t(selectedPlan === 'pro' ? 'enhancedReports' : 'comprehensiveReports')}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <TouchableOpacity
+                    style={[styles.selectPlanButton, { backgroundColor: selectedPlan === 'pro' ? '#4F46E5' : '#8B5CF6' }]}
+                    onPress={openPaymentSheet}
+                    disabled={isProcessingPayment}
+                  >
+                    {isProcessingPayment ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.selectPlanText}>{t('proceedToPayment')}</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+              
+              <View style={styles.paymentNote}>
+                <Text style={[styles.paymentNoteText, { color: colors.textSecondary }]}>
+                  {t('paymentNote')}
+                </Text>
+              </View>
+            </View>
+          </SafeAreaView>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
+  );
+}
+
+export default function WrappedProfileScreen() {
+  return (
+    <StripeProvider>
+      <ProfileScreen />
+    </StripeProvider>
   );
 }
 
@@ -1918,5 +2276,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  paymentNote: {
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+  },
+  paymentNoteText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

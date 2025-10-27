@@ -1,3 +1,12 @@
+# Firestore Database Security Rules
+
+This document details the security rules for your Firestore database based on the current project configuration.
+
+## Current Firestore Rules
+
+Your `firestore.rules` file contains the following rules:
+
+```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -136,5 +145,22 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+
+    // Note: Payment-related data is handled via Cloud Functions and does not require direct Firestore rules.
+    // All payment operations are secured through Firebase Functions authentication and authorization.
   }
 }
+```
+
+## Deployment
+
+Deploy these rules using:
+```
+firebase deploy --only firestore:rules
+```
+
+## Testing
+
+Test with Firebase Emulator:
+```
+firebase emulators:start --only firestore

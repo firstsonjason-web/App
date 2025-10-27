@@ -249,7 +249,7 @@ export default function FriendsScreen() {
       // Show success feedback
       setRequestFeedback({
         type: 'success',
-        message: 'Friend request sent successfully!'
+        message: t('friendRequestSentSuccessfully')
       });
 
       // Reload data to update suggestions and search results
@@ -263,7 +263,7 @@ export default function FriendsScreen() {
 
       let errorMessage = 'Failed to send friend request. Please try again.';
       if (error.message === 'Friend request already sent') {
-        errorMessage = 'Friend request already sent to this user.';
+        errorMessage = t('friendRequestAlreadySentToThisUser');
       } else if (error.message === 'Already friends with this user') {
         errorMessage = 'You are already friends with this user.';
       }
@@ -559,7 +559,7 @@ export default function FriendsScreen() {
             onPress={() => setSelectedTab('search')}
           >
             <Text style={[styles.tabText, { color: selectedTab === 'search' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'search' && styles.activeTabText]}>
-              {t('searchUsers')}
+              {t('searchUsersTitle')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

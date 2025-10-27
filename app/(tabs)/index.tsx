@@ -19,18 +19,22 @@ import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { formatTime } from '@/lib/firebase-services';
+import { Timestamp } from 'firebase/firestore';
 import { getColors } from '@/constants/Colors';
 import { useLanguage } from '@/hooks/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
 interface Goal {
-  id: number;
+  id: string;
   title: string;
   points: number;
   difficulty: 'easy' | 'medium' | 'hard';
   completed: boolean;
   category: 'screen_time' | 'focus' | 'mindfulness' | 'activity' | 'custom';
+  userId: string;
+  createdAt: Timestamp;
+  completedAt?: Timestamp;
 }
 
 const difficultyColors = {
@@ -115,6 +119,12 @@ const goalCategories = [
   { id: 'activity', name: 'Activity', icon: Trophy },
   { id: 'custom', name: 'Custom', icon: Plus },
 ];
+
+const isToday = (timestamp: Timestamp): boolean => {
+  const today = new Date();
+  const goalDate = timestamp.toDate();
+  return today.toDateString() === goalDate.toDateString();
+};
 
 export default function HomeScreen() {
   const { isDarkMode } = useDarkMode();
@@ -201,6 +211,20 @@ export default function HomeScreen() {
 
   const addNewGoal = async () => {
     if (newGoalTitle.trim()) {
+      const isFreeUser = !userProfile?.subscriptionPlan || userProfile.subscriptionPlan === 'free';
+      const todayGoals = goals.filter(g => isToday(g.createdAt));
+      const duplicateGoal = goals.some(g => g.title.toLowerCase() === newGoalTitle.toLowerCase().trim());
+
+      if (isFreeUser && todayGoals.length >= 3) {
+        Alert.alert(t('error'), t('freeUsersCanOnlyAddUpTo3GoalsPerDay'));
+        return;
+      }
+
+      if (duplicateGoal) {
+        Alert.alert(t('error'), 'A goal with this title already exists.');
+        return;
+      }
+
       try {
         console.log('Starting to add new goal:', newGoalTitle);
         console.log('Current goals before adding:', goals.length);
@@ -399,17 +423,17 @@ export default function HomeScreen() {
                   <Text style={styles.prizeIcon}>🎁</Text>
                   <Text style={[styles.cardTitle, { color: colors.text }]}>{t('dailyPrize')}</Text>
                 </View>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.editPrizeButton}
                   onPress={openPrizeModal}
                 >
-                  <Text style={styles.editPrizeText}>Edit</Text>
+                  <Text style={styles.editPrizeText}>{t('edit')}</Text>
                 </TouchableOpacity>
               </View>
               
               <View style={styles.prizeContent}>
                 <Text style={[styles.prizeDescription, { color: colors.textSecondary }]}>
-                  Your reward for completing all daily tasks:
+                  {t('yourRewardForCompletingAllDailyTasks')}
                 </Text>
                 <View style={[styles.prizeBox, { backgroundColor: isDarkMode ? '#1E293B' : '#F0F9FF', borderColor: isDarkMode ? '#334155' : '#E0F2FE' }]}>
                   <Text style={[styles.prizeText, { color: isDarkMode ? '#60A5FA' : '#0369A1' }]}>{dailyPrize}</Text>

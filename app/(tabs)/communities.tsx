@@ -365,14 +365,14 @@ const PostItem = memo(function PostItem({ post, colors, t, handleLikePost, toggl
 
 export default function CommunitiesScreen() {
   const { isDarkMode } = useDarkMode();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { userProfile, getTotalPoints } = useFirebaseData();
   const { t } = useLanguage();
   const colors = getColors(isDarkMode);
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<{ [key: string]: Comment[] }>({});
-  const [loading, setLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -449,8 +449,13 @@ export default function CommunitiesScreen() {
     let unsubscribe: (() => void) | null = null;
 
     const setupListener = async () => {
+      // Only fetch posts if not loading auth and user is authenticated
+      if (loading || !user) {
+        return;
+      }
+
       try {
-        setLoading(true);
+        setPostsLoading(true);
         setError(null);
         setIsOffline(false);
 
@@ -483,7 +488,7 @@ export default function CommunitiesScreen() {
 
             setPosts(transformedPosts);
             setHasMore(firebasePosts.length >= 20);
-            setLoading(false);
+            setPostsLoading(false);
             setIsOffline(false);
 
             // Refresh stats when posts change
@@ -497,7 +502,7 @@ export default function CommunitiesScreen() {
             } else {
               setError('Failed to load posts');
             }
-            setLoading(false);
+            setPostsLoading(false);
           }
         }, 20);
       } catch (error) {
@@ -509,7 +514,7 @@ export default function CommunitiesScreen() {
         } else {
           setError('Failed to load posts');
         }
-        setLoading(false);
+        setPostsLoading(false);
       }
     };
 
@@ -520,10 +525,10 @@ export default function CommunitiesScreen() {
         unsubscribe();
       }
     };
-  }, [user]);
+  }, [user, loading]);
 
   const loadMorePosts = async () => {
-    if (loadingMore || !hasMore) return;
+    if (loadingMore || !hasMore || !user) return;
 
     try {
       setLoadingMore(true);
@@ -567,8 +572,10 @@ export default function CommunitiesScreen() {
   };
 
   const retryLoadPosts = async () => {
+    if (!user) return;
+
     setError(null);
-    setLoading(true);
+    setPostsLoading(true);
 
     try {
       const firebasePosts = await DatabaseService.getPosts(20);
@@ -601,7 +608,7 @@ export default function CommunitiesScreen() {
       console.error('Error retrying posts:', error);
       setError('Failed to load posts');
     } finally {
-      setLoading(false);
+      setPostsLoading(false);
     }
   };
 
@@ -899,10 +906,22 @@ export default function CommunitiesScreen() {
     const trimmedContent = newPostContent.trim();
     if (!trimmedContent && !selectedMedia) {
       Alert.alert(t('error'), t('postContentCannotBeEmpty'));
+    } else if (trimmedContent.length > 500) {
+      Alert.alert(t('error'), t('postContentTooLong'));
       return;
     }
     if (trimmedContent.length > 500) {
       Alert.alert(t('error'), t('postContentTooLong'));
+      return;
+    }
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    // Check for offline mode
+    if (isOffline) {
+      Alert.alert(t('error'), t('cannotCreatePostOffline'));
       return;
     }
     // Additional validation for special characters or potentially harmful content
@@ -1364,7 +1383,7 @@ export default function CommunitiesScreen() {
           onEndReached={loadMorePosts}
           onEndReachedThreshold={0.5}
           ListHeaderComponent={
-            loading && posts.length === 0 ? (
+            postsLoading && posts.length === 0 ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('loading')}</Text>
@@ -1392,7 +1411,7 @@ export default function CommunitiesScreen() {
             ) : null
           }
           ListEmptyComponent={
-            !loading && !error && filteredPosts.length === 0 ? (
+            !postsLoading && !error && filteredPosts.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('noPostsYet')}</Text>
                 <Text style={[styles.emptyText, { color: colors.textSecondary }]}>

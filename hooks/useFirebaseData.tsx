@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useFirebaseAuth';
 import { DatabaseService, Goal, UserProfile, Activity } from '@/lib/firebase-services';
 import { getCurrentUserId } from '@/lib/firebase-services';
@@ -128,15 +128,15 @@ export const useFirebaseData = () => {
     }
   };
 
-  const getTotalPoints = () => {
+  const getTotalPoints = useCallback(() => {
     return goals
       .filter(goal => goal.completed)
       .reduce((sum, goal) => sum + goal.points, 0);
-  };
+  }, [goals]);
 
-  const getCompletedGoalsCount = () => {
+  const getCompletedGoalsCount = useCallback(() => {
     return goals.filter(goal => goal.completed).length;
-  };
+  }, [goals]);
 
   return {
     goals,

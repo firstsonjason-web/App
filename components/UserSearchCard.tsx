@@ -30,8 +30,8 @@ export const UserSearchCard: React.FC<UserSearchCardProps> = ({
   const { isDarkMode } = useDarkMode();
   const colors = getColors(isDarkMode);
 
-  // For now, we'll assume status is 'none' since we don't have the logic to check
-  // In a real implementation, you'd check the Firebase database for the current status
+  // TODO: Implement proper friend request status checking
+  // This should check Firebase for existing friend requests, friendships, etc.
   const requestStatus: FriendRequestStatus = 'none';
 
   const getButtonConfig = () => {

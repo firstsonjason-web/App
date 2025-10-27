@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLanguage } from '@/hooks/LanguageContext';
 
 interface ScreenTimeData {
   date: string;
@@ -15,6 +16,7 @@ interface DailyScreenTime {
 }
 
 export const useScreenTimeTracking = () => {
+  const { t } = useLanguage();
   const [isTracking, setIsTracking] = useState(false);
   const [todayScreenTime, setTodayScreenTime] = useState(0);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
@@ -134,11 +136,41 @@ export const useScreenTimeTracking = () => {
       date.setDate(today.getDate() - i);
       const dateString = date.toISOString().split('T')[0];
 
+      // Get localized day name
       const dayName = date.toLocaleDateString('en', { weekday: 'short' });
+      let translatedDay = dayName;
+
+      // Map English day names to translation keys
+      switch (dayName.toLowerCase()) {
+        case 'mon':
+          translatedDay = t('monday');
+          break;
+        case 'tue':
+          translatedDay = t('tuesday');
+          break;
+        case 'wed':
+          translatedDay = t('wednesday');
+          break;
+        case 'thu':
+          translatedDay = t('thursday');
+          break;
+        case 'fri':
+          translatedDay = t('friday');
+          break;
+        case 'sat':
+          translatedDay = t('saturday');
+          break;
+        case 'sun':
+          translatedDay = t('sunday');
+          break;
+        default:
+          translatedDay = dayName;
+      }
+
       const screenTime = screenTimeData[dateString]?.screenTime || 0;
 
       weekData.push({
-        day: dayName,
+        day: translatedDay,
         screenTime: Math.round(screenTime * 10) / 10, // Round to 1 decimal
         focusTime: Math.round((screenTime * 0.3) * 10) / 10, // Estimate focus time as 30% of screen time
       });

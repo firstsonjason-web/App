@@ -1,5 +1,3 @@
-console.log('🔤 LANGUAGE DEBUG: translations.ts loaded');
-
 export const translations = {
   en: {
     // Landing screen main translations
@@ -121,6 +119,44 @@ export const translations = {
     helpAndSupport: 'Help & Support',
     logout: 'Logout',
     transparency: 'Transparency',
+    userNotAuthenticated: 'User not authenticated',
+    profileSetToPrivate: 'Profile set to private',
+    profileSetToPublic: 'Profile set to public',
+    failedToUpdatePrivacySetting: 'Failed to update privacy setting',
+    unsupportedLanguage: 'Unsupported language: {{language}}',
+    languageChangedTo: 'Language changed to {{language}}',
+    cameraNotAvailable: 'Camera Not Available',
+    cameraAccessNotAvailableOnWeb: 'Camera access is not available on web. Please use the Gallery option instead.',
+    pleaseSelectValidImageFile: 'Please select a valid image file.',
+    failedToUploadImage: 'Failed to upload image. Please try again.',
+    paymentProcessing: 'Payment Processing',
+    redirectToSecurePaymentPage: 'You will be redirected to a secure payment page. Please complete the payment in the new window.',
+    failedToInitializePaymentSheet: 'Failed to initialize payment sheet: {{errorMessage}}',
+    failedToInitializePaymentSheetSimple: 'Failed to initialize payment sheet',
+    noPlanSelected: 'No plan selected',
+    paymentFailed: 'Payment failed: {{errorMessage}}',
+    paymentSuccessful: 'Payment Successful',
+    upgradedToPlan: 'You\'ve successfully upgraded to the {{planName}}!',
+    unexpectedErrorDuringPayment: 'An unexpected error occurred during payment processing',
+    unableToShareProfile: 'Unable to share profile. Please try logging in again.',
+    nameOption: 'Name',
+    emailOption: 'Email',
+    introductionOption: 'Introduction',
+    profilePhotoOption: 'Profile Photo',
+    cancelOption: 'Cancel',
+    proceedToPayment: 'Proceed to Payment',
+    selectLanguage: 'Select Language',
+    paymentNote: 'You\'ll be redirected to a secure payment page powered by Stripe. Your payment information is never stored on our servers.',
+    freePrice: 'Free',
+    proPrice: '$15/month',
+    proMaxPrice: '$30/month',
+    goalsLabel: 'daily goals',
+    postsLabel: 'posts per day',
+    friendsLabel: 'friends total',
+    reportsLabel: 'progress reports',
+    basicReports: 'Basic progress reports',
+    enhancedReports: 'Enhanced progress reports',
+    comprehensiveReports: 'Comprehensive detailed reports',
     profileDetails: 'Profile Details',
     displayName: 'Display Name',
     totalPoints: 'Total Points',
@@ -377,6 +413,24 @@ export const translations = {
     noPostsYet: 'No posts yet',
     beTheFirstToShare: 'Be the first to share your journey with the community!',
     loadMore: 'Load More',
+
+    // Weekday translations
+    monday: 'Mon',
+    tuesday: 'Tue',
+    wednesday: 'Wed',
+    thursday: 'Thu',
+    friday: 'Fri',
+    saturday: 'Sat',
+    sunday: 'Sun',
+
+    // Weekday translations
+    monday: 'Mon',
+    tuesday: 'Tue',
+    wednesday: 'Wed',
+    thursday: 'Thu',
+    friday: 'Fri',
+    saturday: 'Sat',
+    sunday: 'Sun',
   },
 
   zh_CN: {
@@ -498,6 +552,45 @@ export const translations = {
     faq: '常见问题',
     helpAndSupport: '帮助与支持',
     logout: '登出',
+    transparency: '透明度',
+    userNotAuthenticated: '用户未认证',
+    profileSetToPrivate: '个人资料设置为私密',
+    profileSetToPublic: '个人资料设置为公开',
+    failedToUpdatePrivacySetting: '更新隐私设置失败',
+    unsupportedLanguage: '不支持的语言：{{language}}',
+    languageChangedTo: '语言已更改为 {{language}}',
+    cameraNotAvailable: '相机不可用',
+    cameraAccessNotAvailableOnWeb: '在网页上无法访问相机。请使用相册选项。',
+    pleaseSelectValidImageFile: '请选择有效的图像文件。',
+    failedToUploadImage: '上传图像失败。请重试。',
+    paymentProcessing: '支付处理中',
+    redirectToSecurePaymentPage: '您将被重定向到安全的支付页面。请在新的窗口中完成支付。',
+    failedToInitializePaymentSheet: '初始化支付表失败：{{errorMessage}}',
+    failedToInitializePaymentSheetSimple: '初始化支付表失败',
+    noPlanSelected: '未选择方案',
+    paymentFailed: '支付失败：{{errorMessage}}',
+    paymentSuccessful: '支付成功',
+    upgradedToPlan: '您已成功升级到 {{planName}}！',
+    unexpectedErrorDuringPayment: '支付处理过程中发生意外错误',
+    unableToShareProfile: '无法分享个人资料。请尝试重新登录。',
+    nameOption: '姓名',
+    emailOption: '邮箱',
+    introductionOption: '简介',
+    profilePhotoOption: '个人资料照片',
+    cancelOption: '取消',
+    proceedToPayment: '继续支付',
+    selectLanguage: '选择语言',
+    paymentNote: '您将被重定向到安全的支付页面。您的支付信息不会存储在我们的服务器上。',
+    freePrice: '免费',
+    proPrice: '$15/月',
+    proMaxPrice: '$30/月',
+    goalsLabel: '每日目标',
+    postsLabel: '每日帖子',
+    friendsLabel: '好友总数',
+    reportsLabel: '进度报告',
+    basicReports: '基本进度报告',
+    enhancedReports: '增强进度报告',
+    comprehensiveReports: '全面详细报告',
     profileDetails: '个人资料详情',
     displayName: '显示姓名',
     totalPoints: '总积分',
@@ -754,6 +847,20 @@ export const translations = {
     noPostsYet: '还没有帖子',
     beTheFirstToShare: '成为第一个与社区分享你的旅程的人！',
     loadMore: '加载更多',
+    searchUsersTitle: '搜索用户',
+    searchUsersDescription: '寻找朋友并与相同健康之旅的其他人连接',
+    searchUsersByUsername: '按用户名搜索用户',
+    searchingUsers: '正在搜索用户...',
+    noUsersFound: '未找到用户',
+    tryDifferentSearchTerm: '尝试不同的搜索词',
+    searchResults: '搜索结果 ({{count}})',
+    searchUsersTitle: '搜索用户',
+    searchUsersDescription: '寻找朋友并与相同健康之旅的其他人连接',
+    searchUsersByUsername: '按用户名搜索用户',
+    searchingUsers: '正在搜索用户...',
+    noUsersFound: '未找到用户',
+    tryDifferentSearchTerm: '尝试不同的搜索词',
+    searchResults: '搜索结果 ({{count}})',
   },
   zh_TW: {
     // Landing screen main translations
@@ -874,6 +981,45 @@ export const translations = {
     faq: '常見問題',
     helpAndSupport: '幫助與支援',
     logout: '登出',
+    transparency: '透明度',
+    userNotAuthenticated: '使用者未認證',
+    profileSetToPrivate: '個人資料設定為私密',
+    profileSetToPublic: '個人資料設定為公開',
+    failedToUpdatePrivacySetting: '更新隱私設定失敗',
+    unsupportedLanguage: '不支援的語言：{{language}}',
+    languageChangedTo: '語言已更改為 {{language}}',
+    cameraNotAvailable: '相機不可用',
+    cameraAccessNotAvailableOnWeb: '在網頁上無法存取相機。請使用相簿選項。',
+    pleaseSelectValidImageFile: '請選擇有效的圖像檔案。',
+    failedToUploadImage: '上傳圖像失敗。請重試。',
+    paymentProcessing: '付款處理中',
+    redirectToSecurePaymentPage: '您將被重新導向到安全的付款頁面。請在新的視窗中完成付款。',
+    failedToInitializePaymentSheet: '初始化付款表失敗：{{errorMessage}}',
+    failedToInitializePaymentSheetSimple: '初始化付款表失敗',
+    noPlanSelected: '未選擇方案',
+    paymentFailed: '付款失敗：{{errorMessage}}',
+    paymentSuccessful: '付款成功',
+    upgradedToPlan: '您已成功升級到 {{planName}}！',
+    unexpectedErrorDuringPayment: '付款處理過程中發生意外錯誤',
+    unableToShareProfile: '無法分享個人資料。請嘗試重新登入。',
+    nameOption: '姓名',
+    emailOption: '電子郵件',
+    introductionOption: '簡介',
+    profilePhotoOption: '個人資料照片',
+    cancelOption: '取消',
+    proceedToPayment: '繼續付款',
+    selectLanguage: '選擇語言',
+    paymentNote: '您將被重新導向到安全的付款頁面。您的付款資訊不會儲存在我們的伺服器上。',
+    freePrice: '免費',
+    proPrice: '$15/月',
+    proMaxPrice: '$30/月',
+    goalsLabel: '每日目標',
+    postsLabel: '每日貼文',
+    friendsLabel: '好友總數',
+    reportsLabel: '進度報告',
+    basicReports: '基本進度報告',
+    enhancedReports: '增強進度報告',
+    comprehensiveReports: '全面詳細報告',
     profileDetails: '個人資料詳細資訊',
     displayName: '顯示名稱',
     totalPoints: '總積分',
@@ -1141,41 +1287,26 @@ export type TranslationKey = string;
 
 // getTranslation function
 export const getTranslation = (language: Language, key: string, params?: Record<string, any>): string => {
-  console.log('🔤 LANGUAGE DEBUG: getTranslation called for language:', language, 'key:', key, 'params:', params);
-
   const translation = (translations as any)[language]?.[key];
-  console.log('🔤 LANGUAGE DEBUG: Translation found in target language:', translation);
-
   let result = translation;
 
   if (translation) {
-    console.log('🔤 LANGUAGE DEBUG: Using translation from target language');
   } else {
-    console.log('🔤 LANGUAGE DEBUG: Translation not found in target language, trying English fallback...');
     const englishFallback = (translations.en as any)[key];
     if (englishFallback) {
-      console.log('🔤 LANGUAGE DEBUG: English fallback found:', englishFallback);
-      console.log('🔤 LANGUAGE DEBUG: Using English fallback for key:', key);
       result = englishFallback;
     } else {
-      console.warn('🔤 LANGUAGE DEBUG: No translation found in any language, returning key as fallback:', key);
-      console.warn('🔤 LANGUAGE DEBUG: Missing translation for key:', key, 'in language:', language);
       return key;
     }
   }
 
   // Handle interpolation if params are provided
   if (params && typeof result === 'string') {
-    console.log('🔤 LANGUAGE DEBUG: Applying interpolation with params:', params);
     result = result.replace(/\{\{(\w+)\}\}/g, (match, paramKey) => {
       const value = params[paramKey];
-      console.log('🔤 LANGUAGE DEBUG: Replacing', match, 'with', value);
       return value !== undefined ? String(value) : match;
     });
   }
 
-  console.log('🔤 LANGUAGE DEBUG: Final translation result:', result);
   return result;
 };
-
-console.log('🔤 LANGUAGE DEBUG: translations.ts fully loaded with types and functions');

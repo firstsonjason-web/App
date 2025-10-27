@@ -29,6 +29,7 @@ interface UserProfile {
   level: string;
   totalPoints: number;
   createdAt?: any;
+  isPrivate?: boolean;
 }
 
 export default function SharedProfileScreen() {
@@ -57,6 +58,13 @@ export default function SharedProfileScreen() {
       const userProfile = await DatabaseService.getUserProfile(uid);
 
       if (userProfile) {
+        // Check if profile is private
+        if (userProfile.isPrivate && currentUser?.uid !== uid) {
+          Alert.alert(t('error'), 'This profile is private and cannot be viewed.');
+          router.back();
+          return;
+        }
+
         setProfileUser({
           name: userProfile.displayName || 'User',
           email: userProfile.email || '',
@@ -66,6 +74,7 @@ export default function SharedProfileScreen() {
           level: `Level ${Math.floor((userProfile.totalPoints || 0) / 100) + 1}`,
           totalPoints: userProfile.totalPoints || 0,
           createdAt: userProfile.createdAt,
+          isPrivate: userProfile.isPrivate,
         });
       } else {
         Alert.alert(t('error'), 'User profile not found');
