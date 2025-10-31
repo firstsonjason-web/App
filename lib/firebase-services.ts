@@ -1524,6 +1524,111 @@ export class DatabaseService {
       throw error;
     }
   }
+
+  // Screen Time & Focus Time Tracking
+  static async saveScreenTimeData(
+    userId: string,
+    data: {
+      date: string;
+      screenTime: number;
+      focusTime: number;
+      sessions: number;
+      focusSessions: number;
+      lastUpdated: Timestamp;
+    }
+  ): Promise<void> {
+    try {
+      const docRef = doc(db, 'screenTimeData', `${userId}_${data.date}`);
+      await setDoc(docRef, {
+        userId,
+        ...data,
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error saving screen time data:', error);
+      throw error;
+    }
+  }
+
+  static async getScreenTimeData(
+    userId: string,
+    dates: string[]
+  ): Promise<Array<{
+    date: string;
+    screenTime: number;
+    focusTime: number;
+    sessions: number;
+    focusSessions: number;
+    lastUpdated: Timestamp;
+  }>> {
+    try {
+      const results = await Promise.all(
+        dates.map(async (date) => {
+          const docRef = doc(db, 'screenTimeData', `${userId}_${date}`);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            return {
+              date: data.date,
+              screenTime: data.screenTime || 0,
+              focusTime: data.focusTime || 0,
+              sessions: data.sessions || 0,
+              focusSessions: data.focusSessions || 0,
+              lastUpdated: data.lastUpdated || Timestamp.now(),
+            };
+          }
+          
+          return {
+            date,
+            screenTime: 0,
+            focusTime: 0,
+            sessions: 0,
+            focusSessions: 0,
+            lastUpdated: Timestamp.now(),
+          };
+        })
+      );
+
+      return results;
+    } catch (error) {
+      console.error('Error getting screen time data:', error);
+      return [];
+    }
+  }
+
+  static async getTodayScreenTime(userId: string): Promise<number> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const docRef = doc(db, 'screenTimeData', `${userId}_${today}`);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return docSnap.data().screenTime || 0;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('Error getting today screen time:', error);
+      return 0;
+    }
+  }
+
+  static async getTodayFocusTime(userId: string): Promise<number> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const docRef = doc(db, 'screenTimeData', `${userId}_${today}`);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return docSnap.data().focusTime || 0;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('Error getting today focus time:', error);
+      return 0;
+    }
+  }
 }
 
 // Utility functions

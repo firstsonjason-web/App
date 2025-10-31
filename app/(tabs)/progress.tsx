@@ -6,6 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Alert,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -23,26 +25,98 @@ import { DashboardCard } from '@/components/DashboardCard';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseData } from '@/hooks/useFirebaseData';
-import { useScreenTimeTracking } from '@/hooks/useScreenTimeTracking';
+import { useDailyDeviceUsage } from '@/hooks/useDailyDeviceUsage';
 import { getColors } from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '@/hooks/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
+interface WeeklyDataPoint {
+  day: string;
+  screenTime: number;
+  focusTime: number;
+}
+
 export default function ProgressScreen() {
   const { isDarkMode } = useDarkMode();
   const { user } = useAuth();
   const { userProfile, goals, activities, getTotalPoints } = useFirebaseData();
-  const { todayScreenTime, weeklyData, averageDailyScreenTime } = useScreenTimeTracking();
+  const { onSeconds, offSeconds, refresh, requestPermissions, permissionsRequested, moduleAvailable } = useDailyDeviceUsage();
   const colors = getColors(isDarkMode);
   const { t } = useLanguage();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [showAchievements, setShowAchievements] = useState(true);
+  const [weeklyData, setWeeklyData] = useState<WeeklyDataPoint[]>([]);
+  const [averageDailyScreenTime, setAverageDailyScreenTime] = useState(0);
+  const [manualScreenTimeHours, setManualScreenTimeHours] = useState(0);
+  const [showManualInput, setShowManualInput] = useState(false);
 
   useEffect(() => {
     loadAchievementSettings();
+    loadWeeklyData();
   }, [user]);
+
+  useEffect(() => {
+    // Update average when device usage changes
+    if (onSeconds > 0) {
+      const screenTimeHours = onSeconds / 3600;
+      setAverageDailyScreenTime(Number(screenTimeHours.toFixed(1)));
+      
+      // Update today's data in weekly array
+      updateTodayInWeeklyData(screenTimeHours, offSeconds / 3600);
+    }
+  }, [onSeconds, offSeconds]);
+
+  const updateTodayInWeeklyData = async (screenTimeHours: number, focusTimeHours: number) => {
+    const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayIndex = today === 0 ? 6 : today - 1; // Convert to Mon=0, Sun=6
+    
+    setWeeklyData((prevData) => {
+      const newData = [...prevData];
+      newData[dayIndex] = {
+        ...newData[dayIndex],
+        screenTime: Number(screenTimeHours.toFixed(1)),
+        focusTime: Number(focusTimeHours.toFixed(1)),
+      };
+      saveWeeklyData(newData);
+      return newData;
+    });
+  };
+
+  const loadWeeklyData = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('weekly_screen_time_data');
+      if (saved) {
+        setWeeklyData(JSON.parse(saved));
+      } else {
+        // Initialize with default weekly data
+        const defaultData = generateDefaultWeeklyData();
+        setWeeklyData(defaultData);
+        await AsyncStorage.setItem('weekly_screen_time_data', JSON.stringify(defaultData));
+      }
+    } catch (error) {
+      console.log('Error loading weekly data:', error);
+      setWeeklyData(generateDefaultWeeklyData());
+    }
+  };
+
+  const generateDefaultWeeklyData = (): WeeklyDataPoint[] => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days.map((day) => ({
+      day,
+      screenTime: 0,
+      focusTime: 0,
+    }));
+  };
+
+  const saveWeeklyData = async (data: WeeklyDataPoint[]) => {
+    try {
+      await AsyncStorage.setItem('weekly_screen_time_data', JSON.stringify(data));
+    } catch (error) {
+      console.log('Error saving weekly data:', error);
+    }
+  };
 
   const loadAchievementSettings = async () => {
     if (!user) return;
@@ -63,14 +137,24 @@ export default function ProgressScreen() {
     { id: 'year', name: t('periodYear') },
   ];
 
-  const maxScreenTime = Math.max(...weeklyData.map(d => d.screenTime));
-  const maxFocusTime = Math.max(...weeklyData.map(d => d.focusTime));
+  // Helper to format seconds to hours and minutes
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  };
 
-  // Calculate real metrics from Firebase data
+  // Calculate real screen time in hours from seconds
+  const todayScreenTimeHours = onSeconds / 3600;
+  const todayFocusTimeHours = offSeconds / 3600;
+
+  const maxScreenTime = Math.max(...weeklyData.map((d: WeeklyDataPoint) => d.screenTime), todayScreenTimeHours);
+  const maxFocusTime = Math.max(...weeklyData.map((d: WeeklyDataPoint) => d.focusTime), todayFocusTimeHours);
+
+  // Calculate real metrics from Firebase data and device usage
   const totalPoints = getTotalPoints();
   const completedGoals = goals.filter(goal => goal.completed).length;
   const totalActivities = activities.length;
-  const avgScreenTime = averageDailyScreenTime; // Use real screen time data
   const focusSessions = Math.floor(totalPoints / 25); // Estimate based on points
 
   const achievements = [
@@ -89,8 +173,8 @@ export default function ProgressScreen() {
       description: t('digitalMinimalistDescription'),
       icon: TrendingDown,
       color: '#10B981',
-      unlocked: avgScreenTime < 3.5, // Assuming 25% reduction from 4.2h
-      date: avgScreenTime < 3.5 ? new Date().toISOString().split('T')[0] : undefined,
+      unlocked: averageDailyScreenTime < 3.5, // Assuming 25% reduction from 4.2h
+      date: averageDailyScreenTime < 3.5 ? new Date().toISOString().split('T')[0] : undefined,
     },
     {
       id: 3,
@@ -111,6 +195,22 @@ export default function ProgressScreen() {
       progress: Math.min(completedGoals * 2, 30), // Estimate days maintained
     },
   ];
+
+  const handleRequestPermissions = async () => {
+    try {
+      await requestPermissions();
+      Alert.alert(
+        t('permissionsRequested'),
+        t('permissionsRequestedDescription'),
+        [
+          { text: 'OK' }
+        ]
+      );
+    } catch (error: any) {
+      // Error is already handled in ensurePermissions with user alert
+      // We just need to catch it to prevent unhandled promise rejection
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -136,11 +236,11 @@ export default function ProgressScreen() {
                 style={styles.metricGradient}
               >
                 <Smartphone size={24} color="#FFFFFF" />
-                <Text style={styles.metricValue}>{avgScreenTime}h</Text>
+                <Text style={styles.metricValue}>{averageDailyScreenTime}h</Text>
                 <Text style={styles.metricLabel}>{t('avgDaily')}</Text>
                 <View style={styles.metricChange}>
                   <TrendingDown size={12} color="#FFFFFF" />
-                  <Text style={styles.metricChangeText}>{avgScreenTime < 4.2 ? '-18%' : '+5%'}</Text>
+                  <Text style={styles.metricChangeText}>{averageDailyScreenTime < 4.2 ? '-18%' : '+5%'}</Text>
                 </View>
               </LinearGradient>
             </View>
@@ -159,6 +259,133 @@ export default function ProgressScreen() {
                 </View>
               </LinearGradient>
             </View>
+          </View>
+
+          {/* Focus Time Today */}
+          <View style={styles.focusTimeContainer}>
+            <DashboardCard style={{ backgroundColor: colors.cardBackground }}>
+              <View style={styles.focusTimeHeader}>
+                <View style={styles.focusTimeTitle}>
+                  <Clock size={20} color={colors.primary} />
+                  <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0, marginLeft: 8 }]}>
+                    Today's Activity
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={refresh}>
+                  <Text style={{ color: colors.primary, fontSize: 12 }}>Refresh</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.focusTimeStats}>
+                <View style={styles.focusTimeStat}>
+                  <View style={[styles.focusTimeIcon, { backgroundColor: isDarkMode ? '#DC2626' : '#FEE2E2' }]}>
+                    <Smartphone size={20} color={isDarkMode ? '#FCA5A5' : '#DC2626'} />
+                  </View>
+                  <View style={styles.focusTimeInfo}>
+                    <Text style={[styles.focusTimeLabel, { color: colors.textSecondary }]}>Screen Time</Text>
+                    <Text style={[styles.focusTimeValue, { color: colors.text }]}>{formatTime(onSeconds)}</Text>
+                  </View>
+                </View>
+
+                <View style={[styles.focusTimeDivider, { backgroundColor: colors.border }]} />
+
+                <View style={styles.focusTimeStat}>
+                  <View style={[styles.focusTimeIcon, { backgroundColor: isDarkMode ? '#059669' : '#D1FAE5' }]}>
+                    <Brain size={20} color={isDarkMode ? '#6EE7B7' : '#059669'} />
+                  </View>
+                  <View style={styles.focusTimeInfo}>
+                    <Text style={[styles.focusTimeLabel, { color: colors.textSecondary }]}>Off-Screen Time</Text>
+                    <Text style={[styles.focusTimeValue, { color: colors.text }]}>{formatTime(offSeconds)}</Text>
+                  </View>
+                </View>
+              </View>
+              
+              {/* Permission Request Button - Show if module available and permissions not requested */}
+              {!permissionsRequested && moduleAvailable && (
+                <TouchableOpacity 
+                  style={[styles.permissionButton, { backgroundColor: colors.primary }]}
+                  onPress={handleRequestPermissions}
+                >
+                  <Text style={styles.permissionButtonText}>Enable Device Usage Tracking</Text>
+                </TouchableOpacity>
+              )}
+              
+              {/* Show instructions if permissions requested but no data yet */}
+              {permissionsRequested && moduleAvailable && onSeconds === 0 && (
+                <View style={[styles.instructionContainer, { backgroundColor: isDarkMode ? '#1E293B' : '#F0F9FF' }]}>
+                  <Text style={[styles.instructionTitle, { color: colors.text }]}>
+                    ⚙️ Setup Required
+                  </Text>
+                  <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
+                    1. Open iPhone Settings {'\n'}
+                    2. Go to Screen Time {'\n'}
+                    3. Enable "Share Across Devices" {'\n'}
+                    4. Return to app and tap Refresh
+                  </Text>
+                </View>
+              )}
+              
+              {/* Module Unavailable Message */}
+              {!moduleAvailable && (
+                <View style={styles.moduleUnavailableContainer}>
+                  <Text style={[styles.moduleUnavailableText, { color: colors.textSecondary }]}>
+                    {Platform.OS === 'ios' 
+                      ? '⚠️ Native module not loaded. To enable automatic tracking:\n\n1. Run: npx expo prebuild --clean\n2. Run: npx expo run:ios\n3. Grant Screen Time permissions\n\nOr manually enter your screen time below:' 
+                      : 'Device usage tracking not available on this device.'}
+                  </Text>
+                  
+                  {/* Manual Input Alternative */}
+                  <View style={styles.manualInputSection}>
+                    <Text style={[styles.manualInputLabel, { color: colors.text }]}>
+                      Manual Screen Time (hours today):
+                    </Text>
+                    <View style={styles.manualInputRow}>
+                      <TouchableOpacity
+                        style={[styles.manualInputButton, { borderColor: colors.border }]}
+                        onPress={() => {
+                          const newValue = Math.max(0, manualScreenTimeHours - 0.5);
+                          setManualScreenTimeHours(newValue);
+                          updateTodayInWeeklyData(newValue, Math.max(0, (new Date().getHours()) - newValue));
+                        }}
+                      >
+                        <Text style={[styles.manualInputButtonText, { color: colors.text }]}>-</Text>
+                      </TouchableOpacity>
+                      
+                      <Text style={[styles.manualInputValue, { color: colors.text }]}>
+                        {manualScreenTimeHours.toFixed(1)}h
+                      </Text>
+                      
+                      <TouchableOpacity
+                        style={[styles.manualInputButton, { borderColor: colors.border }]}
+                        onPress={() => {
+                          const newValue = Math.min(24, manualScreenTimeHours + 0.5);
+                          setManualScreenTimeHours(newValue);
+                          updateTodayInWeeklyData(newValue, Math.max(0, (new Date().getHours()) - newValue));
+                        }}
+                      >
+                        <Text style={[styles.manualInputButtonText, { color: colors.text }]}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={[styles.manualInputHint, { color: colors.textTertiary }]}>
+                      Check Settings {">"} Screen Time on your iPhone
+                    </Text>
+                  </View>
+
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity 
+                      style={[styles.helpButton, { backgroundColor: colors.primary }]}
+                      onPress={() => Alert.alert(
+                        'Screen Time Tracking',
+                        'Automatic tracking requires:\n\n1. Clean rebuild: npx expo prebuild --clean\n2. Build: npx expo run:ios\n3. Grant Screen Time permissions when prompted\n\nFor now, manually enter your screen time from iPhone Settings > Screen Time',
+                        [{ text: 'OK' }]
+                      )}
+                    >
+                      <Text style={styles.helpButtonText}>How to Enable Auto-Tracking</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </DashboardCard>
           </View>
 
           {/* Period Selector */}
@@ -205,7 +432,7 @@ export default function ProgressScreen() {
               </View>
 
               <View style={styles.chartBars}>
-                {weeklyData.map((data, index) => (
+                {weeklyData.map((data: WeeklyDataPoint, index: number) => (
                   <View key={index} style={styles.barGroup}>
                     <View style={styles.barContainer}>
                       <View
@@ -311,11 +538,11 @@ export default function ProgressScreen() {
             <View style={styles.summaryStats}>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {Math.round(weeklyData.reduce((total, day) => total + day.screenTime, 0) * 10) / 10}h
+                  {Math.round(weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.screenTime, 0) * 10) / 10}h
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('totalScreenTime')}</Text>
                 <Text style={styles.summaryChange}>
-                  {Math.round(weeklyData.reduce((total, day) => total + day.screenTime, 0) * 10) / 10 < 29.6 ? '-4.2h from last week' : '+1.2h from last week'}
+                  {Math.round(weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.screenTime, 0) * 10) / 10 < 29.6 ? '-4.2h from last week' : '+1.2h from last week'}
                 </Text>
               </View>
 
@@ -323,11 +550,11 @@ export default function ProgressScreen() {
 
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {Math.round(weeklyData.reduce((total, day) => total + day.focusTime, 0) * 10) / 10}h
+                  {Math.round(weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.focusTime, 0) * 10) / 10}h
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('focusTimeTotal')}</Text>
                 <Text style={styles.summaryChangePositive}>
-                  {Math.round(weeklyData.reduce((total, day) => total + day.focusTime, 0) * 10) / 10 > 17.8 ? '+2.5h from last week' : '+1.1h from last week'}
+                  {Math.round(weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.focusTime, 0) * 10) / 10 > 17.8 ? '+2.5h from last week' : '+1.1h from last week'}
                 </Text>
               </View>
             </View>
@@ -612,5 +839,147 @@ const styles = StyleSheet.create({
   insightText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  focusTimeContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  focusTimeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  focusTimeTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  focusTimeStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  focusTimeStat: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  focusTimeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  focusTimeInfo: {
+    flex: 1,
+  },
+  focusTimeLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  focusTimeValue: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  focusTimeDivider: {
+    width: 1,
+    height: 40,
+    marginHorizontal: 16,
+  },
+  permissionButton: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  permissionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  moduleUnavailableContainer: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  moduleUnavailableText: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  instructionContainer: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4F46E5',
+  },
+  instructionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  instructionText: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  helpButton: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  helpButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  manualInputSection: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 70, 229, 0.3)',
+  },
+  manualInputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  manualInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+    marginBottom: 8,
+  },
+  manualInputButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  manualInputButtonText: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  manualInputValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    minWidth: 80,
+    textAlign: 'center',
+  },
+  manualInputHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -17,12 +17,19 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
+// Initialize Firebase Auth with AsyncStorage persistence
+let auth;
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
+  });
+} catch (error) {
+  // Fallback to default auth if initialization fails
+  console.warn('Firebase Auth initialization failed, using default auth:', error);
+  auth = getAuth(app);
+}
+
 // Initialize Firebase services
-export const auth = getAuth(app);
 export const db = getFirestore(app);
-
-// Configure auth to use AsyncStorage for persistence
-// Note: In React Native with Expo, we need to handle persistence differently
-// The auth state will be handled in the app initialization
-
+export { auth };
 export default app;

@@ -11,14 +11,16 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Trophy, Star, X, CircleCheck as CheckCircle, Circle, Quote, Smartphone, Target, ChartBar as BarChart3, Trash2 } from 'lucide-react-native';
+import { Plus, Trophy, Star, X, CircleCheck as CheckCircle, Circle, Quote, Smartphone, Target, ChartBar as BarChart3, Trash2, Bell } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DashboardCard } from '@/components/DashboardCard';
+import { NotificationModal } from '@/components/NotificationModal';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { formatTime } from '@/lib/firebase-services';
+import { NotificationService } from '@/lib/notification-service';
 import { Timestamp } from 'firebase/firestore';
 import { getColors } from '@/constants/Colors';
 import { useLanguage } from '@/hooks/LanguageContext';
@@ -164,6 +166,8 @@ export default function HomeScreen() {
   const [totalPoints, setTotalPoints] = useState(0);
   const [currentQuote, setCurrentQuote] = useState(inspirationalQuotes[0]);
   const [showDeleteMode, setShowDeleteMode] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   // Redirect to landing if not authenticated
   useEffect(() => {
@@ -186,6 +190,31 @@ export default function HomeScreen() {
     setCurrentQuote(inspirationalQuotes[randomIndex]);
   }, []);
 
+  // Load unread notification count
+  useEffect(() => {
+    if (user) {
+      loadUnreadCount();
+      
+      // Set up real-time listener for unread count
+      const unsubscribe = NotificationService.setupNotificationListener(
+        user.uid,
+        async (notifications) => {
+          const unreadCount = notifications.filter(n => !n.read).length;
+          setUnreadNotificationCount(unreadCount);
+        }
+      );
+
+      return () => unsubscribe();
+    }
+  }, [user]);
+
+  const loadUnreadCount = async () => {
+    if (user) {
+      const count = await NotificationService.getUnreadCount(user.uid);
+      setUnreadNotificationCount(count);
+    }
+  };
+
   // Update points when goals change
   useEffect(() => {
     console.log('Goals changed, updating points:', goals);
@@ -198,8 +227,20 @@ export default function HomeScreen() {
 
   const toggleGoalCompletion = async (goalId: string) => {
     try {
+      const goal = goals.find(g => g.id === goalId);
+      const wasCompleted = goal?.completed || false;
+      
       // Update goal in Firebase
-      await updateGoal(goalId, { completed: !goals.find(g => g.id === goalId)?.completed });
+      await updateGoal(goalId, { completed: !wasCompleted });
+
+      // Send notification when task is completed (not when uncompleted)
+      if (!wasCompleted && user && goal) {
+        await NotificationService.notifyTaskCompleted(
+          user.uid,
+          goal.title,
+          goal.points
+        );
+      }
 
       // Refresh data to get updated activities
       await refreshData();
@@ -305,8 +346,23 @@ export default function HomeScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.greeting, { color: colors.text }]}>{t('goodMorning')}</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('stayMindful')}</Text>
+            <View>
+              <Text style={[styles.greeting, { color: colors.text }]}>{t('goodMorning')}</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('stayMindful')}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.notificationButton}
+              onPress={() => setShowNotifications(true)}
+            >
+              <Bell size={24} color={colors.text} />
+              {unreadNotificationCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* Inspirational Quote */}
@@ -357,11 +413,11 @@ export default function HomeScreen() {
                     onPress={() => {
                       if (showDeleteMode) {
                         Alert.alert(
-                          t('cancel'),
-                          t('confirmChanges'),
+                          t('deleteGoal'),
+                          t('deleteGoalConfirmation'),
                           [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Remove', style: 'destructive', onPress: () => removeGoal(goal.id) },
+                            { text: t('cancel'), style: 'cancel' },
+                            { text: t('delete'), style: 'destructive', onPress: () => removeGoal(goal.id) },
                           ]
                         );
                       } else {
@@ -681,6 +737,12 @@ export default function HomeScreen() {
             </View>
           </SafeAreaView>
         </Modal>
+
+        {/* Notification Modal */}
+        <NotificationModal 
+          visible={showNotifications}
+          onClose={() => setShowNotifications(false)}
+        />
       </LinearGradient>
     </SafeAreaView>
   );
@@ -699,6 +761,30 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  notificationButton: {
+    position: 'relative',
+    padding: 8,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   greeting: {
     fontSize: 28,

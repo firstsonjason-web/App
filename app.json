@@ -9,7 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.owenisas.app",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.owenisas.app.deviceusage"
+        ],
+        "com.apple.developer.family-controls": true
+      }
     },
     "web": {
       "bundler": "metro",
@@ -19,7 +26,8 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true
@@ -30,6 +38,12 @@
         "projectId": "512b9f41-e45d-409c-9e84-6fee49cb6012"
       }
     },
-    "owner": "owenisas"
+    "owner": "owenisas",
+    "android": {
+      "package": "com.owenisas.app",
+      "permissions": [
+        "PACKAGE_USAGE_STATS"
+      ]
+    }
   }
 }

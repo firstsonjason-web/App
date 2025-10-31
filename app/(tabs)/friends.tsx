@@ -39,6 +39,7 @@ import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseData } from '@/hooks/useFirebaseData';
 import { getColors } from '@/constants/Colors';
 import { UserFriend, DatabaseService, ChatMessage , formatTime } from '@/lib/firebase-services';
+import { NotificationService } from '@/lib/notification-service';
 import { useLanguage } from '@/hooks/LanguageContext';
 import { useUserSearch } from '@/hooks/useUserSearch';
 
@@ -246,6 +247,13 @@ export default function FriendsScreen() {
     try {
       await DatabaseService.sendFriendRequest(friendId);
 
+      // Send notification to the recipient
+      await NotificationService.notifyFriendRequest(
+        friendId,
+        userProfile?.displayName || user.email?.split('@')[0] || 'Someone',
+        user.uid
+      );
+
       // Show success feedback
       setRequestFeedback({
         type: 'success',
@@ -362,6 +370,15 @@ export default function FriendsScreen() {
           chatMessage.trim(),
           'text'
         );
+
+        // Send notification to the recipient
+        await NotificationService.notifyNewMessage(
+          selectedFriend.userId,
+          userProfile?.displayName || user.email?.split('@')[0] || 'Someone',
+          chatMessage.trim(),
+          `${user.uid}_${selectedFriend.userId}`
+        );
+
         setChatMessage('');
       } catch (error) {
         console.error('Error sending message:', error);
@@ -1061,6 +1078,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 24,
     marginBottom: 16,
+    gap: 8,
   },
   tab: {
     flex: 1,

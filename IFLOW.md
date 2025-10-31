@@ -108,3 +108,101 @@ The application can be deployed to multiple platforms:
 3. **Expo Go**: Run directly on devices using the Expo Go app during development
 
 For production deployment, ensure all environment variables are properly configured and Firebase/Supabase services are set up correctly.
+
+implement the stripe payment system:
+Front-End to Back-End Connection Summary
+
+  Architecture Overview
+
+  This application uses Firebase as the backend platform with Firestore as the database and Cloud Functions for
+  server-side logic. The front-end connects to these services through the Firebase SDK, while Stripe handles payment
+  processing.
+
+  Connection Flow
+
+  1. Front-End Initialization
+   - The front-end loads Firebase SDKs from CDN (/__/firebase/10.0.0/ endpoints)
+   - Firebase Hosting automatically serves the appropriate SDK versions
+   - The app initializes Firebase with firebase.initializeApp() through the auto-generated init.js
+
+  2. Authentication Flow
+   - Firebase UI handles user authentication (Google, Email)
+   - On successful authentication, a user document is created in Firestore
+   - A Stripe customer is automatically created via Cloud Functions (createStripeCustomer)
+
+  3. Data Synchronization
+   - The front-end uses Firestore listeners to receive real-time updates:
+     - Payment methods collection: stripe_customers/{userId}/payment_methods
+     - Payments collection: stripe_customers/{userId}/payments
+   - Changes in these collections automatically update the UI
+
+  4. Payment Processing Flow
+   1. Add Payment Method:
+      - Front-end collects card details using Stripe Elements
+      - Calls stripe.confirmCardSetup() with the setup secret
+      - Adds payment method ID to Firestore: stripe_customers/{userId}/payment_methods
+
+   2. Create Payment:
+      - User submits payment form in front-end
+      - Front-end adds payment data to Firestore: stripe_customers/{userId}/payments
+      - Cloud Function createStripePayment is triggered
+      - Function creates actual Stripe payment and updates Firestore with result
+
+   3. 3D Secure Handling:
+      - If required, Cloud Function confirmStripePayment handles confirmation
+      - Front-end listens for status changes and updates UI accordingly
+
+  Key Code Components
+
+  Front-End Connection Points:
+   1. Firebase Initialization:
+   1    <script src="/__/firebase/10.0.0/firebase-app-compat.js"></script>
+   2    <script src="/__/firebase/10.0.0/firebase-auth-compat.js"></script>
+   3    <script src="/__/firebase/10.0.0/firebase-firestore-compat.js"></script>
+   4    <script src="/__/firebase/init.js"></script>
+
+   2. Firestore Listeners:
+   1    firebase.firestore().collection('stripe_customers')
+   2      .doc(currentUser.uid)
+   3      .collection('payment_methods')
+   4      .onSnapshot((snapshot) => { /* UI updates */ });
+
+   3. Stripe Integration:
+   1    const stripe = Stripe('pk_test_...'); // Publishable key
+   2    const { setupIntent, error } = await stripe.confirmCardSetup(
+   3      customerData.setup_secret, { /* payment method */ });
+
+  Back-End Connection Points:
+   1. Cloud Functions Triggers:
+    1    // Triggered when user is created
+    2    exports.createStripeCustomer = functions.auth.user().onCreate(async (user) => { ... });
+    3 
+    4    // Triggered when payment method is added
+    5    exports.addPaymentMethodDetails = functions.firestore
+    6      .document('/stripe_customers/{userId}/payment_methods/{pushId}')
+    7      .onCreate(async (snap, context) => { ... });
+    8 
+    9    // Triggered when payment is created
+   10    exports.createStripePayment = functions.firestore
+   11      .document('stripe_customers/{userId}/payments/{pushId}')
+   12      .onCreate(async (snap, context) => { ... });
+
+   2. Stripe API Integration:
+   1    const stripe = new Stripe(functions.config().stripe.secret, {
+   2      apiVersion: '2020-08-27',
+   3    });
+   4 
+   5    // Create customer
+   6    const customer = await stripe.customers.create({ email: user.email });
+   7 
+   8    // Create payment
+   9    const payment = await stripe.paymentIntents.create({ /* payment details */ });
+
+  Data Flow Summary
+
+   1. User authenticates → Firebase creates user → Cloud Function creates Stripe customer
+   2. User adds payment method → Front-end collects card details → Stripe processes setup → Firestore updated → Cloud
+      Function retrieves payment method details
+   3. User initiates payment → Front-end adds to Firestore → Cloud Function creates Stripe payment → Firestore updated
+      with result
+   4. Real-time listeners update UI as data changes in Firestore
