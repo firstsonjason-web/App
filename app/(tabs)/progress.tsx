@@ -49,8 +49,6 @@ export default function ProgressScreen() {
   const [showAchievements, setShowAchievements] = useState(true);
   const [weeklyData, setWeeklyData] = useState<WeeklyDataPoint[]>([]);
   const [averageDailyScreenTime, setAverageDailyScreenTime] = useState(0);
-  const [manualScreenTimeHours, setManualScreenTimeHours] = useState(0);
-  const [showManualInput, setShowManualInput] = useState(false);
 
   useEffect(() => {
     loadAchievementSettings();
@@ -330,59 +328,9 @@ export default function ProgressScreen() {
                 <View style={styles.moduleUnavailableContainer}>
                   <Text style={[styles.moduleUnavailableText, { color: colors.textSecondary }]}>
                     {Platform.OS === 'ios' 
-                      ? '⚠️ Native module not loaded. To enable automatic tracking:\n\n1. Run: npx expo prebuild --clean\n2. Run: npx expo run:ios\n3. Grant Screen Time permissions\n\nOr manually enter your screen time below:' 
-                      : 'Device usage tracking not available on this device.'}
+                      ? '⚠️ Screen Time tracking requires iOS 16+ and Screen Time permissions.\n\nPlease grant permissions when prompted.' 
+                      : '⚠️ Device usage tracking is only available on iOS 16+'}
                   </Text>
-                  
-                  {/* Manual Input Alternative */}
-                  <View style={styles.manualInputSection}>
-                    <Text style={[styles.manualInputLabel, { color: colors.text }]}>
-                      Manual Screen Time (hours today):
-                    </Text>
-                    <View style={styles.manualInputRow}>
-                      <TouchableOpacity
-                        style={[styles.manualInputButton, { borderColor: colors.border }]}
-                        onPress={() => {
-                          const newValue = Math.max(0, manualScreenTimeHours - 0.5);
-                          setManualScreenTimeHours(newValue);
-                          updateTodayInWeeklyData(newValue, Math.max(0, (new Date().getHours()) - newValue));
-                        }}
-                      >
-                        <Text style={[styles.manualInputButtonText, { color: colors.text }]}>-</Text>
-                      </TouchableOpacity>
-                      
-                      <Text style={[styles.manualInputValue, { color: colors.text }]}>
-                        {manualScreenTimeHours.toFixed(1)}h
-                      </Text>
-                      
-                      <TouchableOpacity
-                        style={[styles.manualInputButton, { borderColor: colors.border }]}
-                        onPress={() => {
-                          const newValue = Math.min(24, manualScreenTimeHours + 0.5);
-                          setManualScreenTimeHours(newValue);
-                          updateTodayInWeeklyData(newValue, Math.max(0, (new Date().getHours()) - newValue));
-                        }}
-                      >
-                        <Text style={[styles.manualInputButtonText, { color: colors.text }]}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={[styles.manualInputHint, { color: colors.textTertiary }]}>
-                      Check Settings {">"} Screen Time on your iPhone
-                    </Text>
-                  </View>
-
-                  {Platform.OS === 'ios' && (
-                    <TouchableOpacity 
-                      style={[styles.helpButton, { backgroundColor: colors.primary }]}
-                      onPress={() => Alert.alert(
-                        'Screen Time Tracking',
-                        'Automatic tracking requires:\n\n1. Clean rebuild: npx expo prebuild --clean\n2. Build: npx expo run:ios\n3. Grant Screen Time permissions when prompted\n\nFor now, manually enter your screen time from iPhone Settings > Screen Time',
-                        [{ text: 'OK' }]
-                      )}
-                    >
-                      <Text style={styles.helpButtonText}>How to Enable Auto-Tracking</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               )}
             </DashboardCard>
@@ -936,50 +884,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
-  },
-  manualInputSection: {
-    marginTop: 20,
-    padding: 16,
-    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(79, 70, 229, 0.3)',
-  },
-  manualInputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  manualInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-    marginBottom: 8,
-  },
-  manualInputButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  manualInputButtonText: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  manualInputValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    minWidth: 80,
-    textAlign: 'center',
-  },
-  manualInputHint: {
-    fontSize: 12,
-    textAlign: 'center',
-    fontStyle: 'italic',
   },
 });
