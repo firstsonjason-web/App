@@ -49,6 +49,7 @@ export default function ProgressScreen() {
   const [showAchievements, setShowAchievements] = useState(true);
   const [weeklyData, setWeeklyData] = useState<WeeklyDataPoint[]>([]);
   const [averageDailyScreenTime, setAverageDailyScreenTime] = useState(0);
+  const [showActivitiesList, setShowActivitiesList] = useState(false);
 
   useEffect(() => {
     loadAchievementSettings();
@@ -153,7 +154,17 @@ export default function ProgressScreen() {
   const totalPoints = getTotalPoints();
   const completedGoals = goals.filter(goal => goal.completed).length;
   const totalActivities = activities.length;
-  const focusSessions = Math.floor(totalPoints / 25); // Estimate based on points
+  const focusSessions = activities.filter(a => a.title.toLowerCase().includes('focus') || a.title.toLowerCase().includes('meditation')).length;
+  
+  // Calculate achievement metrics from real data
+  const totalScreenTimeHours = weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.screenTime, 0);
+  const totalFocusHours = weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.focusTime, 0);
+  const daysActive = weeklyData.filter((day: WeeklyDataPoint) => day.screenTime > 0 || day.focusTime > 0).length;
+  const mindfulnessActivities = activities.filter(a => 
+    a.title.toLowerCase().includes('mindful') || 
+    a.title.toLowerCase().includes('meditation') ||
+    a.title.toLowerCase().includes('breath')
+  ).length;
 
   const achievements = [
     {
@@ -163,6 +174,8 @@ export default function ProgressScreen() {
       icon: Target,
       color: '#4F46E5',
       unlocked: focusSessions >= 7,
+      progress: Math.min(focusSessions, 7),
+      total: 7,
       date: focusSessions >= 7 ? new Date().toISOString().split('T')[0] : undefined,
     },
     {
@@ -171,8 +184,10 @@ export default function ProgressScreen() {
       description: t('digitalMinimalistDescription'),
       icon: TrendingDown,
       color: '#10B981',
-      unlocked: averageDailyScreenTime < 3.5, // Assuming 25% reduction from 4.2h
-      date: averageDailyScreenTime < 3.5 ? new Date().toISOString().split('T')[0] : undefined,
+      unlocked: averageDailyScreenTime > 0 && averageDailyScreenTime < 3.5,
+      progress: averageDailyScreenTime > 0 ? Math.min(Math.floor((4.5 - averageDailyScreenTime) * 10), 10) : 0,
+      total: 10,
+      date: averageDailyScreenTime > 0 && averageDailyScreenTime < 3.5 ? new Date().toISOString().split('T')[0] : undefined,
     },
     {
       id: 3,
@@ -180,8 +195,9 @@ export default function ProgressScreen() {
       description: t('mindfulWarriorDescription'),
       icon: Brain,
       color: '#F59E0B',
-      unlocked: false,
-      progress: Math.min(focusSessions * 2, 50), // Estimate mindfulness sessions
+      unlocked: mindfulnessActivities >= 50,
+      progress: mindfulnessActivities,
+      total: 50,
     },
     {
       id: 4,
@@ -189,8 +205,9 @@ export default function ProgressScreen() {
       description: t('timeGuardianDescription'),
       icon: Award,
       color: '#8B5CF6',
-      unlocked: false,
-      progress: Math.min(completedGoals * 2, 30), // Estimate days maintained
+      unlocked: daysActive >= 30,
+      progress: daysActive,
+      total: 30,
     },
   ];
 
@@ -261,7 +278,7 @@ export default function ProgressScreen() {
 
           {/* Focus Time Today */}
           <View style={styles.focusTimeContainer}>
-            <DashboardCard style={{ backgroundColor: colors.cardBackground }}>
+            <DashboardCard style={{ backgroundColor: colors.cardBackground, padding: 20 }}>
               <View style={styles.focusTimeHeader}>
                 <View style={styles.focusTimeTitle}>
                   <Clock size={20} color={colors.primary} />
@@ -329,7 +346,7 @@ export default function ProgressScreen() {
                   <Text style={[styles.moduleUnavailableText, { color: colors.textSecondary }]}>
                     {Platform.OS === 'ios' 
                       ? '⚠️ Screen Time tracking requires iOS 16+ and Screen Time permissions.\n\nPlease grant permissions when prompted.' 
-                      : '⚠️ Device usage tracking is only available on iOS 16+'}
+                      : '⚠️ Screen Time tracking requires Android 5.1+\n\nPlease grant Usage Access permission when prompted.'}
                   </Text>
                 </View>
               )}
@@ -454,12 +471,12 @@ export default function ProgressScreen() {
                                 <View
                                   style={[
                                     styles.progressFill,
-                                    { width: `${Math.min(achievement.progress || 0, 100)}%` }
+                                    { width: `${Math.min((achievement.progress || 0) / (achievement.total || 100) * 100, 100)}%` }
                                   ]}
                                 />
                               </View>
                               <Text style={[styles.progressText, { color: colors.textSecondary }]}>
-                                {achievement.progress || 0}/50
+                                {achievement.progress || 0}/{achievement.total || 100}
                               </Text>
                             </View>
                           )}
@@ -475,6 +492,66 @@ export default function ProgressScreen() {
               </View>
             </View>
           )}
+
+          {/* Activity History */}
+          <View style={styles.activitiesContainer}>
+            <View style={styles.activitiesHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>
+                {t('activityHistory')} ({totalActivities})
+              </Text>
+              <TouchableOpacity onPress={() => setShowActivitiesList(!showActivitiesList)}>
+                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>
+                  {showActivitiesList ? 'Hide' : 'Show All'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            {showActivitiesList && activities.length > 0 && (
+              <View style={styles.activitiesList}>
+                {activities.map((activity, index) => (
+                  <DashboardCard key={activity.id || index} style={styles.activityCard}>
+                    <View style={styles.activityContent}>
+                      <View style={[styles.activityIconContainer, { backgroundColor: isDarkMode ? '#3730A3' : '#EEF2FF' }]}>
+                        <Award size={18} color={isDarkMode ? '#A78BFA' : '#4F46E5'} />
+                      </View>
+                      <View style={styles.activityInfo}>
+                        <Text style={[styles.activityTitle, { color: colors.text }]}>
+                          {activity.title}
+                        </Text>
+                        <Text style={[styles.activityDate, { color: colors.textSecondary }]}>
+                          {activity.completedAt?.toDate ? 
+                            new Date(activity.completedAt.toDate()).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 
+                            'Recently'
+                          }
+                        </Text>
+                      </View>
+                      <View style={styles.activityPoints}>
+                        <Text style={[styles.activityPointsText, { color: '#10B981' }]}>
+                          +{activity.points}
+                        </Text>
+                      </View>
+                    </View>
+                  </DashboardCard>
+                ))}
+              </View>
+            )}
+            
+            {showActivitiesList && activities.length === 0 && (
+              <DashboardCard style={styles.emptyActivitiesCard}>
+                <Text style={[styles.emptyActivitiesText, { color: colors.textSecondary }]}>
+                  {t('noActivitiesYet')}
+                </Text>
+                <Text style={[styles.emptyActivitiesSubtext, { color: colors.textSecondary }]}>
+                  {t('completeGoalsToSeeActivities')}
+                </Text>
+              </DashboardCard>
+            )}
+          </View>
 
           {/* Weekly Summary */}
           <DashboardCard style={styles.summaryCard}>
@@ -884,5 +961,69 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  activitiesContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  activitiesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  activitiesList: {
+    gap: 10,
+  },
+  activityCard: {
+    padding: 14,
+  },
+  activityContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activityIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  activityDate: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  activityPoints: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  activityPointsText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  emptyActivitiesCard: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyActivitiesText: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  emptyActivitiesSubtext: {
+    fontSize: 13,
+    textAlign: 'center',
   },
 });

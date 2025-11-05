@@ -18,25 +18,38 @@ export async function ensurePermissions() {
       // Show alert to user explaining that Screen Time tracking is not available
       Alert.alert(
         "Screen Time Tracking Unavailable",
-        "Screen Time tracking requires special permissions from Apple that this app doesn't have. " +
-        "The feature works on Android devices. For iOS, you can manually track your usage or use " +
-        "built-in Screen Time features in Settings > Screen Time.",
+        "Screen Time tracking requires iOS 16+ and special permissions from Apple. " +
+        "Please ensure you're running iOS 16 or newer.",
         [{ text: "OK" }]
       );
       throw new Error("ScreenTimeUsage module not available");
     }
-  } else {
-    const { AndroidUsageStats } = NativeModules;
-    if (AndroidUsageStats) {
+  } else if (Platform.OS === "android") {
+    const { UsageStatsModule } = NativeModules;
+    if (UsageStatsModule) {
       try {
-        AndroidUsageStats.openUsageAccessSettings();
+        const hasPermission = await UsageStatsModule.hasPermissions();
+        if (!hasPermission) {
+          Alert.alert(
+            "Usage Access Required",
+            "This app needs Usage Access permission to track your screen time. You'll be redirected to Settings to grant this permission.",
+            [
+              {
+                text: "OK",
+                onPress: async () => {
+                  await UsageStatsModule.requestPermissions();
+                }
+              }
+            ]
+          );
+        }
         return true;
       } catch (error) {
-        console.log("Error opening Android usage settings:", error);
+        console.log("Error requesting Android permissions:", error);
         throw error;
       }
     } else {
-      throw new Error("AndroidUsageStats module not available");
+      throw new Error("UsageStatsModule not available");
     }
   }
 }

@@ -7,10 +7,23 @@
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.owenisas.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app requires access to your camera to take photos.",
+        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to select photos.",
+        "NSPhotoLibraryAddUsageDescription": "This app requires access to save photos to your library.",
+        "NSUserTrackingUsageDescription": "This app tracks data to provide you with a better experience.",
+        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication."
+      },
       "entitlements": {
         "com.apple.security.application-groups": [
           "group.com.owenisas.app.deviceusage"

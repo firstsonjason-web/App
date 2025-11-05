@@ -195,9 +195,17 @@ export default function ActivitiesScreen() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [expandedActivity, setExpandedActivity] = useState<number | null>(null);
   const [userAddictionLevel, setUserAddictionLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
+  const [randomSuggestedActivity, setRandomSuggestedActivity] = useState<ActivityTemplate | null>(null);
+
+  const selectRandomActivity = () => {
+    // Select a random activity from the templates
+    const randomIndex = Math.floor(Math.random() * activityTemplates.length);
+    setRandomSuggestedActivity(activityTemplates[randomIndex]);
+  };
 
   useEffect(() => {
     loadUserAddictionLevel();
+    selectRandomActivity();
   }, [user]);
 
   const loadUserAddictionLevel = async () => {
@@ -348,32 +356,53 @@ export default function ActivitiesScreen() {
             </View>
           )}
 
-          {/* Featured Activity */}
-          <View style={styles.featuredContainer}>
-            <DashboardCard style={styles.featuredCard}>
-              <LinearGradient
-                colors={isDarkMode ? ['#047857', '#065F46'] : ['#10B981', '#059669']}
-                style={styles.featuredGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.featuredContent}>
-                  <View style={styles.featuredText}>
-                    <Text style={styles.featuredTitle}>{t('activityOfTheDay')}</Text>
-                    <Text style={styles.featuredSubtitle}>
-                      {t('takeNatureWalk')}
-                    </Text>
-                    <Text style={styles.featuredDescription}>
-                      {t('reconnectWithNature')}
-                    </Text>
+          {/* Random Suggested Activity */}
+          {randomSuggestedActivity && (
+            <View style={styles.featuredContainer}>
+              <DashboardCard style={styles.featuredCard}>
+                <LinearGradient
+                  colors={
+                    randomSuggestedActivity.color === '#10B981' ? (isDarkMode ? ['#047857', '#065F46'] : ['#10B981', '#059669']) :
+                    randomSuggestedActivity.color === '#4F46E5' ? (isDarkMode ? ['#3730A3', '#312E81'] : ['#4F46E5', '#4338CA']) :
+                    randomSuggestedActivity.color === '#F59E0B' ? (isDarkMode ? ['#D97706', '#B45309'] : ['#F59E0B', '#D97706']) :
+                    randomSuggestedActivity.color === '#8B5CF6' ? (isDarkMode ? ['#6D28D9', '#5B21B6'] : ['#8B5CF6', '#7C3AED']) :
+                    randomSuggestedActivity.color === '#06B6D4' ? (isDarkMode ? ['#0891B2', '#0E7490'] : ['#06B6D4', '#0891B2']) :
+                    randomSuggestedActivity.color === '#EF4444' ? (isDarkMode ? ['#DC2626', '#B91C1C'] : ['#EF4444', '#DC2626']) :
+                    (isDarkMode ? ['#047857', '#065F46'] : ['#10B981', '#059669'])
+                  }
+                  style={styles.featuredGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.featuredContent}>
+                    <View style={styles.featuredText}>
+                      <View style={styles.randomBadge}>
+                        <Text style={styles.randomBadgeText}>🎲 Random Suggestion</Text>
+                      </View>
+                      <Text style={styles.featuredTitle}>{randomSuggestedActivity.title}</Text>
+                      <Text style={styles.featuredSubtitle}>
+                        {randomSuggestedActivity.category} • {randomSuggestedActivity.duration}
+                      </Text>
+                      <Text style={styles.featuredDescription}>
+                        {randomSuggestedActivity.description.length > 100 
+                          ? randomSuggestedActivity.description.substring(0, 100) + '...' 
+                          : randomSuggestedActivity.description}
+                      </Text>
+                      <TouchableOpacity 
+                        style={styles.refreshButton}
+                        onPress={selectRandomActivity}
+                      >
+                        <Text style={styles.refreshButtonText}>↻ Get Another Suggestion</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.featuredIcon}>
+                      {React.createElement(randomSuggestedActivity.icon, { size: 48, color: "#FFFFFF" })}
+                    </View>
                   </View>
-                  <View style={styles.featuredIcon}>
-                    <TreePine size={48} color="#FFFFFF" />
-                  </View>
-                </View>
-              </LinearGradient>
-            </DashboardCard>
-          </View>
+                </LinearGradient>
+              </DashboardCard>
+            </View>
+          )}
 
           {/* Category Filter */}
           <View style={styles.categoriesContainer}>
@@ -624,6 +653,32 @@ const styles = StyleSheet.create({
   },
   featuredIcon: {
     opacity: 0.3,
+  },
+  randomBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  randomBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  refreshButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginTop: 12,
+  },
+  refreshButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   categoriesContainer: {
     marginBottom: 24,

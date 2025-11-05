@@ -16,22 +16,27 @@ export function useDailyDeviceUsage() {
   async function refresh() {
     try {
       let active = 0;
+      let hasData = false;
       if (Platform.OS === "ios") {
         const { ScreenTimeUsage } = NativeModules;
         if (ScreenTimeUsage) {
           active = await ScreenTimeUsage.getTodayActiveSeconds();
+          hasData = active > 0;
         } else {
           setModuleAvailable(false);
         }
       } else if (Platform.OS === "android") {
-        const { AndroidUsageStats } = NativeModules;
-        if (AndroidUsageStats) {
-          active = await AndroidUsageStats.getTodayActiveSeconds();
+        const { UsageStatsModule } = NativeModules;
+        if (UsageStatsModule) {
+          const result = await UsageStatsModule.getTodayUsageStats();
+          active = result.totalScreenTimeSeconds || 0;
+          hasData = active > 0;
         } else {
           setModuleAvailable(false);
         }
       }
-      const off = Math.max(0, secondsSinceLocalMidnight() - Math.floor(active));
+      // Only calculate off-screen time if we have actual screen time data
+      const off = hasData ? Math.max(0, secondsSinceLocalMidnight() - Math.floor(active)) : 0;
       setOnSeconds(Math.floor(active));
       setOffSeconds(off);
     } catch (e) {

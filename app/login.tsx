@@ -9,14 +9,27 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
+import { Eye, EyeOff, Mail, Lock, User, MapPin, Calendar, X } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useLanguage } from '@/hooks/LanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// List of countries for selection
+const COUNTRIES = [
+  'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 
+  'Italy', 'Spain', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 
+  'Norway', 'Denmark', 'Finland', 'Ireland', 'New Zealand', 'Japan', 'South Korea',
+  'China', 'Hong Kong', 'Taiwan', 'Singapore', 'Malaysia', 'Thailand', 'Indonesia',
+  'Philippines', 'Vietnam', 'India', 'Brazil', 'Mexico', 'Argentina', 'Chile',
+  'Colombia', 'Peru', 'South Africa', 'Egypt', 'Nigeria', 'Kenya', 'United Arab Emirates',
+  'Saudi Arabia', 'Israel', 'Turkey', 'Russia', 'Poland', 'Czech Republic', 'Portugal',
+  'Greece', 'Romania', 'Hungary', 'Other'
+].sort();
 
 export default function LoginScreen() {
   const { signIn, signUp, user } = useAuth();
@@ -32,14 +45,25 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [country, setCountry] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | 'prefer-not-to-say' | ''>('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
 
   // Skip button removed - users must authenticate to use the app
 
   const handleSignUp = async () => {
     if (!email.trim() || !password.trim() || !fullName.trim()) {
       Alert.alert(t('error'), t('fieldRequired'));
+      return;
+    }
+
+    if (!country.trim()) {
+      Alert.alert(t('error'), 'Please select your country');
       return;
     }
 
@@ -56,14 +80,30 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // Create user account with Firebase
-      await signUp(email.trim().toLowerCase(), password, fullName.trim());
+      // Create user account with Firebase including additional data
+      const additionalData: any = {
+        displayName: fullName.trim(),
+        country: country.trim(),
+      };
+
+      if (age && !isNaN(parseInt(age))) {
+        additionalData.age = parseInt(age);
+      }
+
+      if (gender) {
+        additionalData.gender = gender;
+      }
+
+      await signUp(email.trim().toLowerCase(), password, additionalData);
 
       // Save user data locally for compatibility with existing code
       const userProfile = {
-        id: 'current-user', // Firebase will handle the actual user ID
+        id: 'current-user',
         name: fullName.trim(),
         email: email.trim().toLowerCase(),
+        country: country.trim(),
+        age: age ? parseInt(age) : undefined,
+        gender: gender || undefined,
         level: 'Digital Beginner',
         streak: 0,
         totalPoints: 0,
@@ -72,16 +112,8 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('userProfile', JSON.stringify(userProfile));
       await AsyncStorage.setItem('isLoggedIn', 'true');
 
-      Alert.alert(
-        t('accountCreated'),
-        t('welcomeToApp'),
-        [
-          {
-            text: t('getStarted'),
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
-      );
+      // Navigate directly without popup
+      router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Sign up error:', error);
       Alert.alert(t('signUpFailed'), error.message || t('error'));
@@ -109,8 +141,8 @@ export default function LoginScreen() {
 
       // Save user data locally for compatibility with existing code
       const userProfile = {
-        id: 'current-user', // Firebase will handle the actual user ID
-        name: 'User', // This will be updated from Firebase profile
+        id: 'current-user',
+        name: 'User',
         email: email.trim().toLowerCase(),
         level: 'Digital Beginner',
         streak: 0,
@@ -120,16 +152,8 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('userProfile', JSON.stringify(userProfile));
       await AsyncStorage.setItem('isLoggedIn', 'true');
 
-      Alert.alert(
-        t('welcomeBack'),
-        t('welcome'),
-        [
-          {
-            text: t('continue'),
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
-      );
+      // Navigate directly without popup
+      router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Sign in error:', error);
       Alert.alert(t('signInFailed'), error.message || t('error'));
@@ -163,19 +187,64 @@ export default function LoginScreen() {
             {/* Form */}
             <View style={styles.form}>
               {isSignUp && (
-                <View style={styles.inputContainer}>
-                  <View style={styles.inputWrapper}>
-                    <User size={20} color="#9CA3AF" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('fullName')}
-                      value={fullName}
-                      onChangeText={setFullName}
-                      placeholderTextColor="#9CA3AF"
-                      autoCapitalize="words"
-                    />
+                <>
+                  <View style={styles.inputContainer}>
+                    <View style={styles.inputWrapper}>
+                      <User size={20} color="#9CA3AF" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder={t('fullName')}
+                        value={fullName}
+                        onChangeText={setFullName}
+                        placeholderTextColor="#9CA3AF"
+                        autoCapitalize="words"
+                      />
+                    </View>
                   </View>
-                </View>
+
+                  <View style={styles.inputContainer}>
+                    <TouchableOpacity 
+                      style={styles.inputWrapper}
+                      onPress={() => setShowCountryPicker(true)}
+                    >
+                      <MapPin size={20} color="#9CA3AF" style={styles.inputIcon} />
+                      <Text style={[styles.input, !country && styles.placeholder]}>
+                        {country || 'Select your country *'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <View style={styles.inputWrapper}>
+                      <Calendar size={20} color="#9CA3AF" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Age (optional)"
+                        value={age}
+                        onChangeText={setAge}
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="number-pad"
+                        maxLength={3}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <TouchableOpacity 
+                      style={styles.inputWrapper}
+                      onPress={() => setShowGenderPicker(true)}
+                    >
+                      <User size={20} color="#9CA3AF" style={styles.inputIcon} />
+                      <Text style={[styles.input, !gender && styles.placeholder]}>
+                        {gender ? gender.charAt(0).toUpperCase() + gender.slice(1).replace('-', ' ') : 'Gender (optional)'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              {!isSignUp && (
+                <View style={{height: 0}} />
               )}
 
               <View style={styles.inputContainer}>
@@ -270,6 +339,88 @@ export default function LoginScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Country Picker Modal */}
+        <Modal
+          visible={showCountryPicker}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowCountryPicker(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Country</Text>
+              <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
+                <X size={24} color="#1F2937" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search countries..."
+                value={countrySearch}
+                onChangeText={setCountrySearch}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+            <ScrollView style={styles.modalContent}>
+              {COUNTRIES
+                .filter(c => c.toLowerCase().includes(countrySearch.toLowerCase()))
+                .map((countryOption) => (
+                  <TouchableOpacity
+                    key={countryOption}
+                    style={styles.countryOption}
+                    onPress={() => {
+                      setCountry(countryOption);
+                      setShowCountryPicker(false);
+                      setCountrySearch('');
+                    }}
+                  >
+                    <Text style={[
+                      styles.countryOptionText,
+                      country === countryOption && styles.selectedOption
+                    ]}>
+                      {countryOption}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+
+        {/* Gender Picker Modal */}
+        <Modal
+          visible={showGenderPicker}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setShowGenderPicker(false)}
+        >
+          <View style={styles.genderModalOverlay}>
+            <View style={styles.genderModalContent}>
+              <Text style={styles.genderModalTitle}>Select Gender</Text>
+              {['male', 'female', 'other', 'prefer-not-to-say'].map((genderOption) => (
+                <TouchableOpacity
+                  key={genderOption}
+                  style={styles.genderOption}
+                  onPress={() => {
+                    setGender(genderOption as any);
+                    setShowGenderPicker(false);
+                  }}
+                >
+                  <Text style={styles.genderOptionText}>
+                    {genderOption.charAt(0).toUpperCase() + genderOption.slice(1).replace('-', ' ')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={[styles.genderOption, styles.cancelOption]}
+                onPress={() => setShowGenderPicker(false)}
+              >
+                <Text style={styles.cancelOptionText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -400,5 +551,97 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
     textDecorationLine: 'underline',
+  },
+  placeholder: {
+    color: '#9CA3AF',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  searchContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  searchInput: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  countryOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  countryOptionText: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  selectedOption: {
+    color: '#4F46E5',
+    fontWeight: '600',
+  },
+  genderModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  genderModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 400,
+    padding: 20,
+  },
+  genderModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  genderOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  genderOptionText: {
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  cancelOption: {
+    backgroundColor: '#FEE2E2',
+  },
+  cancelOptionText: {
+    fontSize: 16,
+    color: '#DC2626',
+    fontWeight: '600',
   },
 });

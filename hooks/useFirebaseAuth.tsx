@@ -9,7 +9,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<void>;
+  signUp: (email: string, password: string, additionalData?: any) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -72,13 +72,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, displayName?: string) => {
+  const signUp = async (email: string, password: string, additionalData?: any) => {
     setLoading(true);
     try {
       const userCredential = await AuthService.signUp(email, password);
 
-      // Create user profile
-      await DatabaseService.createUserProfile(userCredential.user, { displayName });
+      // Create user profile with additional data
+      await DatabaseService.createUserProfile(userCredential.user, additionalData || {});
 
       // Get the created profile
       const profile = await DatabaseService.getUserProfile(userCredential.user.uid);

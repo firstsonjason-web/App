@@ -30,39 +30,7 @@ import * as FileSystem from 'expo-file-system';
 import { useLanguage } from '@/hooks/LanguageContext';
 import { uploadProfileImage, StorageUploadError } from '@/lib/storage-service';
 import * as Sharing from 'expo-sharing';
-
-// Conditional import for Stripe - only on native platforms
-let initStripe, useStripe, StripeProvider;
-if (Platform.OS !== 'web') {
-  const stripeModule = require('@stripe/stripe-react-native');
-  initStripe = stripeModule.initStripe;
-  useStripe = stripeModule.useStripe;
-  StripeProvider = stripeModule.StripeProvider;
-  
-  // Initialize Stripe with the publishable key
-  initStripe({
-    publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51SJwQ0BXjOxrF9eiUDKWbDcs0ZrjrIE6asS3mCt9Tj9PHWmNq4XVo5VzHOCvbUvH9ENxwEx2ioBlZ4eKyrl0XkCJ00200nBwlX',
-    merchantIdentifier: 'merchant.com.yourapp.digitwellness',
-    threeDSecureParams: {
-      backgroundColor: '#FFFFFF',
-      appBar: {
-        title: 'Secure Payment',
-        subtitle: 'Your purchase',
-        backgroundColor: '#4F46E5',
-        textColor: '#FFFFFF',
-        subtitleTextColor: '#D1D5DB',
-      },
-    },
-  });
-} else {
-  // Mock implementations for web
-  initStripe = () => {};
-  useStripe = () => ({
-    initPaymentSheet: () => Promise.resolve({ error: null }),
-    presentPaymentSheet: () => Promise.resolve({ error: null }),
-  });
-  StripeProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
-}
+import { useStripe, StripeProvider } from '../../lib/stripe-service';
 
 function ProfileScreen() {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
@@ -78,12 +46,8 @@ function ProfileScreen() {
   const { t, currentLanguage, changeLanguage } = useLanguage();
   const colors = getColors(isDarkMode);
   
-  // Only use Stripe hook on native platforms
-  const stripe = Platform.OS !== 'web' ? useStripe() : null;
-  const { initPaymentSheet, presentPaymentSheet } = Platform.OS !== 'web' && stripe ? stripe : {
-    initPaymentSheet: () => Promise.resolve({ error: null }),
-    presentPaymentSheet: () => Promise.resolve({ error: null }),
-  };
+  // Use Stripe hook
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [notifications, setNotifications] = useState(isNotificationsEnabled);
   const [dailySummary, setDailySummary] = useState(isDailySummaryEnabled);
@@ -1008,33 +972,22 @@ function ProfileScreen() {
              </DashboardCard>
            </TouchableOpacity>
 
-          {/* Subscription Card */}
+          {/* Subscription Card - Limited Time Free */}
           <DashboardCard style={styles.subscriptionCard}>
             <View style={styles.subscriptionContent}>
               <View style={styles.subscriptionHeader}>
                 <Text style={[styles.subscriptionTitle, { color: colors.text }]}>{t('subscriptionPlan')}</Text>
-                <View style={[styles.currentPlanBadge, { backgroundColor: currentPlan === 'free' ? '#10B981' : currentPlan === 'pro' ? '#4F46E5' : '#8B5CF6' }]}>
+                <View style={[styles.currentPlanBadge, { backgroundColor: '#10B981' }]}>
                   <Text style={styles.currentPlanText}>
-                    {currentPlan === 'free' ? 'FREE' : currentPlan === 'pro' ? 'PRO' : 'PRO MAX'}
+                    LIMITED TIME FREE
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity
-                style={styles.subscribeButton}
-                onPress={() => {
-                  console.log('📋 [Subscription Debug] Subscription modal opened');
-                  setShowSubscriptionModal(true);
-                }}
-              >
-                <LinearGradient
-                  colors={['#4F46E5', '#7C3AED']}
-                  style={styles.subscribeGradient}
-                >
-                  <Text style={styles.subscribeButtonText}>
-                    {currentPlan === 'free' ? t('upgradePlan') : t('changePlan')}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
+              <View style={styles.limitedTimeNotice}>
+                <Text style={[styles.limitedTimeText, { color: colors.text }]}>
+                  🎉 All features are currently free! Enjoy unlimited access to Pro and ProMax features.
+                </Text>
+              </View>
             </View>
           </DashboardCard>
 
@@ -1992,6 +1945,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  limitedTimeNotice: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  limitedTimeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   subscriptionPlans: {
     flex: 1,

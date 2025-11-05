@@ -62,6 +62,10 @@ export interface UserProfile {
   updatedAt: Timestamp;
   isPrivate?: boolean; // Default false (public)
   subscriptionPlan?: 'free' | 'pro' | 'promax'; // Subscription plan
+  country?: string; // User's country for rankings
+  age?: number; // User's age
+  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say'; // User's gender
+  bio?: string; // User's bio/introduction
 }
 
 export interface Activity {
