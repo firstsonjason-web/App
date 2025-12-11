@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import {
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -1461,37 +1462,26 @@ export class DatabaseService {
 
   static async getUnreadMessageCount(currentUserId: string): Promise<number> {
     try {
-      // Get all user's chat IDs by querying messages where user is not the sender
-      const messagesQuery = query(
-        collection(db, 'chats'),
-        orderBy('timestamp', 'desc')
+      // Use collection group to find unread messages across all chats, then filter by chatId membership
+      const unreadMessagesQuery = query(
+        collectionGroup(db, 'messages'),
+        where('isRead', '==', false),
+        orderBy('timestamp', 'desc'),
+        limit(200)
       );
 
-      const chatsSnapshot = await getDocs(messagesQuery);
+      const snapshot = await getDocs(unreadMessagesQuery);
       let totalUnread = 0;
 
-      for (const chatDoc of chatsSnapshot.docs) {
-        const chatId = chatDoc.id;
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data() as ChatMessage;
+        const chatId = (data as any).chatId || '';
 
-        // Check if current user is part of this chat
-        const chatUserIds = chatId.split('_');
-        if (!chatUserIds.includes(currentUserId)) continue;
-
-        const otherUserId = chatUserIds.find(id => id !== currentUserId);
-        if (!otherUserId) continue;
-
-        const unreadQuery = query(
-          collection(db, 'chats', chatId, 'messages'),
-          where('senderId', '==', otherUserId),
-          where('isRead', '==', false),
-          limit(1) // Just need to check if any exist
-        );
-
-        const unreadSnapshot = await getDocs(unreadQuery);
-        if (!unreadSnapshot.empty) {
-          totalUnread++;
+        // chatId is formatted as "uid1_uid2"; check membership and exclude current user's own messages
+        if (chatId.includes(currentUserId) && data.senderId !== currentUserId) {
+          totalUnread += 1;
         }
-      }
+      });
 
       return totalUnread;
     } catch (error) {

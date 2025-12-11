@@ -2,139 +2,119 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    function isValidUserData() {
-      return request.auth != null &&
-             request.auth.uid == resource.data.userId;
-    }
+    function isAuthed() { return request.auth != null; }
+    function isOwner(userId) { return isAuthed() && request.auth.uid == userId; }
 
     // Users collection - users can read/write their own profile
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
-      allow read: if isAuthenticated() && resource.data.isPublic == true;
+      // Allow authenticated reads so aggregated queries (stats, friends lookup) don't fail.
+      // Write access remains owner-only.
+      allow read: if isAuthed();
+      allow create: if isOwner(userId);
+      allow update, delete: if isOwner(userId);
     }
 
     // Goals collection - users can manage their own goals
     match /goals/{goalId} {
-      allow read, write: if isAuthenticated() && isValidUserData();
-      allow create: if isAuthenticated() &&
-        request.auth.uid == request.resource.data.userId &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isOwner(resource.data.userId);
     }
 
     // Activities collection - users can read/write their own activities
     match /activities/{activityId} {
-      allow read, write: if isAuthenticated() && isValidUserData();
-      allow create: if isAuthenticated() &&
-        request.auth.uid == request.resource.data.userId;
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isOwner(resource.data.userId);
     }
 
     // Communities collection - public read for all authenticated users
     match /communities/{communityId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
-        request.auth.uid == request.resource.data.createdBy;
-      allow update, delete: if isAuthenticated() &&
-        request.auth.uid == resource.data.createdBy;
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.createdBy;
+      allow update, delete: if isAuthed() && request.auth.uid == resource.data.createdBy;
     }
 
     // Posts collection - community posts with proper access control
     match /posts/{postId} {
-       allow read: if isAuthenticated();
-       allow create: if isAuthenticated() &&
-         request.auth.uid == request.resource.data.userId;
-       allow update: if isAuthenticated() &&
-         request.auth.uid == resource.data.userId;
-       // Allow updating likes and replies arrays
-       allow update: if isAuthenticated() &&
-         (request.resource.data.diff(resource.data).affectedKeys().hasAny(['likes', 'replies']));
+       allow read: if isAuthed();
+       allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+       // Owners full control; others can only touch likes/replies
+       allow update: if isAuthed() && (
+         request.auth.uid == resource.data.userId ||
+         request.resource.data.diff(resource.data).changedKeys().subsetOf(['likes','replies'])
+       );
+       allow delete: if isOwner(resource.data.userId);
      }
 
     // Comments collection - users can manage their own comments
     match /comments/{commentId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
-        request.auth.uid == request.resource.data.authorId;
-      allow update, delete: if isAuthenticated() &&
-        request.auth.uid == resource.data.authorId;
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.authorId;
+      allow update, delete: if isOwner(resource.data.authorId);
+    }
+
+    match /notifications/{notificationId} {
+      allow read, update, delete: if isOwner(resource.data.userId);
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
     }
 
     // Friends collection - users can manage their own friend relationships
     match /friends/{friendId} {
-      allow read: if isAuthenticated() &&
+      allow read: if isAuthed() &&
         (request.auth.uid == resource.data.userId ||
          request.auth.uid == resource.data.friendId);
-      allow create: if isAuthenticated() &&
+      allow create: if isAuthed() &&
         request.auth.uid == request.resource.data.userId;
-      allow update, delete: if isAuthenticated() &&
-        request.auth.uid == resource.data.userId;
+      allow update, delete: if isOwner(resource.data.userId);
     }
 
     // FriendRequests collection - users can manage their own friend requests
     match /friendRequests/{requestId} {
-      allow read: if isAuthenticated() &&
+      allow read: if isAuthed() &&
         (request.auth.uid == resource.data.userId ||
-         request.auth.uid == resource.data.friendId);
-      allow create: if isAuthenticated() &&
+         request.auth.uid == resource.data.friendId ||
+         resource.data.status == 'accepted');
+      allow create: if isAuthed() &&
         request.auth.uid == request.resource.data.userId;
-      allow update, delete: if isAuthenticated() &&
+      allow update, delete: if isAuthed() &&
         (request.auth.uid == resource.data.userId ||
          request.auth.uid == resource.data.friendId);
     }
 
     // Chats collection - users can access their own chats
     match /chats/{chatId} {
-      allow read: if isAuthenticated() &&
-        chatId.matches(request.auth.uid + '_.*|.*_' + request.auth.uid);
-      allow write: if false; // Chats are managed via messages subcollection
+      allow read: if isAuthed() &&
+        (chatId.matches(request.auth.uid + '_.*') || chatId.matches('.*_' + request.auth.uid));
+      allow write: if false; // managed via messages subcollection
     }
 
     // Chat messages subcollection - users can send/receive messages in their chats
     match /chats/{chatId}/messages/{messageId} {
-      allow read: if isAuthenticated() &&
-        chatId.matches(request.auth.uid + '_.*|.*_' + request.auth.uid);
-      allow create: if isAuthenticated() &&
+      allow read: if isAuthed() &&
+        (chatId.matches(request.auth.uid + '_.*') || chatId.matches('.*_' + request.auth.uid));
+      allow create: if isAuthed() &&
         request.auth.uid == request.resource.data.senderId &&
-        chatId.matches(request.auth.uid + '_.*|.*_' + request.auth.uid);
-      allow update: if isAuthenticated() &&
-        request.auth.uid == resource.data.senderId;
-      allow delete: if false; // Prevent deletion of messages
+        (chatId.matches(request.auth.uid + '_.*') || chatId.matches('.*_' + request.auth.uid));
+      allow update: if isOwner(resource.data.senderId);
+      allow delete: if false;
     }
 
     // Rankings collection - public read for authenticated users
     match /rankings/{rankingId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Rankings are calculated server-side
-    }
-
-    // User rankings subcollection - users can read rankings data
-    match /users/{userId}/rankings/{rankingId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Rankings are calculated server-side
-    }
-
-    // Global rankings for different time periods
-    match /global_rankings/{period} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Rankings are calculated server-side
-    }
-
-    // Admin functions - only allow from authenticated admin users
-    match /admin/{document=**} {
-      allow read, write: if false; // Disable admin access for now
-    }
-
-    // Public data that anyone can read (if needed)
-    match /public/{document=**} {
-      allow read: if true;
+      allow read: if isAuthed();
       allow write: if false;
     }
+    match /users/{userId}/rankings/{rankingId} {
+      allow read: if isAuthed();
+      allow write: if false;
+    }
+    match /global_rankings/{period} {
+      allow read: if isAuthed();
+      allow write: if false;
+    }
+
+    match /admin/{document=**} { allow read, write: if false; }
+    match /public/{document=**} { allow read: if true; allow write: if false; }
   }
 }

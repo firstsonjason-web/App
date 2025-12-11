@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "bolt-expo-nativewind",
-    "slug": "app",
+    "slug": "pabo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,7 +15,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.owenisas.app",
+      "bundleIdentifier": "com.homingchan.app",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "This app requires access to your camera to take photos.",
@@ -26,7 +26,7 @@
       },
       "entitlements": {
         "com.apple.security.application-groups": [
-          "group.com.owenisas.app.deviceusage"
+          "group.com.homingchan.app.deviceusage"
         ],
         "com.apple.developer.family-controls": true
       }
@@ -48,12 +48,12 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "512b9f41-e45d-409c-9e84-6fee49cb6012"
+        "projectId": "b7a91eb0-4ba7-4548-bfbf-d4a8f2d34900"
       }
     },
-    "owner": "owenisas",
+    "owner": "minglongcha",
     "android": {
-      "package": "com.owenisas.app",
+      "package": "com.homingchan.app",
       "permissions": [
         "PACKAGE_USAGE_STATS"
       ]

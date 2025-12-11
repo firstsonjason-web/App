@@ -122,6 +122,14 @@ export default function LoginScreen() {
     }
   };
 
+  const getAuthErrorMessage = (error: any) => {
+    const code = error?.code || '';
+    if (code.includes('wrong-password')) return t('invalidEmail') + ' / ' + t('passwordTooShort');
+    if (code.includes('user-not-found')) return t('invalidEmail');
+    if (code.includes('too-many-requests')) return t('failedToUpdateProfile');
+    return error?.message || t('error');
+  };
+
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert(t('error'), t('fieldRequired'));
@@ -156,7 +164,7 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Sign in error:', error);
-      Alert.alert(t('signInFailed'), error.message || t('error'));
+      Alert.alert(t('signInFailed'), getAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }

@@ -60,16 +60,26 @@ export const useNotifications = () => {
     }
 
     try {
-      // Cancel existing daily summary notifications
-      await Notifications.cancelScheduledNotificationAsync('daily-summary');
+      // Cancel existing daily summary notifications (by stored id or by type)
+      const storedId = await AsyncStorage.getItem('daily_summary_id');
+      if (storedId) {
+        await Notifications.cancelScheduledNotificationAsync(storedId);
+        await AsyncStorage.removeItem('daily_summary_id');
+      }
+      const existing = await Notifications.getAllScheduledNotificationsAsync();
+      await Promise.all(
+        existing
+          .filter((n) => n.content.data?.type === 'daily-summary')
+          .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+      );
 
       // Schedule new daily summary at 8 PM
-      await Notifications.scheduleNotificationAsync({
-        identifier: 'daily-summary',
+      const identifier = await Notifications.scheduleNotificationAsync({
         content: {
           title: '📊 Daily Digital Wellness Summary',
           body: 'Check your screen time and focus progress from today!',
           sound: 'default',
+          data: { type: 'daily-summary' },
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
@@ -78,6 +88,7 @@ export const useNotifications = () => {
           repeats: true,
         },
       });
+      await AsyncStorage.setItem('daily_summary_id', identifier);
     } catch (error) {
       console.error('Error scheduling daily summary notification:', error);
     }

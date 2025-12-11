@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.owenisas.app'
+    namespace 'com.homingchan.app'
     defaultConfig {
-        applicationId 'com.owenisas.app'
+        applicationId 'com.homingchan.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

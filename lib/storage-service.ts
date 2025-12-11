@@ -221,14 +221,17 @@ export const uploadPostMedia = async (
     let blob: Blob;
 
     if (typeof mediaUri === 'string') {
-      if (mediaUri.startsWith('http')) {
+      const isRemote = mediaUri.startsWith('http');
+      const isLocalFile = mediaUri.startsWith('file://') || mediaUri.startsWith('content://') || mediaUri.startsWith('blob:');
+
+      if (isRemote || isLocalFile) {
         const response = await fetch(mediaUri);
         if (!response.ok) {
-          throw new StorageUploadError('Failed to fetch media from URL', 'FETCH_FAILED');
+          throw new StorageUploadError('Failed to read media from provided URI', 'FETCH_FAILED');
         }
         blob = await response.blob();
       } else {
-        throw new StorageUploadError('File path handling requires additional setup for React Native', 'UNSUPPORTED_URI');
+        throw new StorageUploadError('Unsupported URI format', 'UNSUPPORTED_URI');
       }
     } else {
       blob = mediaUri as Blob;

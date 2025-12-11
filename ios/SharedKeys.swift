@@ -1,7 +1,7 @@
 import Foundation
 
 struct Shared {
-    static let appGroupId = "group.com.owenisas.app.deviceusage"
+    static let appGroupId = "group.com.homingchan.app.deviceusage"
 }
 
 func todayKey() -> String {
