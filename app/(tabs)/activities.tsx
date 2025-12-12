@@ -79,7 +79,7 @@ const activityTemplates: ActivityTemplate[] = [
     difficulty: 'Easy',
     category: 'Mindful',
     icon: Book,
-    color: '#4F46E5',
+    color: '#3B3B44',
     benefits: ['Improves self-awareness', 'Reduces anxiety', 'Enhances memory', 'Clarifies thoughts'],
     videoId: 'U2_cDF3GCzM',
     videoTitle: 'How to Start Journaling - A Beginner\'s Guide',
@@ -107,7 +107,7 @@ const activityTemplates: ActivityTemplate[] = [
     difficulty: 'Easy',
     category: 'Creative',
     icon: Palette,
-    color: '#8B5CF6',
+    color: '#3F3F46',
     benefits: ['Enhances creativity', 'Improves focus', 'Reduces stress', 'Develops observation skills'],
     videoId: 'Zi4bsTqe3Lk',
     videoTitle: 'Drawing for Beginners - Mindful Art Practice',
@@ -174,9 +174,9 @@ const activityTemplates: ActivityTemplate[] = [
 const categories = [
   { id: 'all', name: 'All Activities', color: '#6B7280' },
   { id: 'Physical', name: 'Physical', color: '#10B981' },
-  { id: 'Creative', name: 'Creative', color: '#8B5CF6' },
+  { id: 'Creative', name: 'Creative', color: '#3F3F46' },
   { id: 'Social', name: 'Social', color: '#EF4444' },
-  { id: 'Mindful', name: 'Mindful', color: '#4F46E5' },
+  { id: 'Mindful', name: 'Mindful', color: '#3B3B44' },
   { id: 'Learning', name: 'Learning', color: '#06B6D4' },
 ];
 
@@ -363,9 +363,9 @@ export default function ActivitiesScreen() {
                 <LinearGradient
                   colors={
                     randomSuggestedActivity.color === '#10B981' ? (isDarkMode ? ['#047857', '#065F46'] : ['#10B981', '#059669']) :
-                    randomSuggestedActivity.color === '#4F46E5' ? (isDarkMode ? ['#3730A3', '#312E81'] : ['#4F46E5', '#4338CA']) :
+                    randomSuggestedActivity.color === '#3B3B44' ? (isDarkMode ? ['#3730A3', '#312E81'] : ['#3B3B44', '#4338CA']) :
                     randomSuggestedActivity.color === '#F59E0B' ? (isDarkMode ? ['#D97706', '#B45309'] : ['#F59E0B', '#D97706']) :
-                    randomSuggestedActivity.color === '#8B5CF6' ? (isDarkMode ? ['#6D28D9', '#5B21B6'] : ['#8B5CF6', '#7C3AED']) :
+                    randomSuggestedActivity.color === '#3F3F46' ? (isDarkMode ? ['#6D28D9', '#5B21B6'] : ['#3F3F46', '#27272A']) :
                     randomSuggestedActivity.color === '#06B6D4' ? (isDarkMode ? ['#0891B2', '#0E7490'] : ['#06B6D4', '#0891B2']) :
                     randomSuggestedActivity.color === '#EF4444' ? (isDarkMode ? ['#DC2626', '#B91C1C'] : ['#EF4444', '#DC2626']) :
                     (isDarkMode ? ['#047857', '#065F46'] : ['#10B981', '#059669'])

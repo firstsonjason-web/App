@@ -172,7 +172,7 @@ export default function ProgressScreen() {
       title: t('focusMasterTitle'),
       description: t('focusMasterDescription'),
       icon: Target,
-      color: '#4F46E5',
+      color: '#3B3B44',
       unlocked: focusSessions >= 7,
       progress: Math.min(focusSessions, 7),
       total: 7,
@@ -204,7 +204,7 @@ export default function ProgressScreen() {
       title: t('timeGuardianTitle'),
       description: t('timeGuardianDescription'),
       icon: Award,
-      color: '#8B5CF6',
+      color: '#3F3F46',
       unlocked: daysActive >= 30,
       progress: daysActive,
       total: 30,
@@ -247,7 +247,7 @@ export default function ProgressScreen() {
           <View style={styles.metricsContainer}>
             <View style={styles.metricCard}>
               <LinearGradient
-                colors={isDarkMode ? ['#3730A3', '#4338CA'] : ['#4F46E5', '#6366F1']}
+                colors={isDarkMode ? ['#3730A3', '#4338CA'] : ['#3B3B44', '#6366F1']}
                 style={styles.metricGradient}
               >
                 <Smartphone size={24} color="#FFFFFF" />
@@ -387,7 +387,7 @@ export default function ProgressScreen() {
             <View style={styles.chart}>
               <View style={styles.chartLegend}>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: '#4F46E5' }]} />
+                  <View style={[styles.legendDot, { backgroundColor: '#3B3B44' }]} />
                   <Text style={[styles.legendText, { color: colors.textSecondary }]}>{t('screenTimeLabel')}</Text>
                 </View>
                 <View style={styles.legendItem}>
@@ -405,7 +405,7 @@ export default function ProgressScreen() {
                           styles.bar,
                           {
                             height: maxScreenTime > 0 ? (data.screenTime / maxScreenTime) * 80 : 0,
-                            backgroundColor: '#4F46E5'
+                            backgroundColor: '#3B3B44'
                           }
                         ]}
                       />
@@ -512,7 +512,7 @@ export default function ProgressScreen() {
                   <DashboardCard key={activity.id || index} style={styles.activityCard}>
                     <View style={styles.activityContent}>
                       <View style={[styles.activityIconContainer, { backgroundColor: isDarkMode ? '#3730A3' : '#EEF2FF' }]}>
-                        <Award size={18} color={isDarkMode ? '#A78BFA' : '#4F46E5'} />
+                        <Award size={18} color={isDarkMode ? '#A78BFA' : '#3B3B44'} />
                       </View>
                       <View style={styles.activityInfo}>
                         <Text style={[styles.activityTitle, { color: colors.text }]}>
@@ -584,7 +584,7 @@ export default function ProgressScreen() {
               </View>
             </View>
 
-            <View style={[styles.summaryInsight, { backgroundColor: isDarkMode ? '#1E293B' : '#F0F9FF', borderLeftColor: '#4F46E5' }]}>
+            <View style={[styles.summaryInsight, { backgroundColor: isDarkMode ? '#1E293B' : '#F0F9FF', borderLeftColor: '#3B3B44' }]}>
               <Text style={[styles.insightText, { color: colors.text }]}>
                 {t('progressInsightMessage')}
               </Text>
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   periodButtonActive: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
   },
   periodText: {
     fontSize: 14,
@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     borderRadius: 2,
   },
   progressText: {
@@ -940,7 +940,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#4F46E5',
+    borderColor: '#3B3B44',
   },
   instructionTitle: {
     fontSize: 16,

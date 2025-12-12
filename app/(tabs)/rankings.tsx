@@ -293,7 +293,7 @@ export default function RankingsScreen() {
           {currentUser && (
             <DashboardCard style={styles.yourRankCard}>
               <LinearGradient
-                colors={isDarkMode ? ['#3730A3', '#4338CA'] : ['#4F46E5', '#6366F1']}
+                colors={isDarkMode ? ['#3730A3', '#4338CA'] : ['#3B3B44', '#6366F1']}
                 style={styles.yourRankGradient}
               >
                 <View style={styles.yourRankContent}>
@@ -514,7 +514,7 @@ export default function RankingsScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('competitionStats')}</Text>
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
-                <Users size={24} color="#4F46E5" />
+                <Users size={24} color="#3B3B44" />
                 <Text style={styles.statValue}>2.4M</Text>
                 <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('activeUsers')}</Text>
               </View>
@@ -696,8 +696,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryButtonActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
+    borderColor: '#3B3B44',
   },
   categoryText: {
     fontSize: 14,
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   currentUserName: {
-    color: '#4F46E5',
+    color: '#3B3B44',
   },
   leaderboardCountry: {
     fontSize: 14,

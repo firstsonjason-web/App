@@ -567,7 +567,7 @@ export default function FriendsScreen() {
             style={[styles.tab, selectedTab === 'friends' && styles.activeTab]}
             onPress={() => setSelectedTab('friends')}
           >
-            <Text style={[styles.tabText, { color: selectedTab === 'friends' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'friends' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: selectedTab === 'friends' ? '#3B3B44' : colors.textSecondary }, selectedTab === 'friends' && styles.activeTabText]}>
               {t('myFriends')} ({friends.length})
             </Text>
           </TouchableOpacity>
@@ -575,7 +575,7 @@ export default function FriendsScreen() {
             style={[styles.tab, selectedTab === 'search' && styles.activeTab]}
             onPress={() => setSelectedTab('search')}
           >
-            <Text style={[styles.tabText, { color: selectedTab === 'search' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'search' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: selectedTab === 'search' ? '#3B3B44' : colors.textSecondary }, selectedTab === 'search' && styles.activeTabText]}>
               {t('searchUsersTitle')}
             </Text>
           </TouchableOpacity>
@@ -583,7 +583,7 @@ export default function FriendsScreen() {
             style={[styles.tab, selectedTab === 'requests' && styles.activeTab]}
             onPress={() => setSelectedTab('requests')}
           >
-            <Text style={[styles.tabText, { color: selectedTab === 'requests' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'requests' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: selectedTab === 'requests' ? '#3B3B44' : colors.textSecondary }, selectedTab === 'requests' && styles.activeTabText]}>
               {t('friendRequestsTab')} ({friendRequests.length})
             </Text>
           </TouchableOpacity>
@@ -591,7 +591,7 @@ export default function FriendsScreen() {
             style={[styles.tab, selectedTab === 'suggestions' && styles.activeTab]}
             onPress={() => setSelectedTab('suggestions')}
           >
-            <Text style={[styles.tabText, { color: selectedTab === 'suggestions' ? '#4F46E5' : colors.textSecondary }, selectedTab === 'suggestions' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: selectedTab === 'suggestions' ? '#3B3B44' : colors.textSecondary }, selectedTab === 'suggestions' && styles.activeTabText]}>
               {t('suggestionsTab')}
             </Text>
           </TouchableOpacity>
@@ -746,7 +746,7 @@ export default function FriendsScreen() {
                           )}
                           <View style={styles.friendActions}>
                             <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.background }]}>
-                              <MessageCircle size={18} color="#4F46E5" />
+                              <MessageCircle size={18} color="#3B3B44" />
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.background }]}>
                               <Phone size={18} color="#10B981" />
@@ -968,10 +968,10 @@ export default function FriendsScreen() {
               </View>
               <View style={styles.chatActions}>
                 <TouchableOpacity style={[styles.chatActionButton, { backgroundColor: colors.background }]}>
-                  <Phone size={20} color="#4F46E5" />
+                  <Phone size={20} color="#3B3B44" />
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.chatActionButton, { backgroundColor: colors.background }]}>
-                  <Video size={20} color="#4F46E5" />
+                  <Video size={20} color="#3B3B44" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1088,14 +1088,14 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#4F46E5',
+    borderBottomColor: '#3B3B44',
   },
   tabText: {
     fontSize: 16,
     fontWeight: '600',
   },
   activeTabText: {
-    color: '#4F46E5',
+    color: '#3B3B44',
   },
   content: {
     flex: 1,
@@ -1158,7 +1158,7 @@ const styles = StyleSheet.create({
   },
   friendLevel: {
     fontSize: 12,
-    color: '#4F46E5',
+    color: '#3B3B44',
     fontWeight: '500',
     marginBottom: 4,
   },
@@ -1217,7 +1217,7 @@ const styles = StyleSheet.create({
   },
   suggestionLevel: {
     fontSize: 12,
-    color: '#4F46E5',
+    color: '#3B3B44',
     fontWeight: '500',
     marginBottom: 4,
   },
@@ -1236,14 +1236,14 @@ const styles = StyleSheet.create({
   },
   interestText: {
     fontSize: 10,
-    color: '#4F46E5',
+    color: '#3B3B44',
     fontWeight: '500',
   },
   addFriendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1299,7 +1299,7 @@ const styles = StyleSheet.create({
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
@@ -1374,7 +1374,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sentMessageText: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     color: '#FFFFFF',
   },
   receivedMessageText: {
@@ -1410,7 +1410,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     justifyContent: 'center',
     alignItems: 'center',
   },

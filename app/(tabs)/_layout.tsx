@@ -1,29 +1,39 @@
 import { Tabs } from 'expo-router';
 import { Chrome as Home, TrendingUp, Users, User, MessageCircle, Trophy } from 'lucide-react-native';
 import { useLanguage } from '@/hooks/LanguageContext';
+import { useDarkMode } from '@/hooks/useDarkMode';
+import { getColors } from '@/constants/Colors';
 
 
 export default function TabLayout() {
   const { t } = useLanguage();
+  const { isDarkMode } = useDarkMode();
+  const colors = getColors(isDarkMode);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#4F46E5',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.textTertiary,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colors.cardBackground,
           borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
-          paddingTop: 8,
-          paddingBottom: 8,
-          height: 80,
+          borderTopColor: colors.border,
+          paddingTop: 10,
+          paddingBottom: 10,
+          height: 85,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: isDarkMode ? 0.3 : 0.08,
+          shadowRadius: 12,
+          elevation: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
+          fontSize: 11,
+          fontWeight: '600',
           marginTop: 4,
+          letterSpacing: 0.2,
         },
       }}
     >

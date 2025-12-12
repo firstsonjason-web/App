@@ -617,7 +617,7 @@ function ProfileScreen() {
         returnURL: 'your-app://stripe-redirect', // Deep link for redirect-based payment methods
         appearance: {
           colors: {
-            primary: '#4F46E5',
+            primary: '#3B3B44',
             background: isDarkMode ? '#1F2937' : '#FFFFFF',
             componentBackground: isDarkMode ? '#374151' : '#F9FAFB',
             componentBorder: isDarkMode ? '#4B5563' : '#E5E7EB',
@@ -806,7 +806,7 @@ function ProfileScreen() {
           posts: `10 ${t('postsLabel')}`,
           friends: `20 ${t('friendsLabel')}`,
           reports: t('enhancedReports'),
-          color: '#4F46E5'
+          color: '#3B3B44'
         };
       case 'promax':
         return {
@@ -816,7 +816,7 @@ function ProfileScreen() {
           posts: `25 ${t('postsLabel')}`,
           friends: t('unlimitedFriends'),
           reports: t('comprehensiveReports'),
-          color: '#8B5CF6'
+          color: '#3F3F46'
         };
     }
   };
@@ -836,11 +836,11 @@ function ProfileScreen() {
 
   const getEditIcon = (type: string) => {
     switch (type) {
-      case 'name': return <Edit3 size={24} color="#4F46E5" />;
+      case 'name': return <Edit3 size={24} color="#3B3B44" />;
       case 'email': return <Mail size={24} color="#10B981" />;
       case 'introduction': return <FileText size={24} color="#F59E0B" />;
       case 'photo': return <Camera size={24} color="#EF4444" />;
-      default: return <Edit3 size={24} color="#4F46E5" />;
+      default: return <Edit3 size={24} color="#3B3B44" />;
     }
   };
 
@@ -894,7 +894,9 @@ function ProfileScreen() {
            <TouchableOpacity onPress={() => setShowProfileDetailsModal(true)}>
              <DashboardCard style={styles.profileCard}>
                <LinearGradient
-                 colors={isDarkMode ? ['#7C3AED', '#5B21B6'] : ['#8B5CF6', '#7C3AED']}
+                 colors={isDarkMode ? ['#2D2D35', '#1E1E24'] : ['#3A3A42', '#28282E']}
+                 start={{ x: 0, y: 0 }}
+                 end={{ x: 1, y: 1 }}
                  style={styles.profileGradient}
                >
                  <View style={styles.profileContent}>
@@ -965,12 +967,12 @@ function ProfileScreen() {
                      >
                        <Edit3 size={16} color="#FFFFFF" />
                      </TouchableOpacity>
-                     <ChevronRight size={20} color="rgba(255, 255, 255, 0.7)" />
-                   </View>
-                 </View>
-               </LinearGradient>
-             </DashboardCard>
-           </TouchableOpacity>
+                    <ChevronRight size={20} color="rgba(255, 255, 255, 0.7)" />
+                  </View>
+                </View>
+              </LinearGradient>
+            </DashboardCard>
+          </TouchableOpacity>
 
           {/* Subscription Card - Limited Time Free */}
           <DashboardCard style={styles.subscriptionCard}>
@@ -998,13 +1000,13 @@ function ProfileScreen() {
               <View style={styles.settingsList}>
                 <View style={styles.settingItem}>
                   <View style={styles.settingLeft}>
-                    <Bell size={20} color="#4F46E5" />
+                    <Bell size={20} color="#3B3B44" />
                     <Text style={[styles.settingText, { color: colors.text }]}>{t('pushNotifications')}</Text>
                   </View>
                   <Switch
                     value={notifications}
                     onValueChange={handleNotificationToggle}
-                    trackColor={{ false: '#E5E7EB', true: '#4F46E5' }}
+                    trackColor={{ false: '#E5E7EB', true: '#3B3B44' }}
                     thumbColor={notifications ? '#FFFFFF' : '#FFFFFF'}
                   />
                 </View>
@@ -1432,7 +1434,7 @@ function ProfileScreen() {
 
                 <View style={styles.profileActions}>
                   <TouchableOpacity
-                    style={[styles.profileActionButton, { backgroundColor: '#4F46E5' }]}
+                    style={[styles.profileActionButton, { backgroundColor: '#3B3B44' }]}
                     onPress={() => {
                       console.log('🔧 Edit Profile button pressed in profile actions');
                       setShowProfileDetailsModal(false);
@@ -1642,7 +1644,7 @@ function ProfileScreen() {
                       <Text style={[styles.planName, { color: colors.text }]}>
                         {t(selectedPlan === 'pro' ? 'proPlan' : 'proMaxPlan')}
                       </Text>
-                      <Text style={[styles.planPrice, { color: selectedPlan === 'pro' ? '#4F46E5' : '#8B5CF6' }]}>
+                      <Text style={[styles.planPrice, { color: selectedPlan === 'pro' ? '#3B3B44' : '#3F3F46' }]}>
                         {t(selectedPlan === 'pro' ? 'proPrice' : 'proMaxPrice')}
                       </Text>
                     </View>
@@ -1676,7 +1678,7 @@ function ProfileScreen() {
                   </View>
                   
                   <TouchableOpacity
-                    style={[styles.selectPlanButton, { backgroundColor: selectedPlan === 'pro' ? '#4F46E5' : '#8B5CF6' }]}
+                    style={[styles.selectPlanButton, { backgroundColor: selectedPlan === 'pro' ? '#3B3B44' : '#3F3F46' }]}
                     onPress={openPaymentSheet}
                     disabled={isProcessingPayment}
                   >
@@ -1721,26 +1723,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
+    letterSpacing: 0.2,
   },
   profileCard: {
-    marginHorizontal: 24,
-    marginBottom: 24,
+    marginHorizontal: 20,
+    marginBottom: 20,
     padding: 0,
     overflow: 'hidden',
+    borderRadius: 24,
   },
   profileGradient: {
-    padding: 20,
+    padding: 24,
   },
   profileContent: {
     flexDirection: 'row',
@@ -1753,20 +1759,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 18,
   },
   profileAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   avatarLoading: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -1813,7 +1819,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: '#4F46E5',
+    borderColor: '#3B3B44',
   },
   editPhotoButton: {
     position: 'absolute',
@@ -1822,7 +1828,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
@@ -1866,20 +1872,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
+    letterSpacing: -0.2,
   },
   profileEmail: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 4,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.75)',
+    marginBottom: 6,
   },
   profileStreak: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   profileRight: {
     alignItems: 'flex-end',
@@ -1891,37 +1898,39 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   introCard: {
-    marginHorizontal: 24,
-    marginBottom: 24,
+    marginHorizontal: 20,
+    marginBottom: 20,
   },
   introContent: {
-    padding: 20,
+    padding: 24,
   },
   introTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     marginBottom: 12,
+    letterSpacing: -0.2,
   },
   introText: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 24,
   },
   subscriptionCard: {
-    marginHorizontal: 24,
-    marginBottom: 24,
+    marginHorizontal: 20,
+    marginBottom: 20,
   },
   subscriptionContent: {
-    padding: 20,
+    padding: 24,
   },
   subscriptionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   subscriptionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   currentPlanBadge: {
     paddingHorizontal: 12,
@@ -2021,13 +2030,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     marginBottom: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   settingsList: {
     padding: 0,
@@ -2036,10 +2047,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 18,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   settingItemLast: {
     borderBottomWidth: 0,
@@ -2050,9 +2061,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 12,
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 14,
   },
   settingRight: {
     flexDirection: 'row',
@@ -2070,29 +2081,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   saveButton: {
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: '#3B3B44',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 14,
   },
   modalContent: {
     flex: 1,
-    padding: 24,
+    padding: 20,
   },
   editOption: {
     flexDirection: 'row',
@@ -2143,14 +2155,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedLanguageText: {
-    color: '#4F46E5',
+    color: '#3B3B44',
     fontWeight: '600',
   },
   checkmark: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     justifyContent: 'center',
     alignItems: 'center',
   },

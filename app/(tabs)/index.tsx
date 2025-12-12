@@ -52,66 +52,41 @@ const difficultyPoints = {
 };
 
 const inspirationalQuotes = [
+  { text: "The real problem is not whether machines think but whether men do.", author: "B.F. Skinner" },
+  { text: "Technology is a useful servant but a dangerous master.", author: "Christian Lous Lange" },
+  { text: "We are stuck with technology when what we really want is just stuff that works.", author: "Douglas Adams" },
+  { text: "The art of being wise is knowing what to overlook.", author: "William James" },
+  { text: "Simplicity is the ultimate sophistication.", author: "Leonardo da Vinci" },
+  { text: "The quieter you become, the more you are able to hear.", author: "Rumi" },
+  { text: "In the depth of winter, I finally learned that there was in me an invincible summer.", author: "Albert Camus" },
+  { text: "The present moment is the only time over which we have dominion.", author: "Thich Nhat Hanh" },
+  { text: "Peace comes from within. Do not seek it without.", author: "Buddha" },
+  { text: "The best way to take care of the future is to take care of the present moment.", author: "Thich Nhat Hanh" },
+  { text: "Mindfulness is about being fully awake in our lives.", author: "Jon Kabat-Zinn" },
+  { text: "The mind is everything. What you think you become.", author: "Buddha" },
+  { text: "Yesterday is history, tomorrow is a mystery, today is a gift.", author: "Eleanor Roosevelt" },
+  { text: "The only way to make sense out of change is to plunge into it, move with it, and join the dance.", author: "Alan Watts" },
+  { text: "Be yourself; everyone else is already taken.", author: "Oscar Wilde" },
+].map((item, index) => ({ ...item, index }));
+
+// Rotating palette for quotes to keep them visually distinct.
+const quotePalettes = [
   {
-    text: "The real problem is not whether machines think but whether men do.",
-    author: "B.F. Skinner"
+    light: { gradient: ['#F5F7FF', '#E6E9F5'], text: '#14151C', author: '#5B5B65', icon: 'rgba(0,0,0,0.16)' },
+    dark:  { gradient: ['#10121B', '#1C1F2B'], text: '#F7F7FB', author: '#B2B2BE', icon: 'rgba(255,255,255,0.33)' },
   },
   {
-    text: "Technology is a useful servant but a dangerous master.",
-    author: "Christian Lous Lange"
+    light: { gradient: ['#FDF4FF', '#F5E8FF'], text: '#2D1B3F', author: '#6B4E7D', icon: 'rgba(45,27,63,0.16)' },
+    dark:  { gradient: ['#1F1728', '#2B2035'], text: '#F7F1FB', author: '#C8B7D8', icon: 'rgba(255,255,255,0.30)' },
   },
   {
-    text: "We are stuck with technology when what we really want is just stuff that works.",
-    author: "Douglas Adams"
+    light: { gradient: ['#ECFDF3', '#DAF4E6'], text: '#123525', author: '#3E6B55', icon: 'rgba(18,53,37,0.14)' },
+    dark:  { gradient: ['#0F1F17', '#193024'], text: '#E9F5EE', author: '#A6C8B6', icon: 'rgba(255,255,255,0.28)' },
   },
   {
-    text: "The art of being wise is knowing what to overlook.",
-    author: "William James"
+    light: { gradient: ['#FFF7ED', '#FFEFD9'], text: '#5C3415', author: '#9A6B36', icon: 'rgba(92,52,21,0.14)' },
+    dark:  { gradient: ['#2A1C10', '#3A2717'], text: '#FFF5E8', author: '#D9C3A4', icon: 'rgba(255,255,255,0.28)' },
   },
-  {
-    text: "Simplicity is the ultimate sophistication.",
-    author: "Leonardo da Vinci"
-  },
-  {
-    text: "The quieter you become, the more you are able to hear.",
-    author: "Rumi"
-  },
-  {
-    text: "In the depth of winter, I finally learned that there was in me an invincible summer.",
-    author: "Albert Camus"
-  },
-  {
-    text: "The present moment is the only time over which we have dominion.",
-    author: "Thich Nhat Hanh"
-  },
-  {
-    text: "Peace comes from within. Do not seek it without.",
-    author: "Buddha"
-  },
-  {
-    text: "The best way to take care of the future is to take care of the present moment.",
-    author: "Thich Nhat Hanh"
-  },
-  {
-    text: "Mindfulness is about being fully awake in our lives.",
-    author: "Jon Kabat-Zinn"
-  },
-  {
-    text: "The mind is everything. What you think you become.",
-    author: "Buddha"
-  },
-  {
-    text: "Yesterday is history, tomorrow is a mystery, today is a gift.",
-    author: "Eleanor Roosevelt"
-  },
-  {
-    text: "The only way to make sense out of change is to plunge into it, move with it, and join the dance.",
-    author: "Alan Watts"
-  },
-  {
-    text: "Be yourself; everyone else is already taken.",
-    author: "Oscar Wilde"
-  }
 ];
 
 const goalCategories = [
@@ -187,7 +162,7 @@ export default function HomeScreen() {
   // Set a random quote when component mounts
   useEffect(() => {
     const randomIndex = Math.floor(Math.random() * inspirationalQuotes.length);
-    setCurrentQuote(inspirationalQuotes[randomIndex]);
+    setCurrentQuote({ ...inspirationalQuotes[randomIndex], index: randomIndex });
   }, []);
 
   // Load unread notification count
@@ -366,19 +341,41 @@ export default function HomeScreen() {
           </View>
 
           {/* Inspirational Quote */}
-          <DashboardCard style={styles.quoteCard}>
-            <LinearGradient
-              colors={isDarkMode ? ['#1E40AF', '#3B82F6'] : ['#2563EB', '#60A5FA']}
-              style={styles.quoteGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.quoteContent}>
-                <Quote size={24} color="rgba(255, 255, 255, 0.7)" style={styles.quoteIcon} />
-                <Text style={styles.quoteText}>&ldquo;{currentQuote.text}&rdquo;</Text>
-                <Text style={styles.quoteAuthor}>— {currentQuote.author}</Text>
-              </View>
-            </LinearGradient>
+          <DashboardCard
+            style={styles.quoteCard}
+            gradientColors={
+              quotePalettes[currentQuote.index % quotePalettes.length][
+                isDarkMode ? 'dark' : 'light'
+              ].gradient as [string, string]
+            }
+          >
+            <View style={styles.quoteContainer}>
+              <Quote
+                size={20}
+                color={
+                  quotePalettes[currentQuote.index % quotePalettes.length][
+                    isDarkMode ? 'dark' : 'light'
+                  ].icon
+                }
+                style={styles.quoteIcon}
+              />
+              <Text
+                style={[
+                  styles.quoteText,
+                  { color: quotePalettes[currentQuote.index % quotePalettes.length][isDarkMode ? 'dark' : 'light'].text },
+                ]}
+              >
+                &ldquo;{currentQuote.text}&rdquo;
+              </Text>
+              <Text
+                style={[
+                  styles.quoteAuthor,
+                  { color: quotePalettes[currentQuote.index % quotePalettes.length][isDarkMode ? 'dark' : 'light'].author },
+                ]}
+              >
+                — {currentQuote.author}
+              </Text>
+            </View>
           </DashboardCard>
 
           {/* Daily Awards */}
@@ -461,11 +458,11 @@ export default function HomeScreen() {
                 ))}
                 
                 <TouchableOpacity
-                  style={[styles.addGoalButton, { backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF', borderColor: isDarkMode ? '#334155' : '#E0E7FF' }]}
+                  style={[styles.addGoalButton, { backgroundColor: isDarkMode ? '#27272A' : '#F4F4F5', borderColor: isDarkMode ? '#3F3F46' : '#E4E4E7' }]}
                   onPress={() => setShowAddGoalModal(true)}
                 >
-                  <Plus size={20} color="#4F46E5" />
-                  <Text style={styles.addGoalText}>{t('addNewGoal')}</Text>
+                  <Plus size={20} color={colors.text} />
+                  <Text style={[styles.addGoalText, { color: colors.text }]}>{t('addNewGoal')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -491,8 +488,8 @@ export default function HomeScreen() {
                 <Text style={[styles.prizeDescription, { color: colors.textSecondary }]}>
                   {t('yourRewardForCompletingAllDailyTasks')}
                 </Text>
-                <View style={[styles.prizeBox, { backgroundColor: isDarkMode ? '#1E293B' : '#F0F9FF', borderColor: isDarkMode ? '#334155' : '#E0F2FE' }]}>
-                  <Text style={[styles.prizeText, { color: isDarkMode ? '#60A5FA' : '#0369A1' }]}>{dailyPrize}</Text>
+                <View style={[styles.prizeBox, { backgroundColor: isDarkMode ? '#27272A' : '#F4F4F5', borderColor: colors.border }]}>
+                  <Text style={[styles.prizeText, { color: colors.text }]}>{dailyPrize}</Text>
                 </View>
                 
                 {/* Progress indicator */}
@@ -759,111 +756,122 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   notificationButton: {
     position: 'relative',
-    padding: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   notificationBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 8,
+    right: 8,
     backgroundColor: '#EF4444',
     borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    minWidth: 18,
+    height: 18,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   notificationBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
   },
   greeting: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
+    letterSpacing: 0.2,
   },
   quoteCard: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
+    marginHorizontal: 20,
+    marginBottom: 20,
     padding: 0,
     overflow: 'hidden',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
   },
-  quoteGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  quoteContent: {
+  quoteContainer: {
+    padding: 26,
     alignItems: 'center',
     position: 'relative',
   },
   quoteIcon: {
     position: 'absolute',
-    top: -8,
-    left: -8,
+    top: -10,
+    left: -6,
   },
   quoteText: {
-    fontSize: 18,
+    fontSize: 16,
     fontStyle: 'italic',
-    color: '#FFFFFF',
     textAlign: 'center',
     lineHeight: 26,
-    marginBottom: 16,
-    paddingHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 10,
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
   quoteAuthor: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 13,
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
   progressSection: {
-    padding: 20,
+    padding: 24,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   awardsCard: {
-    marginHorizontal: 24,
-    marginBottom: 24,
+    marginHorizontal: 20,
+    marginBottom: 20,
   },
   awardsSection: {
-    padding: 20,
+    padding: 24,
   },
   awardsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   awardsTitle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   awardsActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   deleteButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FEE2E2',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -873,76 +881,79 @@ const styles = StyleSheet.create({
   pointsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
   },
   pointsText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#F59E0B',
+    fontWeight: '700',
+    color: '#D97706',
   },
   goalsList: {
-    marginTop: 16,
-    gap: 16,
+    marginTop: 8,
+    gap: 12,
   },
   goalItem: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
   },
   goalContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 14,
   },
   goalInfo: {
     flex: 1,
   },
   goalText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 10,
+    lineHeight: 22,
   },
   goalTextCompleted: {
     textDecorationLine: 'line-through',
+    opacity: 0.6,
   },
   goalMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   difficultyBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   difficultyText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   pointsValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#F59E0B',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#D97706',
   },
   addGoalButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 2,
     borderStyle: 'dashed',
-    gap: 8,
+    gap: 10,
   },
   addGoalText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4F46E5',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#3B3B44',
   },
   goalCheck: {
     width: 20,
@@ -956,96 +967,98 @@ const styles = StyleSheet.create({
     borderColor: '#10B981',
   },
   activitySection: {
-    padding: 20,
+    padding: 24,
   },
   activityList: {
     marginTop: 16,
-    gap: 16,
+    gap: 14,
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 14,
   },
   activityDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 6,
   },
   activityContent: {
     flex: 1,
   },
   activityTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   activityTime: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
   },
   emptyActivityContainer: {
-    marginTop: 16,
-    padding: 20,
+    marginTop: 20,
+    paddingVertical: 32,
     alignItems: 'center',
   },
   emptyActivityText: {
     fontSize: 14,
-    fontStyle: 'italic',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
+    opacity: 0.7,
   },
   prizeCard: {
-    marginHorizontal: 24,
-    marginBottom: 24,
+    marginHorizontal: 20,
+    marginBottom: 20,
   },
   prizeSection: {
-    padding: 20,
+    padding: 24,
   },
   prizeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   prizeTitle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   prizeIcon: {
-    fontSize: 20,
+    fontSize: 22,
   },
   editPrizeButton: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: 'rgba(24, 24, 27, 0.06)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   editPrizeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4F46E5',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#3B3B44',
   },
   prizeContent: {
-    gap: 12,
+    gap: 14,
   },
   prizeDescription: {
     fontSize: 14,
     fontWeight: '500',
+    lineHeight: 20,
   },
   prizeBox: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
   },
   prizeText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
   },
   prizeProgress: {
-    gap: 8,
+    gap: 10,
   },
   prizeProgressInfo: {
     flexDirection: 'row',
@@ -1053,55 +1066,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   prizeProgressText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  prizeEarnedText: {
-    fontSize: 14,
-    color: '#10B981',
+    fontSize: 13,
     fontWeight: '600',
   },
+  prizeEarnedText: {
+    fontSize: 13,
+    color: '#10B981',
+    fontWeight: '700',
+  },
   prizeProgressBar: {
-    height: 6,
-    borderRadius: 3,
+    height: 8,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   prizeProgressFill: {
     height: '100%',
     backgroundColor: '#10B981',
-    borderRadius: 3,
+    borderRadius: 4,
   },
   prizeInput: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 14,
+    padding: 16,
     fontSize: 16,
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
   prizeHint: {
     fontSize: 14,
-    marginBottom: 12,
-    fontStyle: 'italic',
+    marginBottom: 14,
+    lineHeight: 20,
   },
   prizeSuggestions: {
-    marginTop: 24,
+    marginTop: 28,
   },
   suggestionsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 14,
   },
   suggestionsList: {
-    gap: 8,
+    gap: 10,
   },
   suggestionItem: {
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
   },
   suggestionText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '500',
   },
   modalContainer: {
@@ -1111,153 +1124,162 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   saveButton: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: '#3B3B44',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 14,
   },
   modalContent: {
     flex: 1,
-    padding: 16,
+    padding: 20,
     justifyContent: 'center',
   },
   inputSection: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   goalInput: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 14,
+    padding: 16,
     fontSize: 16,
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
   difficultySelector: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   difficultyOption: {
     flex: 1,
     borderWidth: 2,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 14,
+    padding: 16,
     alignItems: 'center',
   },
   difficultyOptionText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     marginBottom: 4,
+    letterSpacing: 0.5,
   },
   difficultyOptionTextActive: {
     color: '#FFFFFF',
   },
   difficultyPoints: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   difficultyPointsActive: {
     color: '#FFFFFF',
   },
   categorySelector: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   categoryOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
   },
   categoryOptionActive: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
   },
   categoryOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
   },
   categoryOptionTextActive: {
     color: '#FFFFFF',
   },
   previewSection: {
-    marginTop: 24,
+    marginTop: 28,
   },
   previewLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   previewGoal: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
-    gap: 12,
+    gap: 14,
   },
   previewInfo: {
     flex: 1,
   },
   previewTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 10,
   },
   previewMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   previewDifficulty: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   previewDifficultyText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   previewPoints: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#F59E0B',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#D97706',
   },
   motivationalSection: {
     alignItems: 'center',
     marginBottom: 32,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   motivationalQuote: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     textAlign: 'center',
     fontStyle: 'italic',
-    marginBottom: 8,
-    lineHeight: 26,
+    marginBottom: 10,
+    lineHeight: 28,
   },
   motivationalAuthor: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
 });

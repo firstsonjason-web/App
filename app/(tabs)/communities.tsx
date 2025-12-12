@@ -63,7 +63,7 @@ const getCategories = (t: any) => [
   { id: 'all', name: t('allPosts'), color: '#6B7280' },
   { id: 'success', name: t('successStories'), color: '#10B981' },
   { id: 'challenge', name: t('challenges'), color: '#F59E0B' },
-  { id: 'tip', name: t('tipsAndTricks'), color: '#4F46E5' },
+  { id: 'tip', name: t('tipsAndTricks'), color: '#3B3B44' },
   { id: 'motivation', name: t('motivation'), color: '#EF4444' },
 ];
 
@@ -1296,7 +1296,7 @@ export default function CommunitiesScreen() {
         {/* Community Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Users size={20} color="#4F46E5" />
+            <Users size={20} color="#3B3B44" />
             <Text style={styles.statValue}>
               {statsLoading ? '...' : communityStats.members > 0 ? communityStats.members.toString() : '0'}
             </Text>
@@ -1647,7 +1647,7 @@ export default function CommunitiesScreen() {
                 accessibilityHint={t('postYourComment')}
                 accessibilityRole="button"
               >
-                <Send size={20} color="#4F46E5" />
+                <Send size={20} color="#3B3B44" />
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -1688,11 +1688,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
-    shadowColor: '#4F46E5',
+    shadowColor: '#3B3B44',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -1805,7 +1805,7 @@ const styles = StyleSheet.create({
   },
   authorLevel: {
     fontSize: 12,
-    color: '#4F46E5',
+    color: '#3B3B44',
     fontWeight: '600',
   },
   authorStreak: {
@@ -1932,7 +1932,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   postButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -2188,7 +2188,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#3B3B44',
   },
   newPostButtonDisabled: {
     backgroundColor: '#9CA3AF',
