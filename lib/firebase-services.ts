@@ -820,6 +820,70 @@ export class DatabaseService {
     }
   }
 
+  // Competition Stats Services
+  static async getCompetitionStats(): Promise<{
+    activeUsers: number;
+    countries: number;
+    goalSuccessRate: number;
+  }> {
+    try {
+      // Get all users
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const now = Timestamp.now();
+      const thirtyDaysAgo = Timestamp.fromMillis(now.toMillis() - 30 * 24 * 60 * 60 * 1000);
+
+      // Count active users (updated in last 30 days)
+      let activeUsersCount = 0;
+      const countriesSet = new Set<string>();
+
+      usersSnapshot.docs.forEach((doc) => {
+        const userData = doc.data() as UserProfile;
+        
+        // Check if user was active in last 30 days
+        if (userData.updatedAt && userData.updatedAt.toMillis() >= thirtyDaysAgo.toMillis()) {
+          activeUsersCount++;
+        }
+
+        // Collect unique countries
+        if (userData.country) {
+          countriesSet.add(userData.country);
+        }
+      });
+
+      // Get all goals to calculate success rate
+      const goalsSnapshot = await getDocs(collection(db, 'goals'));
+      let totalGoals = 0;
+      let completedGoals = 0;
+
+      goalsSnapshot.docs.forEach((doc) => {
+        const goalData = doc.data() as Goal;
+        totalGoals++;
+        if (goalData.completed) {
+          completedGoals++;
+        }
+      });
+
+      // Calculate goal success rate as percentage
+      const goalSuccessRate = totalGoals > 0 
+        ? Math.round((completedGoals / totalGoals) * 100) 
+        : 0;
+
+      return {
+        activeUsers: activeUsersCount,
+        countries: countriesSet.size,
+        goalSuccessRate
+      };
+    } catch (error) {
+      console.error('Error fetching competition stats:', error);
+      // Return default values on error
+      return {
+        activeUsers: 0,
+        countries: 0,
+        goalSuccessRate: 0
+      };
+    }
+  }
+
   static async addReply(postId: string, replyData: Omit<Reply, 'id' | 'timestamp'>): Promise<string> {
     const postRef = doc(db, 'posts', postId);
     const postDoc = await getDoc(postRef);

@@ -146,6 +146,15 @@ const getCategories = (t: any) => [
   { id: 'country', name: t('country'), icon: Target },
 ];
 
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`;
+  } else if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`;
+  }
+  return num.toString();
+};
+
 export default function RankingsScreen() {
   const { isDarkMode } = useDarkMode();
   const { user } = useAuth();
@@ -156,6 +165,12 @@ export default function RankingsScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState('weekly');
   const [selectedCategory, setSelectedCategory] = useState('global');
+  const [competitionStats, setCompetitionStats] = useState({
+    activeUsers: 0,
+    countries: 0,
+    goalSuccessRate: 0
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const timeframes = getTimeframes(t);
   const categories = getCategories(t);
@@ -164,6 +179,23 @@ export default function RankingsScreen() {
   useEffect(() => {
     loadLeaderboard();
   }, [selectedTimeframe, selectedCategory]);
+
+  // Load competition stats
+  useEffect(() => {
+    loadCompetitionStats();
+  }, []);
+
+  const loadCompetitionStats = async () => {
+    try {
+      setStatsLoading(true);
+      const stats = await DatabaseService.getCompetitionStats();
+      setCompetitionStats(stats);
+    } catch (error) {
+      console.error('Error loading competition stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const loadLeaderboard = async () => {
     try {
@@ -515,17 +547,23 @@ export default function RankingsScreen() {
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
                 <Users size={24} color="#3B3B44" />
-                <Text style={styles.statValue}>2.4M</Text>
+                <Text style={styles.statValue}>
+                  {statsLoading ? '...' : formatNumber(competitionStats.activeUsers)}
+                </Text>
                 <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('activeUsers')}</Text>
               </View>
               <View style={styles.statCard}>
                 <Trophy size={24} color="#F59E0B" />
-                <Text style={styles.statValue}>156</Text>
+                <Text style={styles.statValue}>
+                  {statsLoading ? '...' : competitionStats.countries.toString()}
+                </Text>
                 <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('countries')}</Text>
               </View>
               <View style={styles.statCard}>
                 <Target size={24} color="#10B981" />
-                <Text style={styles.statValue}>89%</Text>
+                <Text style={styles.statValue}>
+                  {statsLoading ? '...' : `${competitionStats.goalSuccessRate}%`}
+                </Text>
                 <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('goalSuccess')}</Text>
               </View>
             </View>
