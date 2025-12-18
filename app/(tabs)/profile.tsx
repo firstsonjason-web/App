@@ -30,6 +30,8 @@ import * as FileSystem from 'expo-file-system';
 import { useLanguage } from '@/hooks/LanguageContext';
 import { uploadProfileImage, StorageUploadError } from '@/lib/storage-service';
 import * as Sharing from 'expo-sharing';
+import { auth } from '@/lib/firebase';
+import { EmailAuthProvider, reauthenticateWithCredential, deleteUser as firebaseDeleteUser } from 'firebase/auth';
 import { useStripe, StripeProvider } from '../../lib/stripe-service';
 
 function ProfileScreen() {
@@ -66,6 +68,64 @@ function ProfileScreen() {
   const [selectedPlan, setSelectedPlan] = useState<'pro' | 'promax' | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
+
+  // Delete account flow
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const getPrimaryProvider = () => user?.providerData?.[0]?.providerId;
+
+  const handleInitiateDelete = () => {
+    Alert.alert(
+      t('deleteAccountConfirmTitle'),
+      t('deleteAccountConfirmText'),
+      [
+        { text: t('cancelOption'), style: 'cancel' },
+        { text: t('delete'), style: 'destructive', onPress: () => setShowDeleteConfirmModal(true) },
+      ]
+    );
+  };
+
+  const handleFinalDelete = async () => {
+    if (!user) return;
+    if (confirmText.trim().toUpperCase() !== 'DELETE') {
+      Alert.alert(t('error'), t('deleteAccountTypeToConfirm'));
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      const providerId = getPrimaryProvider();
+      if (providerId === 'password') {
+        if (!deletePassword) {
+          Alert.alert(t('error'), t('enterPassword'));
+          setIsDeletingAccount(false);
+          return;
+        }
+        const credential = EmailAuthProvider.credential(user.email || '', deletePassword);
+        await reauthenticateWithCredential(user, credential);
+      }
+      await firebaseDeleteUser(user);
+      Alert.alert(t('deleteAccountDeletedTitle'), t('deleteAccountDeletedText'));
+      router.replace('/');
+    } catch (err) {
+      console.error('Delete account failed:', err);
+      const e = err as any;
+      if (e?.code === 'auth/requires-recent-login') {
+        Alert.alert(t('error'), t('deleteAccountReauthRequired'));
+      } else if (e?.code === 'auth/wrong-password') {
+        Alert.alert(t('error'), t('wrongPassword'));
+      } else {
+        Alert.alert(t('error'), t('deleteAccountFailed', { message: e?.message || '' }));
+      }
+    } finally {
+      setIsDeletingAccount(false);
+      setShowDeleteConfirmModal(false);
+      setConfirmText('');
+      setDeletePassword('');
+    }
+  };
 
   const [localUserProfile, setLocalUserProfile] = useState<any>({
     name: 'Alex Johnson',
@@ -1120,6 +1180,37 @@ function ProfileScreen() {
                   <View style={styles.settingLeft}>
                     <HelpCircle size={20} color="#6B7280" />
                     <Text style={[styles.settingText, { color: colors.text }]}>{t('helpAndSupport')}</Text>
+                  </View>
+                  <ChevronRight size={20} color={colors.textTertiary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.settingItem}
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      window.open('https://stayhealthiness.com/privacy-policy', '_blank');
+                    } else {
+                      Alert.alert(
+                        t('privacyPolicy'),
+                        t('viewPrivacyPolicyMessage'),
+                        [
+                          {
+                            text: t('viewOnWebsite'),
+                            onPress: () => {
+                              // For mobile, you would typically use Linking.openURL
+                              const { Linking } = require('react-native');
+                              Linking.openURL('https://stayhealthiness.com/privacy-policy');
+                            }
+                          },
+                          { text: t('cancel'), style: 'cancel' }
+                        ]
+                      );
+                    }
+                  }}
+                >
+                  <View style={styles.settingLeft}>
+                    <Shield size={20} color="#6366F1" />
+                    <Text style={[styles.settingText, { color: colors.text }]}>{t('privacyPolicy')}</Text>
                   </View>
                   <ChevronRight size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
@@ -2265,5 +2356,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  // Delete account styles
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  deleteButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
