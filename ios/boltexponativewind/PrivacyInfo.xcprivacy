@@ -42,86 +42,80 @@
 	</array>
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- Contact Info: Email Address -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
 		</dict>
-		<!-- User Content: Photos/Videos (profile pictures) -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
 		</dict>
-		<!-- Usage Data: Product Interaction -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
 		</dict>
-		<!-- Identifiers: User ID -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeUserID</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
 		</dict>
-		<!-- Usage Data: Screen Time & Device Usage -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherUsageData</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
 		</dict>
-		<!-- Name -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeName</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
 		</dict>
 	</array>
 	<key>NSPrivacyTracking</key>

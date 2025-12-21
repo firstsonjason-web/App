@@ -1216,6 +1216,17 @@ function ProfileScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  style={styles.settingItem}
+                  onPress={handleInitiateDelete}
+                >
+                  <View style={styles.settingLeft}>
+                    <Shield size={20} color="#EF4444" />
+                    <Text style={[styles.settingText, { color: '#EF4444' }]}>{t('deleteAccount')}</Text>
+                  </View>
+                  <ChevronRight size={20} color={colors.textTertiary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   style={[styles.settingItem, styles.settingItemLast]}
                   onPress={handleLogout}
                 >
@@ -1790,6 +1801,69 @@ function ProfileScreen() {
             </View>
           </SafeAreaView>
         </Modal>
+
+        {/* Delete Account Confirmation Modal */}
+        <Modal
+          visible={showDeleteConfirmModal}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setShowDeleteConfirmModal(false)}
+        >
+          <View style={styles.deleteModalOverlay}>
+            <View style={[styles.deleteModalContent, { backgroundColor: colors.cardBackground }]}>
+              <Text style={[styles.deleteModalTitle, { color: colors.text }]}>{t('deleteAccountWarningTitle')}</Text>
+              <Text style={[styles.deleteModalText, { color: colors.textSecondary }]}>
+                {t('deleteAccountWarningText')}
+              </Text>
+              
+              {getPrimaryProvider() === 'password' && (
+                <TextInput
+                  style={[styles.deleteInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                  placeholder={t('enterPassword')}
+                  placeholderTextColor={colors.textTertiary}
+                  secureTextEntry
+                  value={deletePassword}
+                  onChangeText={setDeletePassword}
+                />
+              )}
+              
+              <TextInput
+                style={[styles.deleteInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('deleteAccountTypeToConfirmPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={confirmText}
+                onChangeText={setConfirmText}
+                autoCapitalize="characters"
+              />
+              
+              <View style={styles.deleteModalActions}>
+                <TouchableOpacity
+                  style={[styles.cancelButton, { borderColor: colors.border }]}
+                  onPress={() => {
+                    setShowDeleteConfirmModal(false);
+                    setConfirmText('');
+                    setDeletePassword('');
+                  }}
+                  disabled={isDeletingAccount}
+                >
+                  <Text style={[styles.cancelButtonText, { color: colors.text }]}>{t('cancelOption')}</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.deleteButton, (confirmText.trim().toUpperCase() !== 'DELETE' || isDeletingAccount) && { opacity: 0.5 }]}
+                  onPress={handleFinalDelete}
+                  disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeletingAccount}
+                >
+                  {isDeletingAccount ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.deleteButtonText}>{t('delete')}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -2358,25 +2432,67 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   // Delete account styles
-  cancelButton: {
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  deleteModalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 24,
+    padding: 24,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  deleteModalText: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  deleteInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
-    color: '#374151',
     fontWeight: '600',
   },
   deleteButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    flex: 1,
+    paddingVertical: 14,
     borderRadius: 12,
     backgroundColor: '#EF4444',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteButtonText: {
     color: '#FFFFFF',
