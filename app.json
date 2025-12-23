@@ -4,16 +4,17 @@
     "slug": "pabo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/AppIcons/appstore.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/AppIcons/appstore.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "newArchEnabled": true,
     "ios": {
+      "icon": "./assets/images/AppIcons/appstore.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.homingchan.app",
       "buildNumber": "1",

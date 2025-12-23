@@ -83,7 +83,10 @@ class ScreenTimeUsage: NSObject {
 
     @objc func getTodayActiveSeconds(_ resolve: RCTPromiseResolveBlock,
                                      rejecter reject: RCTPromiseRejectBlock) {
-        let defaults = UserDefaults(suiteName: Shared.appGroupId)!
-        resolve(defaults.integer(forKey: todayKey()))
+        if let defaults = UserDefaults(suiteName: Shared.appGroupId) {
+            resolve(defaults.integer(forKey: todayKey()))
+        } else {
+            resolve(0)
+        }
     }
 }
