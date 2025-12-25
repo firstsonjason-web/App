@@ -101,27 +101,27 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">8. International Data Transfers</h2>
+            <h2 className="text-2xl font-bold text-text-primary mb-4">8. International Data Transfers</h2>
             <p>Your information may be transferred to and processed in countries other than your country of residence, with adequate protections in place.</p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">9. California Privacy Rights (CCPA)</h2>
+            <h2 className="text-2xl font-bold text-text-primary mb-4">9. California Privacy Rights (CCPA)</h2>
             <p>California residents have the right to know, delete, and opt-out of the sale of their personal information. We do not sell personal information.</p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">10. European Privacy Rights (GDPR)</h2>
+            <h2 className="text-2xl font-bold text-text-primary mb-4">10. European Privacy Rights (GDPR)</h2>
             <p>EEA users have rights to access, rectification, erasure, and more under GDPR. Contact us to exercise these rights.</p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">11. Cookies and Tracking</h2>
+            <h2 className="text-2xl font-bold text-text-primary mb-4">11. Cookies and Tracking</h2>
             <p>We use essential cookies for functionality and Firebase Analytics for anonymized usage tracking.</p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-primary mb-4">15. Contact Us</h2>
+            <h2 className="text-2xl font-bold text-text-primary mb-4">15. Contact Us</h2>
             <p>
               <strong>Email</strong>: support@stayhealthiness.com<br />
               <strong>Website</strong>: https://stayhealthiness.com/privacy-policy

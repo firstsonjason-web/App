@@ -1,22 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  trailingSlash: true,
   async rewrites() {
     return [
       {
         source: '/privacy-policy.html',
-        destination: '/privacy-policy',
+        destination: '/privacy-policy/',
       },
       {
         source: '/features.html',
-        destination: '/features',
+        destination: '/features/',
       },
       {
         source: '/about.html',
-        destination: '/about',
+        destination: '/about/',
       },
       {
         source: '/support.html',
-        destination: '/support',
+        destination: '/support/',
       },
       {
         source: '/index.html',
@@ -26,4 +27,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

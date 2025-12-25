@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Target, BarChart3, Zap, Users, LineChart, Sparkles, CheckCircle2 } from 'lucide-react';
 

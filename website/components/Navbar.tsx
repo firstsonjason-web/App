@@ -78,7 +78,7 @@ const Navbar = () => {
           <div className="md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-600 hover:text-primary p-2"
+              className="text-text-secondary hover:text-accent p-2"
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -97,7 +97,7 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
                 className={cn(
                   "block px-3 py-3 text-base font-medium rounded-md",
-                  pathname === link.href ? "bg-gray-50 text-primary" : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                  pathname === link.href ? "bg-background text-text-primary" : "text-text-secondary hover:bg-background hover:text-accent"
                 )}
               >
                 {link.name}
