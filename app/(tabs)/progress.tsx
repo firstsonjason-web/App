@@ -19,6 +19,7 @@ import {
   Clock,
   Smartphone,
   Brain,
+  RefreshCw,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DashboardCard } from '@/components/DashboardCard';
@@ -29,6 +30,8 @@ import { useDailyDeviceUsage } from '@/hooks/useDailyDeviceUsage';
 import { getColors } from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '@/hooks/LanguageContext';
+import { DatabaseService, ScreenTimeData } from '@/lib/firebase-services';
+import { getDeviceInfo, DeviceInfo } from '@/lib/device-info';
 
 const { width } = Dimensions.get('window');
 
@@ -38,23 +41,46 @@ interface WeeklyDataPoint {
   focusTime: number;
 }
 
+interface DailyDataPoint {
+  date: string; // YYYY-MM-DD format
+  screenTime: number; // in hours
+  focusTime: number; // in hours
+}
+
 export default function ProgressScreen() {
   const { isDarkMode } = useDarkMode();
   const { user } = useAuth();
   const { userProfile, goals, activities, getTotalPoints } = useFirebaseData();
-  const { onSeconds, offSeconds, refresh, requestPermissions, permissionsRequested, moduleAvailable } = useDailyDeviceUsage();
+  const { onSeconds, offSeconds, refresh, requestPermissions, permissionsRequested, isAuthorized, moduleAvailable, debugInfo } = useDailyDeviceUsage();
   const colors = getColors(isDarkMode);
   const { t } = useLanguage();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [showAchievements, setShowAchievements] = useState(true);
   const [weeklyData, setWeeklyData] = useState<WeeklyDataPoint[]>([]);
+  const [periodData, setPeriodData] = useState<WeeklyDataPoint[]>([]);
+  const [dailyHistory, setDailyHistory] = useState<DailyDataPoint[]>([]);
   const [averageDailyScreenTime, setAverageDailyScreenTime] = useState(0);
   const [showActivitiesList, setShowActivitiesList] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
-    loadAchievementSettings();
-    loadWeeklyData();
-  }, [user]);
+    const initializeDevice = async () => {
+      const info = await getDeviceInfo();
+      setDeviceInfo(info);
+    };
+    initializeDevice();
+  }, []);
+
+  useEffect(() => {
+    if (user && deviceInfo) {
+      loadAchievementSettings();
+      loadDailyHistory();
+      loadWeeklyData();
+      loadFirebaseData();
+    }
+  }, [user, deviceInfo]);
 
   useEffect(() => {
     // Update average when device usage changes
@@ -62,15 +88,58 @@ export default function ProgressScreen() {
       const screenTimeHours = onSeconds / 3600;
       setAverageDailyScreenTime(Number(screenTimeHours.toFixed(1)));
       
-      // Update today's data in weekly array
-      updateTodayInWeeklyData(screenTimeHours, offSeconds / 3600);
+      // Update today's data
+      updateTodayData(screenTimeHours, offSeconds / 3600);
     }
   }, [onSeconds, offSeconds]);
 
-  const updateTodayInWeeklyData = async (screenTimeHours: number, focusTimeHours: number) => {
-    const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const dayIndex = today === 0 ? 6 : today - 1; // Convert to Mon=0, Sun=6
+  // Update period data when selectedPeriod or dailyHistory changes
+  useEffect(() => {
+    if (dailyHistory.length > 0 || weeklyData.length > 0) {
+      generatePeriodData();
+    }
+  }, [selectedPeriod, dailyHistory, weeklyData]);
+
+  const updateTodayData = async (screenTimeHours: number, focusTimeHours: number) => {
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
     
+    // Update daily history
+    setDailyHistory((prevHistory) => {
+      const newHistory = [...prevHistory];
+      const existingIndex = newHistory.findIndex(d => d.date === todayString);
+      
+      if (existingIndex >= 0) {
+        newHistory[existingIndex] = {
+          date: todayString,
+          screenTime: Number(screenTimeHours.toFixed(1)),
+          focusTime: Number(focusTimeHours.toFixed(1)),
+        };
+      } else {
+        newHistory.push({
+          date: todayString,
+          screenTime: Number(screenTimeHours.toFixed(1)),
+          focusTime: Number(focusTimeHours.toFixed(1)),
+        });
+      }
+      
+      // Keep only last 365 days
+      const sortedHistory = newHistory.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      ).slice(0, 365);
+      
+      saveDailyHistory(sortedHistory);
+      
+      // Sync to Firebase
+      if (user && deviceInfo) {
+        syncToFirebase(todayString, screenTimeHours, focusTimeHours);
+      }
+      
+      return sortedHistory;
+    });
+
+    // Also update weekly data for backward compatibility
+    const dayIndex = today.getDay() === 0 ? 6 : today.getDay() - 1; // Convert to Mon=0, Sun=6
     setWeeklyData((prevData) => {
       const newData = [...prevData];
       newData[dayIndex] = {
@@ -81,6 +150,193 @@ export default function ProgressScreen() {
       saveWeeklyData(newData);
       return newData;
     });
+  };
+
+  const syncToFirebase = async (date: string, screenTime: number, focusTime: number) => {
+    if (!user || !deviceInfo || isSyncing) return;
+    
+    try {
+      setIsSyncing(true);
+      await DatabaseService.saveScreenTimeData(
+        user.uid,
+        deviceInfo.deviceId,
+        deviceInfo.deviceName,
+        deviceInfo.platform,
+        date,
+        screenTime,
+        focusTime
+      );
+    } catch (error) {
+      console.error('Error syncing to Firebase:', error);
+      // Don't throw - allow local storage to continue working
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const loadFirebaseData = async () => {
+    if (!user || !deviceInfo) return;
+
+    try {
+      // Load last 365 days of data from Firebase
+      const now = new Date();
+      const oneYearAgo = new Date(now);
+      oneYearAgo.setDate(oneYearAgo.getDate() - 365);
+      const startDate = oneYearAgo.toISOString().split('T')[0];
+      const endDate = now.toISOString().split('T')[0];
+
+      const firebaseData = await DatabaseService.getScreenTimeData(
+        user.uid,
+        startDate,
+        endDate
+      );
+
+      // Merge Firebase data with local data
+      setDailyHistory((prevHistory) => {
+        const mergedMap = new Map<string, DailyDataPoint>();
+        
+        // Add local data first
+        prevHistory.forEach(item => {
+          mergedMap.set(item.date, item);
+        });
+
+        // Merge Firebase data (prefer more recent updatedAt)
+        firebaseData.forEach((item: ScreenTimeData) => {
+          const existing = mergedMap.get(item.date);
+          if (!existing || (item.updatedAt && existing)) {
+            mergedMap.set(item.date, {
+              date: item.date,
+              screenTime: item.screenTime,
+              focusTime: item.focusTime,
+            });
+          }
+        });
+
+        const merged = Array.from(mergedMap.values())
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 365);
+
+        saveDailyHistory(merged);
+        return merged;
+      });
+    } catch (error) {
+      console.error('Error loading Firebase data:', error);
+      // Continue with local data only
+    }
+  };
+
+  const loadDailyHistory = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('daily_screen_time_history');
+      if (saved) {
+        const history = JSON.parse(saved);
+        setDailyHistory(history);
+      } else {
+        setDailyHistory([]);
+      }
+    } catch (error) {
+      console.log('Error loading daily history:', error);
+      setDailyHistory([]);
+    }
+  };
+
+  const saveDailyHistory = async (data: DailyDataPoint[]) => {
+    try {
+      await AsyncStorage.setItem('daily_screen_time_history', JSON.stringify(data));
+    } catch (error) {
+      console.log('Error saving daily history:', error);
+    }
+  };
+
+  const generatePeriodData = () => {
+    const now = new Date();
+    let data: WeeklyDataPoint[] = [];
+
+    // If no daily history, use weekly data as fallback for week view
+    if (dailyHistory.length === 0 && selectedPeriod === 'week' && weeklyData.length > 0) {
+      setPeriodData(weeklyData);
+      return;
+    }
+
+    if (selectedPeriod === 'week') {
+      // Show last 7 days
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      data = days.map((day, index) => {
+        const date = new Date(now);
+        date.setDate(now.getDate() - (6 - index)); // Get last 7 days
+        const dateString = date.toISOString().split('T')[0];
+        const dayData = dailyHistory.find(d => d.date === dateString);
+        
+        return {
+          day: day.substring(0, 3), // Mon, Tue, etc.
+          screenTime: dayData?.screenTime || 0,
+          focusTime: dayData?.focusTime || 0,
+        };
+      });
+    } else if (selectedPeriod === 'month') {
+      // Show last 4 weeks
+      const weeks = [];
+      for (let i = 3; i >= 0; i--) {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - (i * 7) - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        
+        // Aggregate data for this week
+        let weekScreenTime = 0;
+        let weekFocusTime = 0;
+        for (let d = 0; d < 7; d++) {
+          const date = new Date(weekStart);
+          date.setDate(weekStart.getDate() + d);
+          const dateString = date.toISOString().split('T')[0];
+          const dayData = dailyHistory.find(h => h.date === dateString);
+          if (dayData) {
+            weekScreenTime += dayData.screenTime;
+            weekFocusTime += dayData.focusTime;
+          }
+        }
+        
+        weeks.push({
+          day: `W${4 - i}`, // W1, W2, W3, W4
+          screenTime: Number(weekScreenTime.toFixed(1)),
+          focusTime: Number(weekFocusTime.toFixed(1)),
+        });
+      }
+      data = weeks;
+    } else if (selectedPeriod === 'year') {
+      // Show last 12 months
+      const months = [];
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      for (let i = 11; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+        const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+        
+        // Aggregate data for this month
+        let monthScreenTime = 0;
+        let monthFocusTime = 0;
+        for (let d = 0; d <= monthEnd.getDate(); d++) {
+          const date = new Date(monthStart);
+          date.setDate(monthStart.getDate() + d);
+          const dateString = date.toISOString().split('T')[0];
+          const dayData = dailyHistory.find(h => h.date === dateString);
+          if (dayData) {
+            monthScreenTime += dayData.screenTime;
+            monthFocusTime += dayData.focusTime;
+          }
+        }
+        
+        months.push({
+          day: monthNames[monthDate.getMonth()],
+          screenTime: Number(monthScreenTime.toFixed(1)),
+          focusTime: Number(monthFocusTime.toFixed(1)),
+        });
+      }
+      data = months;
+    }
+
+    setPeriodData(data);
   };
 
   const loadWeeklyData = async () => {
@@ -147,8 +403,10 @@ export default function ProgressScreen() {
   const todayScreenTimeHours = onSeconds / 3600;
   const todayFocusTimeHours = offSeconds / 3600;
 
-  const maxScreenTime = Math.max(...weeklyData.map((d: WeeklyDataPoint) => d.screenTime), todayScreenTimeHours);
-  const maxFocusTime = Math.max(...weeklyData.map((d: WeeklyDataPoint) => d.focusTime), todayFocusTimeHours);
+  // Use periodData for calculations instead of weeklyData
+  const displayData = periodData.length > 0 ? periodData : weeklyData;
+  const maxScreenTime = Math.max(...displayData.map((d: WeeklyDataPoint) => d.screenTime), todayScreenTimeHours, 1);
+  const maxFocusTime = Math.max(...displayData.map((d: WeeklyDataPoint) => d.focusTime), todayFocusTimeHours, 1);
 
   // Calculate real metrics from Firebase data and device usage
   const totalPoints = getTotalPoints();
@@ -156,10 +414,10 @@ export default function ProgressScreen() {
   const totalActivities = activities.length;
   const focusSessions = activities.filter(a => a.title.toLowerCase().includes('focus') || a.title.toLowerCase().includes('meditation')).length;
   
-  // Calculate achievement metrics from real data
-  const totalScreenTimeHours = weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.screenTime, 0);
-  const totalFocusHours = weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.focusTime, 0);
-  const daysActive = weeklyData.filter((day: WeeklyDataPoint) => day.screenTime > 0 || day.focusTime > 0).length;
+  // Calculate achievement metrics from real data (use periodData for current view)
+  const totalScreenTimeHours = displayData.reduce((total: number, day: WeeklyDataPoint) => total + day.screenTime, 0);
+  const totalFocusHours = displayData.reduce((total: number, day: WeeklyDataPoint) => total + day.focusTime, 0);
+  const daysActive = displayData.filter((day: WeeklyDataPoint) => day.screenTime > 0 || day.focusTime > 0).length;
   const mindfulnessActivities = activities.filter(a => 
     a.title.toLowerCase().includes('mindful') || 
     a.title.toLowerCase().includes('meditation') ||
@@ -281,13 +539,17 @@ export default function ProgressScreen() {
             <DashboardCard style={{ backgroundColor: colors.cardBackground, padding: 20 }}>
               <View style={styles.focusTimeHeader}>
                 <View style={styles.focusTimeTitle}>
-                  <Clock size={20} color={colors.primary} />
-                  <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0, marginLeft: 8 }]}>
+                  <Clock size={22} color={colors.primary} />
+                  <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0, marginLeft: 10 }]}>
                     Today's Activity
                   </Text>
                 </View>
-                <TouchableOpacity onPress={refresh}>
-                  <Text style={{ color: colors.primary, fontSize: 12 }}>Refresh</Text>
+                <TouchableOpacity 
+                  onPress={refresh}
+                  style={[styles.refreshButton, { backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)' }]}
+                >
+                  <RefreshCw size={14} color={colors.primary} />
+                  <Text style={[styles.refreshText, { color: colors.primary }]}>Refresh</Text>
                 </TouchableOpacity>
               </View>
               
@@ -297,8 +559,8 @@ export default function ProgressScreen() {
                     <Smartphone size={20} color={isDarkMode ? '#FCA5A5' : '#DC2626'} />
                   </View>
                   <View style={styles.focusTimeInfo}>
-                    <Text style={[styles.focusTimeLabel, { color: colors.textSecondary }]}>Screen Time</Text>
-                    <Text style={[styles.focusTimeValue, { color: colors.text }]}>{formatTime(onSeconds)}</Text>
+                    <Text style={[styles.focusTimeLabel, { color: colors.textSecondary }]} numberOfLines={1}>Screen Time</Text>
+                    <Text style={[styles.focusTimeValue, { color: colors.text }]} numberOfLines={1}>{formatTime(onSeconds)}</Text>
                   </View>
                 </View>
 
@@ -309,14 +571,14 @@ export default function ProgressScreen() {
                     <Brain size={20} color={isDarkMode ? '#6EE7B7' : '#059669'} />
                   </View>
                   <View style={styles.focusTimeInfo}>
-                    <Text style={[styles.focusTimeLabel, { color: colors.textSecondary }]}>Off-Screen Time</Text>
-                    <Text style={[styles.focusTimeValue, { color: colors.text }]}>{formatTime(offSeconds)}</Text>
+                    <Text style={[styles.focusTimeLabel, { color: colors.textSecondary }]} numberOfLines={1}>Off-Screen</Text>
+                    <Text style={[styles.focusTimeValue, { color: colors.text }]} numberOfLines={1}>{formatTime(offSeconds)}</Text>
                   </View>
                 </View>
               </View>
               
-              {/* Permission Request Button - Show if module available and permissions not requested */}
-              {!permissionsRequested && moduleAvailable && (
+              {/* Permission Request Button - Show if module available and not yet authorized */}
+              {!isAuthorized && !permissionsRequested && moduleAvailable && (
                 <TouchableOpacity 
                   style={[styles.permissionButton, { backgroundColor: colors.primary }]}
                   onPress={handleRequestPermissions}
@@ -326,7 +588,7 @@ export default function ProgressScreen() {
               )}
               
               {/* Show instructions if permissions requested but no data yet */}
-              {permissionsRequested && moduleAvailable && onSeconds === 0 && (
+              {(permissionsRequested || isAuthorized) && moduleAvailable && onSeconds === 0 && (
                 <View style={[styles.instructionContainer, { backgroundColor: isDarkMode ? '#1E293B' : '#F0F9FF' }]}>
                   <Text style={[styles.instructionTitle, { color: colors.text }]}>
                     ⚙️ Setup Required
@@ -347,6 +609,28 @@ export default function ProgressScreen() {
                     {Platform.OS === 'ios' 
                       ? '⚠️ Screen Time tracking requires iOS 16+ and Screen Time permissions.\n\nPlease grant permissions when prompted.' 
                       : '⚠️ Screen Time tracking requires Android 5.1+\n\nPlease grant Usage Access permission when prompted.'}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Debug Info - Tap Screen Time card title 5 times to show */}
+              <TouchableOpacity onPress={() => setShowDebug(!showDebug)}>
+                <Text style={[styles.debugToggle, { color: colors.textSecondary }]}>
+                  {showDebug ? '🔧 Hide Debug' : '🔧 Show Debug'}
+                </Text>
+              </TouchableOpacity>
+              
+              {showDebug && debugInfo && (
+                <View style={[styles.debugContainer, { backgroundColor: isDarkMode ? '#1E293B' : '#F0F9FF' }]}>
+                  <Text style={[styles.debugTitle, { color: colors.text }]}>Debug Info:</Text>
+                  <Text style={[styles.debugText, { color: colors.textSecondary }]}>
+                    authStatus: {debugInfo.authStatus || 'unknown'}{'\n'}
+                    todayKey: {debugInfo.todayKey || 'unknown'}{'\n'}
+                    activeSeconds: {debugInfo.activeSeconds ?? 'null'}{'\n'}
+                    lastActiveTs: {debugInfo.lastActiveTs ? new Date(debugInfo.lastActiveTs * 1000).toLocaleString() : 'never'}{'\n'}
+                    appGroupAvailable: {String(debugInfo.appGroupAvailable)}{'\n'}
+                    monitoringActivities: {JSON.stringify(debugInfo.monitoringActivities || [])}{'\n'}
+                    relevantKeys: {JSON.stringify(debugInfo.relevantKeys || [])}
                   </Text>
                 </View>
               )}
@@ -381,7 +665,11 @@ export default function ProgressScreen() {
           <DashboardCard style={styles.chartCard}>
             <View style={styles.chartHeader}>
               <Text style={[styles.chartTitle, { color: colors.text }]}>{t('screenTimeVsFocusTime')}</Text>
-              <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>{t('thisWeeksOverview')}</Text>
+              <Text style={[styles.chartSubtitle, { color: colors.textSecondary }]}>
+                {selectedPeriod === 'week' ? t('thisWeeksOverview') : 
+                 selectedPeriod === 'month' ? 'Last 4 Weeks' : 
+                 'Last 12 Months'}
+              </Text>
             </View>
 
             <View style={styles.chart}>
@@ -397,7 +685,7 @@ export default function ProgressScreen() {
               </View>
 
               <View style={styles.chartBars}>
-                {weeklyData.map((data: WeeklyDataPoint, index: number) => (
+                {displayData.map((data: WeeklyDataPoint, index: number) => (
                   <View key={index} style={styles.barGroup}>
                     <View style={styles.barContainer}>
                       <View
@@ -553,21 +841,27 @@ export default function ProgressScreen() {
             )}
           </View>
 
-          {/* Weekly Summary */}
+          {/* Period Summary */}
           <DashboardCard style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('weeklySummary')}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {selectedPeriod === 'week' ? t('weeklySummary') : 
+                 selectedPeriod === 'month' ? 'Monthly Summary' : 
+                 'Yearly Summary'}
+              </Text>
               <Calendar size={20} color={colors.textSecondary} />
             </View>
 
             <View style={styles.summaryStats}>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {Math.round(weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.screenTime, 0) * 10) / 10}h
+                  {Math.round(totalScreenTimeHours * 10) / 10}h
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('totalScreenTime')}</Text>
                 <Text style={styles.summaryChange}>
-                  {Math.round(weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.screenTime, 0) * 10) / 10 < 29.6 ? '-4.2h from last week' : '+1.2h from last week'}
+                  {selectedPeriod === 'week' ? 'This week' : 
+                   selectedPeriod === 'month' ? 'Last 4 weeks' : 
+                   'Last 12 months'}
                 </Text>
               </View>
 
@@ -575,11 +869,13 @@ export default function ProgressScreen() {
 
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {Math.round(weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.focusTime, 0) * 10) / 10}h
+                  {Math.round(totalFocusHours * 10) / 10}h
                 </Text>
                 <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('focusTimeTotal')}</Text>
                 <Text style={styles.summaryChangePositive}>
-                  {Math.round(weeklyData.reduce((total: number, day: WeeklyDataPoint) => total + day.focusTime, 0) * 10) / 10 > 17.8 ? '+2.5h from last week' : '+1.1h from last week'}
+                  {selectedPeriod === 'week' ? 'This week' : 
+                   selectedPeriod === 'month' ? 'Last 4 weeks' : 
+                   'Last 12 months'}
                 </Text>
               </View>
             </View>
@@ -878,40 +1174,56 @@ const styles = StyleSheet.create({
   focusTimeTitle: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+  },
+  refreshText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   focusTimeStats: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 4,
   },
   focusTimeStat: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 0, // Allow shrinking
   },
   focusTimeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   focusTimeInfo: {
     flex: 1,
+    minWidth: 0, // Allow shrinking
   },
   focusTimeLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   focusTimeValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
   focusTimeDivider: {
     width: 1,
-    height: 40,
-    marginHorizontal: 16,
+    height: 30,
+    marginHorizontal: 12,
   },
   permissionButton: {
     marginTop: 16,
@@ -1025,5 +1337,26 @@ const styles = StyleSheet.create({
   emptyActivitiesSubtext: {
     fontSize: 13,
     textAlign: 'center',
+  },
+  debugToggle: {
+    fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  debugContainer: {
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  debugTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  debugText: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    lineHeight: 18,
   },
 });

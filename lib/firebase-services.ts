@@ -115,6 +115,19 @@ export interface Comment {
   createdAt: Timestamp;
 }
 
+export interface ScreenTimeData {
+  id: string;
+  userId: string;
+  deviceId: string; // Unique device identifier
+  deviceName: string; // Device name/model
+  platform: 'ios' | 'android' | 'web';
+  date: string; // YYYY-MM-DD format
+  screenTime: number; // in hours
+  focusTime: number; // in hours
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface Friend {
   id: string;
   userId: string;
@@ -1551,6 +1564,117 @@ export class DatabaseService {
     } catch (error) {
       console.error('Error getting unread message count:', error);
       throw error;
+    }
+  }
+
+  // Screen Time Data Services
+  static async saveScreenTimeData(
+    userId: string,
+    deviceId: string,
+    deviceName: string,
+    platform: 'ios' | 'android' | 'web',
+    date: string,
+    screenTime: number,
+    focusTime: number
+  ): Promise<void> {
+    try {
+      const screenTimeRef = doc(db, 'users', userId, 'screenTime', `${date}_${deviceId}`);
+      const now = Timestamp.now();
+      
+      await setDoc(screenTimeRef, {
+        userId,
+        deviceId,
+        deviceName,
+        platform,
+        date,
+        screenTime,
+        focusTime,
+        updatedAt: now,
+        createdAt: (await getDoc(screenTimeRef)).exists() 
+          ? (await getDoc(screenTimeRef)).data()?.createdAt || now 
+          : now,
+      }, { merge: true });
+      
+      console.log(`✅ Screen time data saved for ${date} on device ${deviceName}`);
+    } catch (error) {
+      console.error('Error saving screen time data:', error);
+      throw error;
+    }
+  }
+
+  static async getScreenTimeData(
+    userId: string,
+    startDate?: string,
+    endDate?: string,
+    deviceId?: string
+  ): Promise<ScreenTimeData[]> {
+    try {
+      let q: Query<DocumentData> = query(
+        collection(db, 'users', userId, 'screenTime'),
+        orderBy('date', 'desc')
+      );
+
+      // Apply filters - Firestore requires composite index for multiple where clauses
+      if (deviceId) {
+        q = query(q, where('deviceId', '==', deviceId));
+      }
+      if (startDate) {
+        q = query(q, where('date', '>=', startDate));
+      }
+      if (endDate) {
+        q = query(q, where('date', '<=', endDate));
+      }
+
+      const snapshot = await getDocs(q);
+      const results = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as ScreenTimeData));
+
+      // Filter by date range in memory if needed (to avoid composite index requirement)
+      let filtered = results;
+      if (startDate && !deviceId) {
+        filtered = filtered.filter(d => d.date >= startDate);
+      }
+      if (endDate && !deviceId) {
+        filtered = filtered.filter(d => d.date <= endDate);
+      }
+
+      return filtered;
+    } catch (error) {
+      console.error('Error getting screen time data:', error);
+      throw error;
+    }
+  }
+
+  static async getUserDevices(userId: string): Promise<Array<{ deviceId: string; deviceName: string; platform: string; lastActive: Timestamp }>> {
+    try {
+      const snapshot = await getDocs(
+        query(
+          collection(db, 'users', userId, 'screenTime'),
+          orderBy('updatedAt', 'desc')
+        )
+      );
+
+      const deviceMap = new Map<string, { deviceId: string; deviceName: string; platform: string; lastActive: Timestamp }>();
+      
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const deviceId = data.deviceId;
+        if (!deviceMap.has(deviceId)) {
+          deviceMap.set(deviceId, {
+            deviceId,
+            deviceName: data.deviceName || 'Unknown Device',
+            platform: data.platform || 'unknown',
+            lastActive: data.updatedAt || data.createdAt
+          });
+        }
+      });
+
+      return Array.from(deviceMap.values());
+    } catch (error) {
+      console.error('Error getting user devices:', error);
+      return [];
     }
   }
 

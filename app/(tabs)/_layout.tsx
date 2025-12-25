@@ -3,12 +3,64 @@ import { Chrome as Home, TrendingUp, Users, User, MessageCircle, Trophy } from '
 import { useLanguage } from '@/hooks/LanguageContext';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { getColors } from '@/constants/Colors';
-
+import { Platform, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { useCallback, useMemo } from 'react';
+import { AnimatedTabIcon } from '@/components/AnimatedTabIcon';
 
 export default function TabLayout() {
   const { t } = useLanguage();
   const { isDarkMode } = useDarkMode();
   const colors = getColors(isDarkMode);
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  
+  // Adjust sizes for smaller devices
+  // With 7 tabs, we need ~50-55px per tab for labels, so hide on devices < 400px
+  const isSmallDevice = width < 400;
+  const showLabels = !isSmallDevice;
+  const iconSize = isSmallDevice ? 22 : 22;
+  const fontSize = isSmallDevice ? 9 : 10;
+  const letterSpacing = isSmallDevice ? 0.2 : 0.3;
+  // Reduce height when labels are hidden
+  const tabBarHeight = showLabels ? 65 : 55;
+  const paddingTop = isSmallDevice ? 8 : 8;
+  const paddingBottom = isSmallDevice ? 8 : 8;
+
+  const handleTabPress = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, []);
+
+  const tabBarStyle = useMemo(() => ({
+    backgroundColor: colors.cardBackground,
+    borderTopWidth: 0,
+    paddingTop,
+    paddingBottom: Math.max(insets.bottom, paddingBottom),
+    height: tabBarHeight + Math.max(insets.bottom, paddingBottom),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: isDarkMode ? 0.5 : 0.12,
+    shadowRadius: 20,
+    elevation: 25,
+    position: 'absolute' as const,
+  }), [colors.cardBackground, paddingTop, paddingBottom, insets.bottom, tabBarHeight, isDarkMode]);
+
+  const tabBarLabelStyle = useMemo(() => ({
+    fontSize,
+    fontWeight: '600' as const,
+    marginTop: 2,
+    marginBottom: 0,
+    letterSpacing,
+  }), [fontSize, letterSpacing]);
+
+  const tabBarItemStyle = useMemo(() => ({
+    paddingVertical: isSmallDevice ? 4 : 6,
+    borderRadius: 14,
+    marginHorizontal: isSmallDevice ? 1 : 3,
+  }), [isSmallDevice]);
 
   return (
     <Tabs
@@ -16,33 +68,31 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.textTertiary,
-        tabBarStyle: {
-          backgroundColor: colors.cardBackground,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          paddingTop: 10,
-          paddingBottom: 10,
-          height: 85,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: isDarkMode ? 0.3 : 0.08,
-          shadowRadius: 12,
-          elevation: 10,
+        tabBarStyle,
+        tabBarLabelStyle,
+        tabBarItemStyle,
+        tabBarIconStyle: {
+          marginTop: showLabels ? 2 : 0,
         },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginTop: 4,
-          letterSpacing: 0.2,
-        },
+        tabBarHideOnKeyboard: true,
+        tabBarShowLabel: showLabels,
+      }}
+      screenListeners={{
+        tabPress: handleTabPress,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: t('home'),
-          tabBarIcon: ({ size, color }) => (
-            <Home size={size} color={color} />
+          tabBarIcon: ({ size, color, focused }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Home 
+                size={iconSize} 
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -50,8 +100,14 @@ export default function TabLayout() {
         name="rankings"
         options={{
           title: t('rankings'),
-          tabBarIcon: ({ size, color }) => (
-            <Trophy size={size} color={color} />
+          tabBarIcon: ({ size, color, focused }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Trophy 
+                size={iconSize} 
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -59,8 +115,14 @@ export default function TabLayout() {
         name="activities"
         options={{
           title: t('activities'),
-          tabBarIcon: ({ size, color }) => (
-            <Users size={size} color={color} />
+          tabBarIcon: ({ size, color, focused }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Users 
+                size={iconSize} 
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -68,8 +130,14 @@ export default function TabLayout() {
         name="friends"
         options={{
           title: t('friends'),
-          tabBarIcon: ({ size, color }) => (
-            <MessageCircle size={size} color={color} />
+          tabBarIcon: ({ size, color, focused }) => (
+            <AnimatedTabIcon focused={focused}>
+              <MessageCircle 
+                size={iconSize} 
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -77,8 +145,14 @@ export default function TabLayout() {
         name="progress"
         options={{
           title: t('progress'),
-          tabBarIcon: ({ size, color }) => (
-            <TrendingUp size={size} color={color} />
+          tabBarIcon: ({ size, color, focused }) => (
+            <AnimatedTabIcon focused={focused}>
+              <TrendingUp 
+                size={iconSize} 
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -86,8 +160,14 @@ export default function TabLayout() {
         name="communities"
         options={{
           title: t('communities'),
-          tabBarIcon: ({ size, color }) => (
-            <Users size={size} color={color} />
+          tabBarIcon: ({ size, color, focused }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Users 
+                size={iconSize} 
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -95,8 +175,14 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: t('profile'),
-          tabBarIcon: ({ size, color }) => (
-            <User size={size} color={color} />
+          tabBarIcon: ({ size, color, focused }) => (
+            <AnimatedTabIcon focused={focused}>
+              <User 
+                size={iconSize} 
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
