@@ -5,11 +5,12 @@ import ManagedSettings
 import SwiftUI
 
 @objc(ScreenTimeUsage)
-@MainActor
 class ScreenTimeUsage: NSObject {
     private let authCenter = AuthorizationCenter.shared
     private let activityCenter = DeviceActivityCenter()
-    private var selection = FamilyActivitySelection()
+    
+    // selection must be accessed on the main thread as it's used in UI
+    @MainActor private var selection = FamilyActivitySelection()
     
     @objc
     static func moduleName() -> String! {
@@ -23,7 +24,7 @@ class ScreenTimeUsage: NSObject {
 
     @objc func requestAuthorization(_ resolve: @escaping RCTPromiseResolveBlock,
                                     rejecter reject: @escaping RCTPromiseRejectBlock) {
-        Task { @MainActor in
+        Task {
             do {
                 if #available(iOS 16.0, *) {
                     try await authCenter.requestAuthorization(for: .individual)
@@ -77,7 +78,7 @@ class ScreenTimeUsage: NSObject {
 
     @objc func startDailyMonitor(_ resolve: @escaping RCTPromiseResolveBlock,
                                  rejecter reject: @escaping RCTPromiseRejectBlock) {
-        Task { @MainActor in
+        Task {
             do {
                 var start = DateComponents(); start.hour = 0; start.minute = 0
                 var end   = DateComponents(); end.hour = 23; end.minute = 59
@@ -111,10 +112,8 @@ class ScreenTimeUsage: NSObject {
         let seconds: Int
         if let defaults = UserDefaults(suiteName: Shared.appGroupId) {
             seconds = defaults.integer(forKey: todayKey())
-            print("[ScreenTimeUsage] getTodayActiveSeconds - key: \(todayKey()), value: \(seconds)")
         } else {
             seconds = 0
-            print("[ScreenTimeUsage] getTodayActiveSeconds - UserDefaults not available, returning 0")
         }
         resolve(NSNumber(value: seconds))
     }
@@ -125,7 +124,16 @@ class ScreenTimeUsage: NSObject {
         
         // Check authorization status
         if #available(iOS 16.0, *) {
-            info["authStatus"] = String(describing: authCenter.authorizationStatus)
+            let status = authCenter.authorizationStatus
+            info["authStatus"] = String(describing: status)
+            
+            // Only check activities if authorized to avoid potential crashes/exceptions
+            if status == .approved {
+                let activities = activityCenter.activities
+                info["monitoringActivities"] = activities.map { $0.rawValue }
+            } else {
+                info["monitoringActivities"] = [] as [String]
+            }
         }
         
         // Check App Group
@@ -136,21 +144,18 @@ class ScreenTimeUsage: NSObject {
             info["lastActiveTs"] = defaults.double(forKey: "lastActiveTs")
             info["appGroupAvailable"] = true
             
-            // List all keys in the app group
-            var allKeys: [String] = []
-            for (k, _) in defaults.dictionaryRepresentation() {
+            // List all keys in the app group safely
+            let dict = defaults.dictionaryRepresentation()
+            var relevantKeys: [String] = []
+            for k in dict.keys {
                 if k.starts(with: "activeSeconds_") || k == "lastActiveTs" {
-                    allKeys.append(k)
+                    relevantKeys.append(k)
                 }
             }
-            info["relevantKeys"] = allKeys
+            info["relevantKeys"] = relevantKeys
         } else {
             info["appGroupAvailable"] = false
         }
-        
-        // Check if monitoring is active
-        let activities = activityCenter.activities
-        info["monitoringActivities"] = activities.map { $0.rawValue }
         
         resolve(info)
     }

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 70;
+	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -13,14 +13,14 @@
 		5AE46171AB3E5DFF5A81AD30 /* libPods-boltexponativewind.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1ACD58DFF315A9BAD9F4A531 /* libPods-boltexponativewind.a */; };
 		B2FCA740EE07F6FFD5A59A24 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D938A420551C6DDD2E1FDF84 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		CEC3582C2EB4D68100117A78 /* boltexponativewind/ScreenTimeUsage.m in Sources */ = {isa = PBXBuildFile; fileRef = CEC358292EB4D68100117A78 /* boltexponativewind/ScreenTimeUsage.m */; };
-		CEC3582E2EB4D68100117A78 /* boltexponativewind/SharedKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC3582B2EB4D68100117A78 /* boltexponativewind/SharedKeys.swift */; };
-		CEC358302EB4D83A00117A78 /* boltexponativewind/ScreenTimeUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC3582F2EB4D83A00117A78 /* boltexponativewind/ScreenTimeUsage.swift */; };
-		CEEF5B332EEA8D9800E90A42 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CEEF5B322EEA8D9800E90A42 /* DeviceActivity.framework */; };
-		CEEF5B3B2EEA8D9800E90A42 /* ScreenTimeMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CEEF5B312EEA8D9800E90A42 /* ScreenTimeMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		CEEF5B492EEA937900E90A42 /* boltexponativewind/SharedKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC3582B2EB4D68100117A78 /* boltexponativewind/SharedKeys.swift */; };
+		CEC3582C2EB4D68100117A78 /* ScreenTimeUsage.m in Sources */ = {isa = PBXBuildFile; fileRef = CEC358292EB4D68100117A78 /* ScreenTimeUsage.m */; };
+		CEC3582E2EB4D68100117A78 /* SharedKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC3582B2EB4D68100117A78 /* SharedKeys.swift */; };
+		CEC358302EB4D83A00117A78 /* ScreenTimeUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC3582F2EB4D83A00117A78 /* ScreenTimeUsage.swift */; };
 		CEC358322EB4D83A00117A78 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = CEC358312EB4D83A00117A78 /* Localizable.strings */; };
 		CEC358342EB4D83A00117A78 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = CEC358332EB4D83A00117A78 /* InfoPlist.strings */; };
+		CEEF5B332EEA8D9800E90A42 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CEEF5B322EEA8D9800E90A42 /* DeviceActivity.framework */; };
+		CEEF5B3B2EEA8D9800E90A42 /* ScreenTimeMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CEEF5B312EEA8D9800E90A42 /* ScreenTimeMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CEEF5B492EEA937900E90A42 /* SharedKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC3582B2EB4D68100117A78 /* SharedKeys.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -58,9 +58,9 @@
 		7154B9BEC8E35354936D093F /* Pods-boltexponativewind.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-boltexponativewind.debug.xcconfig"; path = "Target Support Files/Pods-boltexponativewind/Pods-boltexponativewind.debug.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = boltexponativewind/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		CEC358292EB4D68100117A78 /* boltexponativewind/ScreenTimeUsage.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = boltexponativewind/ScreenTimeUsage.m; sourceTree = "<group>"; };
-		CEC3582B2EB4D68100117A78 /* boltexponativewind/SharedKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = boltexponativewind/SharedKeys.swift; sourceTree = "<group>"; };
-		CEC3582F2EB4D83A00117A78 /* boltexponativewind/ScreenTimeUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = boltexponativewind/ScreenTimeUsage.swift; sourceTree = "<group>"; };
+		CEC358292EB4D68100117A78 /* ScreenTimeUsage.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = boltexponativewind/ScreenTimeUsage.m; sourceTree = "<group>"; };
+		CEC3582B2EB4D68100117A78 /* SharedKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = boltexponativewind/SharedKeys.swift; sourceTree = "<group>"; };
+		CEC3582F2EB4D83A00117A78 /* ScreenTimeUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = boltexponativewind/ScreenTimeUsage.swift; sourceTree = "<group>"; };
 		CEC358312EB4D83A00117A78 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = boltexponativewind/en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		CEC358332EB4D83A00117A78 /* InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = InfoPlist.strings; path = boltexponativewind/en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		CEEF5B312EEA8D9800E90A42 /* ScreenTimeMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScreenTimeMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,7 +72,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		CEEF5B3F2EEA8D9800E90A42 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		CEEF5B3F2EEA8D9800E90A42 /* Exceptions for "ScreenTimeMonitor" folder in "ScreenTimeMonitor" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -82,7 +82,18 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		CEEF5B342EEA8D9800E90A42 /* ScreenTimeMonitor */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (CEEF5B3F2EEA8D9800E90A42 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ScreenTimeMonitor; sourceTree = "<group>"; };
+		CEEF5B342EEA8D9800E90A42 /* ScreenTimeMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CEEF5B3F2EEA8D9800E90A42 /* Exceptions for "ScreenTimeMonitor" folder in "ScreenTimeMonitor" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = ScreenTimeMonitor;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -164,9 +175,9 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				CEC3582F2EB4D83A00117A78 /* boltexponativewind/ScreenTimeUsage.swift */,
-				CEC358292EB4D68100117A78 /* boltexponativewind/ScreenTimeUsage.m */,
-				CEC3582B2EB4D68100117A78 /* boltexponativewind/SharedKeys.swift */,
+				CEC3582F2EB4D83A00117A78 /* ScreenTimeUsage.swift */,
+				CEC358292EB4D68100117A78 /* ScreenTimeUsage.m */,
+				CEC3582B2EB4D68100117A78 /* SharedKeys.swift */,
 				CEC358312EB4D83A00117A78 /* Localizable.strings */,
 				CEC358332EB4D83A00117A78 /* InfoPlist.strings */,
 				13B07FAE1A68108700A75B9A /* boltexponativewind */,
@@ -457,11 +468,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CEC3582C2EB4D68100117A78 /* boltexponativewind/ScreenTimeUsage.m in Sources */,
-				CEC3582E2EB4D68100117A78 /* boltexponativewind/SharedKeys.swift in Sources */,
+				CEC3582C2EB4D68100117A78 /* ScreenTimeUsage.m in Sources */,
+				CEC3582E2EB4D68100117A78 /* SharedKeys.swift in Sources */,
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				B2FCA740EE07F6FFD5A59A24 /* ExpoModulesProvider.swift in Sources */,
-				CEC358302EB4D83A00117A78 /* boltexponativewind/ScreenTimeUsage.swift in Sources */,
+				CEC358302EB4D83A00117A78 /* ScreenTimeUsage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,7 +480,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CEEF5B492EEA937900E90A42 /* boltexponativewind/SharedKeys.swift in Sources */,
+				CEEF5B492EEA937900E90A42 /* SharedKeys.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
