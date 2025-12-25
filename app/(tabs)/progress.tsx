@@ -51,7 +51,7 @@ export default function ProgressScreen() {
   const { isDarkMode } = useDarkMode();
   const { user } = useAuth();
   const { userProfile, goals, activities, getTotalPoints } = useFirebaseData();
-  const { onSeconds, offSeconds, refresh, requestPermissions, permissionsRequested, isAuthorized, moduleAvailable, debugInfo } = useDailyDeviceUsage();
+  const { onSeconds, offSeconds, refresh, requestPermissions, permissionsRequested, isAuthorized, moduleAvailable } = useDailyDeviceUsage();
   const colors = getColors(isDarkMode);
   const { t } = useLanguage();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
@@ -61,7 +61,6 @@ export default function ProgressScreen() {
   const [dailyHistory, setDailyHistory] = useState<DailyDataPoint[]>([]);
   const [averageDailyScreenTime, setAverageDailyScreenTime] = useState(0);
   const [showActivitiesList, setShowActivitiesList] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -613,27 +612,6 @@ export default function ProgressScreen() {
                 </View>
               )}
               
-              {/* Debug Info - Tap Screen Time card title 5 times to show */}
-              <TouchableOpacity onPress={() => setShowDebug(!showDebug)}>
-                <Text style={[styles.debugToggle, { color: colors.textSecondary }]}>
-                  {showDebug ? '🔧 Hide Debug' : '🔧 Show Debug'}
-                </Text>
-              </TouchableOpacity>
-              
-              {showDebug && debugInfo && (
-                <View style={[styles.debugContainer, { backgroundColor: isDarkMode ? '#1E293B' : '#F0F9FF' }]}>
-                  <Text style={[styles.debugTitle, { color: colors.text }]}>Debug Info:</Text>
-                  <Text style={[styles.debugText, { color: colors.textSecondary }]}>
-                    authStatus: {debugInfo.authStatus || 'unknown'}{'\n'}
-                    todayKey: {debugInfo.todayKey || 'unknown'}{'\n'}
-                    activeSeconds: {debugInfo.activeSeconds ?? 'null'}{'\n'}
-                    lastActiveTs: {debugInfo.lastActiveTs ? new Date(debugInfo.lastActiveTs * 1000).toLocaleString() : 'never'}{'\n'}
-                    appGroupAvailable: {String(debugInfo.appGroupAvailable)}{'\n'}
-                    monitoringActivities: {JSON.stringify(debugInfo.monitoringActivities || [])}{'\n'}
-                    relevantKeys: {JSON.stringify(debugInfo.relevantKeys || [])}
-                  </Text>
-                </View>
-              )}
             </DashboardCard>
           </View>
 
@@ -1337,26 +1315,5 @@ const styles = StyleSheet.create({
   emptyActivitiesSubtext: {
     fontSize: 13,
     textAlign: 'center',
-  },
-  debugToggle: {
-    fontSize: 12,
-    textAlign: 'center',
-    paddingVertical: 8,
-    marginTop: 8,
-  },
-  debugContainer: {
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  debugTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  debugText: {
-    fontSize: 11,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    lineHeight: 18,
   },
 });

@@ -24,6 +24,29 @@ export function DashboardCard({
   const colors = getColors(isDarkMode);
   const bg = gradientColors || [colors.gradientStart, colors.gradientEnd];
   
+  // Extract padding from style to apply it to the gradient instead of the outer view
+  const flattenedStyle = StyleSheet.flatten(style) || {};
+  const {
+    padding,
+    paddingHorizontal,
+    paddingVertical,
+    paddingTop,
+    paddingBottom,
+    paddingLeft,
+    paddingRight,
+    ...outerStyle
+  } = flattenedStyle as any;
+
+  const paddingStyle = {
+    padding,
+    paddingHorizontal,
+    paddingVertical,
+    paddingTop,
+    paddingBottom,
+    paddingLeft,
+    paddingRight,
+  };
+  
   return (
     <View 
       style={[
@@ -32,14 +55,14 @@ export function DashboardCard({
           borderColor: colors.border,
           shadowOpacity: elevated ? (isDarkMode ? 0.4 : 0.06) : 0,
         }, 
-        style
+        outerStyle
       ]}
     >
       <LinearGradient
         colors={bg}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradient}
+        style={[styles.gradient, paddingStyle]}
       >
         {children}
       </LinearGradient>

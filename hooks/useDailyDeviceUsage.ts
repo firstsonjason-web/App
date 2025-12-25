@@ -11,7 +11,30 @@ export function useDailyDeviceUsage() {
   const [onSeconds, setOnSeconds] = useState(0);
   const [offSeconds, setOffSeconds] = useState(0);
   const [permissionsRequested, setPermissionsRequested] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [moduleAvailable, setModuleAvailable] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+
+  // Check if already authorized on mount
+  useEffect(() => {
+    async function checkAuth() {
+      if (Platform.OS === "ios") {
+        const { ScreenTimeUsage } = NativeModules;
+        if (ScreenTimeUsage && ScreenTimeUsage.isAuthorized) {
+          try {
+            const authorized = await ScreenTimeUsage.isAuthorized();
+            setIsAuthorized(authorized);
+            if (authorized) {
+              setPermissionsRequested(true);
+            }
+          } catch (e) {
+            console.log("Error checking authorization:", e);
+          }
+        }
+      }
+    }
+    checkAuth();
+  }, []);
 
   async function refresh() {
     try {
@@ -22,6 +45,15 @@ export function useDailyDeviceUsage() {
         if (ScreenTimeUsage) {
           active = await ScreenTimeUsage.getTodayActiveSeconds();
           hasData = active > 0;
+          
+          // Get debug info
+          try {
+            const debug = await ScreenTimeUsage.getDebugInfo();
+            console.log("[useDailyDeviceUsage] Debug info:", JSON.stringify(debug, null, 2));
+            setDebugInfo(debug);
+          } catch (e) {
+            console.log("[useDailyDeviceUsage] Could not get debug info:", e);
+          }
         } else {
           setModuleAvailable(false);
         }
@@ -39,6 +71,7 @@ export function useDailyDeviceUsage() {
       const off = hasData ? Math.max(0, secondsSinceLocalMidnight() - Math.floor(active)) : 0;
       setOnSeconds(Math.floor(active));
       setOffSeconds(off);
+      console.log(`[useDailyDeviceUsage] active=${active}, hasData=${hasData}, off=${off}`);
     } catch (e) {
       // Silently handle errors - native modules may not be available
       console.log("Error getting device usage data:", e);
@@ -65,5 +98,5 @@ export function useDailyDeviceUsage() {
     return () => clearInterval(id);
   }, []);
 
-  return { onSeconds, offSeconds, refresh, requestPermissions, permissionsRequested, moduleAvailable };
+  return { onSeconds, offSeconds, refresh, requestPermissions, permissionsRequested, isAuthorized, moduleAvailable, debugInfo };
 }

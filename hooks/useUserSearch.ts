@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { UserProfile } from '@/lib/firebase-services';
+import { UserProfile, DatabaseService } from '@/lib/firebase-services';
 
 export interface UserSearchResult extends UserProfile {
   // Additional computed fields for search results
@@ -64,9 +64,6 @@ export function useUserSearch(debounceDelay: number = 300): UseUserSearchReturn 
     try {
       setLoading(true);
       setError(null);
-
-      // Import here to avoid circular dependencies
-      const { DatabaseService } = await import('@/lib/firebase-services');
 
       // Call the Firebase search method
       const searchResults = await DatabaseService.searchUsersByUsername(query);

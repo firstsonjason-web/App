@@ -17,13 +17,12 @@
       "icon": "./assets/images/AppIcons/appstore.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.homingchan.app",
-      "buildNumber": "1",
+      "buildNumber": "31",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app requires access to your camera to take photos.",
-        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to select photos.",
-        "NSPhotoLibraryAddUsageDescription": "This app requires access to save photos to your library.",
-        "NSUserTrackingUsageDescription": "This app tracks data to provide you with a better experience.",
-        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication."
+        "NSCameraUsageDescription": "Pabo Focus needs access to your camera to let you take and share photos of your progress in the community.",
+        "NSPhotoLibraryUsageDescription": "Pabo Focus needs access to your photo library to let you upload and share photos of your progress in the community.",
+        "NSPhotoLibraryAddUsageDescription": "Pabo Focus needs access to save photos you take within the app to your library.",
+        "NSFamilyControlsUsageDescription": "Pabo Focus needs access to Screen Time to track your focus and help you stay productive."
       },
       "entitlements": {
         "com.apple.security.application-groups": [

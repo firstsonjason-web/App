@@ -6,7 +6,17 @@ import {
   deleteObject,
   UploadMetadata
 } from 'firebase/storage';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  getDoc,
+  doc,
+  Timestamp
+} from 'firebase/firestore';
 import app from './firebase';
+import { db } from './firebase-config';
 
 // Initialize Firebase Storage
 const storage = getStorage(app);
@@ -559,9 +569,6 @@ try {
     // For a specific user, we can do more targeted cleanup
     try {
       // Get all posts by this user to verify their media references
-      const { getFirestore, collection, query, where, getDocs } = await import('firebase/firestore');
-      const db = getFirestore();
-
       const postsQuery = query(
         collection(db, 'posts'),
         where('userId', '==', userId)
@@ -578,7 +585,8 @@ try {
       });
 
       // Check user's profile image
-      const userProfile = await import('./firebase-services').then(m => m.DatabaseService.getUserProfile(userId));
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userProfile = userDoc.exists() ? userDoc.data() : null;
       if (userProfile?.avatar && !userProfile.avatar.includes('pexels-photo') && !userProfile.avatar.includes('default')) {
         validMediaUrls.add(userProfile.avatar);
       }
@@ -634,9 +642,6 @@ try {
   if (userId) {
     try {
       // Get user's posts and check their timestamps
-      const { getFirestore, collection, query, where, getDocs, Timestamp } = await import('firebase/firestore');
-      const db = getFirestore();
-
       const postsQuery = query(
         collection(db, 'posts'),
         where('userId', '==', userId)
@@ -703,9 +708,6 @@ try {
   if (userId) {
     try {
       // Check for draft posts or incomplete uploads that might have temp files
-      const { getFirestore, collection, query, where, getDocs, Timestamp } = await import('firebase/firestore');
-      const db = getFirestore();
-
       // Look for posts without content (might indicate failed uploads)
       const postsQuery = query(
         collection(db, 'posts'),
@@ -770,9 +772,6 @@ try {
 
   try {
     // Get user's posts and count media files
-    const { getFirestore, collection, query, where, getDocs, Timestamp } = await import('firebase/firestore');
-    const db = getFirestore();
-
     // Get posts with media
     const postsQuery = query(
       collection(db, 'posts'),
@@ -803,7 +802,8 @@ try {
     });
 
     // Also check user's profile image
-    const userProfile = await import('./firebase-services').then(m => m.DatabaseService.getUserProfile(userId));
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userProfile = userDoc.exists() ? userDoc.data() : null;
     if (userProfile?.avatar && !userProfile.avatar.includes('pexels-photo') && !userProfile.avatar.includes('default')) {
       totalFiles++;
       totalSize += estimateMediaSize('image'); // Profile images are typically images
@@ -875,10 +875,6 @@ try {
   const mediaUrls: string[] = [];
 
   try {
-    // Import Firebase services dynamically to avoid circular dependencies
-    const { getFirestore, collection, query, where, getDocs } = await import('firebase/firestore');
-    const db = getFirestore();
-
     // Get all posts by this user that have media
     const postsQuery = query(
       collection(db, 'posts'),
@@ -895,7 +891,8 @@ try {
     });
 
     // Also get user's profile image if it's not a default image
-    const userProfile = await import('./firebase-services').then(m => m.DatabaseService.getUserProfile(userId));
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userProfile = userDoc.exists() ? userDoc.data() : null;
     if (userProfile?.avatar &&
         !userProfile.avatar.includes('pexels-photo') &&
         !userProfile.avatar.includes('default') &&

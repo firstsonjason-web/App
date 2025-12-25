@@ -41,7 +41,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>31</string>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
@@ -54,23 +54,21 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>This app requires access to your camera to take photos.</string>
-    <key>NSFaceIDUsageDescription</key>
-    <string>This app uses Face ID for secure authentication.</string>
+    <string>Pabo Focus needs access to your camera to let you take and share photos of your progress in the community.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
     <key>NSMotionUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your device motion</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>This app requires access to save photos to your library.</string>
+    <string>Pabo Focus needs access to save photos you take within the app to your library.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>This app requires access to your photo library to select photos.</string>
+    <string>Pabo Focus needs access to your photo library to let you upload and share photos of your progress in the community.</string>
+    <key>NSFamilyControlsUsageDescription</key>
+    <string>Pabo Focus needs access to Screen Time to track your focus and help you stay productive.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
     </array>
-    <key>NSUserTrackingUsageDescription</key>
-    <string>This app tracks data to provide you with a better experience.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>UIBackgroundModes</key>
