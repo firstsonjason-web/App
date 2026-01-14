@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Twitter, Facebook, Instagram } from 'lucide-react';
+import { Twitter, Instagram } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -58,13 +58,10 @@ const Footer = () => {
             &copy; {new Date().getFullYear()} Pabo Focus. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Twitter">
+            <a href="https://x.com/PaboFocus?s=20" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-text-primary transition-colors" aria-label="X (Twitter)">
               <Twitter size={20} />
             </a>
-            <a href="#" className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Facebook">
-              <Facebook size={20} />
-            </a>
-            <a href="#" className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Instagram">
+            <a href="https://www.instagram.com/pabo1910/?utm_source=ig_web_button_share_sheet" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Instagram">
               <Instagram size={20} />
             </a>
           </div>
