@@ -59,23 +59,66 @@ const Hero = () => {
             className="relative"
           >
             <div className="relative mx-auto w-[300px] h-[600px] bg-gray-900 rounded-[3rem] border-[8px] border-gray-800 shadow-2xl overflow-hidden">
-              <div className="absolute top-0 w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 p-8 text-white">
-                <div className="mt-12">
-                  <div className="text-2xl font-bold mb-2">Good morning! 🌅</div>
-                  <div className="text-sm opacity-80 mb-12">Stay mindful, stay healthy</div>
-                  
-                  <div className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 border border-white/20">
-                    <div className="text-sm font-semibold mb-4">Today's Progress</div>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs opacity-80">Screen Time</span>
-                        <span className="font-bold">2h 15m</span>
+              <div className="absolute top-0 w-full h-full bg-[#FAFAFA] text-[#09090B] p-0 font-sans">
+                {/* iOS Status Bar Placeholder */}
+                <div className="h-12 w-full flex justify-between items-end px-8 pb-2">
+                  <span className="text-xs font-bold">9:41</span>
+                  <div className="flex gap-1 items-center">
+                    <div className="w-4 h-2 bg-black rounded-[1px]" />
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h3 className="text-2xl font-black">PaboFocus</h3>
+                      <p className="text-xs text-gray-500 font-medium">Digital Wellness Reimagined</p>
+                    </div>
+                    <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                      <Zap size={20} className="text-white fill-current" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                        <BarChart3 size={18} />
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs opacity-80">Focus Time</span>
-                        <span className="font-bold">5h 30m</span>
+                      <span className="text-sm font-bold text-gray-700">Today's Usage</span>
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <span className="text-3xl font-black text-primary">2h 15m</span>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">Goal: 6h 00m</p>
+                      </div>
+                      <div className="w-12 h-12 relative flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90">
+                          <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-gray-100" />
+                          <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray="125.6" strokeDashoffset="40" className="text-primary" />
+                        </svg>
+                        <span className="absolute text-[10px] font-bold">38%</span>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                      <div className="text-orange-500 mb-2"><Zap size={16} fill="currentColor" /></div>
+                      <div className="text-xl font-black">12</div>
+                      <div className="text-[10px] text-gray-400 font-bold uppercase">Focus Heat</div>
+                    </div>
+                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                      <div className="text-primary mb-2"><Star size={16} fill="currentColor" /></div>
+                      <div className="text-xl font-black">1.2k</div>
+                      <div className="text-[10px] text-gray-400 font-bold uppercase">Points</div>
+                    </div>
+                  </div>
+
+                  {/* Navigation Bar Placeholder */}
+                  <div className="absolute bottom-6 left-6 right-6 h-12 bg-white rounded-2xl shadow-lg border border-gray-50 flex justify-around items-center">
+                    <div className="text-primary"><Target size={18} /></div>
+                    <div className="text-gray-300"><Users size={18} /></div>
+                    <div className="text-gray-300"><Star size={18} /></div>
                   </div>
                 </div>
               </div>

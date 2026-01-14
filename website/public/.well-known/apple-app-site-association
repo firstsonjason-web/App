@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "MPZ46V7CWZ.com.homingchan.app",
+        "paths": ["/invite/*"]
+      }
+    ]
+  }
+}

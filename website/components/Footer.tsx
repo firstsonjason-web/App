@@ -48,6 +48,7 @@ const Footer = () => {
             <ul className="space-y-4">
               <li><Link href="/privacy-policy" className="text-text-secondary hover:text-accent transition-colors text-sm">Privacy Policy</Link></li>
               <li><Link href="/terms" className="text-text-secondary hover:text-accent transition-colors text-sm">Terms of Service</Link></li>
+              <li><Link href="/apple-app-site-association" className="text-text-secondary hover:text-accent transition-colors text-xs opacity-50">App Site Association</Link></li>
             </ul>
           </div>
         </div>
