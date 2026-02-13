@@ -48,7 +48,7 @@ export default function PrivacyPolicyPage() {
               <li><strong>Firebase Authentication</strong>: For secure user authentication</li>
               <li><strong>Firebase Firestore</strong>: For data storage and synchronization</li>
               <li><strong>Firebase Storage</strong>: For storing profile images and user content</li>
-              <li><strong>Stripe</strong>: For payment processing (Pro and ProMax subscriptions)</li>
+              <li><strong>RevenueCat</strong>: For subscription management and payment processing (Daily Plan and Prof Plan subscriptions via Apple In-App Purchases)</li>
             </ul>
           </section>
 

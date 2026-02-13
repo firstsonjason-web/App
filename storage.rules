@@ -22,16 +22,23 @@ service firebase.storage {
       return request.resource.size < 10 * 1024 * 1024; // 10MB limit
     }
 
-    // Profile images - users can upload/delete their own profile images
-    match /profile-images/{userId}/{allPaths=**} {
+    // Profile images - users can manage their own profile images
+    match /profile-images/{userId}/{filename} {
       allow read: if isAuthenticated();
       allow write: if isOwner(userId) &&
         isValidImageType() &&
         isValidFileSize();
     }
 
-    // Post media - users can upload/delete their own post media
-    match /post-media/{userId}/{allPaths=**} {
+    // Community / Post media - users can upload media for their posts
+    match /post-media/{userId}/{filename} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) &&
+        (isValidImageType() || isValidVideoType()) &&
+        isValidFileSize();
+    }
+    
+    match /community-media/{userId}/{filename} {
       allow read: if isAuthenticated();
       allow write: if isOwner(userId) &&
         (isValidImageType() || isValidVideoType()) &&

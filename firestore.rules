@@ -7,45 +7,49 @@ service cloud.firestore {
 
     // Users collection - users can read/write their own profile
     match /users/{userId} {
-      // Allow authenticated reads so aggregated queries (stats, friends lookup) don't fail.
-      // Write access remains owner-only.
       allow read: if isAuthed();
       allow create: if isOwner(userId);
-      allow update, delete: if isOwner(userId);
+      // We allow updates to their own profile, including blockedUserIds
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+      
+      // Subcollections like userStats or achievements
+      match /{allPaths=**} {
+        allow read: if isAuthed();
+        allow write: if isOwner(userId);
+      }
     }
 
-    // Goals collection - users can manage their own goals
+    // Goals & Activities - Personal progress data
     match /goals/{goalId} {
       allow read: if isOwner(resource.data.userId);
       allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
       allow update, delete: if isOwner(resource.data.userId);
     }
 
-    // Activities collection - users can read/write their own activities
     match /activities/{activityId} {
       allow read: if isOwner(resource.data.userId);
       allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
       allow update, delete: if isOwner(resource.data.userId);
     }
 
-    // Communities collection - public read for all authenticated users
+    // Communities & Posts - Social features
     match /communities/{communityId} {
       allow read: if isAuthed();
       allow create: if isAuthed() && request.auth.uid == request.resource.data.createdBy;
       allow update, delete: if isAuthed() && request.auth.uid == resource.data.createdBy;
     }
 
-    // Posts collection - community posts with proper access control
     match /posts/{postId} {
-       allow read: if isAuthed();
-       allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
-       // Owners full control; others can only touch likes/replies
-       allow update: if isAuthed() && (
-         request.auth.uid == resource.data.userId ||
-         request.resource.data.diff(resource.data).changedKeys().subsetOf(['likes','replies'])
-       );
-       allow delete: if isOwner(resource.data.userId);
-     }
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+      // Owners full control; others can only touch likes/replies
+      allow update: if isAuthed() && (
+        request.auth.uid == resource.data.userId ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'replies', 'likeIds'])
+      );
+      allow delete: if isOwner(resource.data.userId);
+    }
 
     // Comments collection - users can manage their own comments
     match /comments/{commentId} {
@@ -56,7 +60,8 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       allow read, update, delete: if isOwner(resource.data.userId);
-      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+      // Anyone can create a notification for another user
+      allow create: if isAuthed();
     }
 
     // Friends collection - users can manage their own friend relationships
@@ -66,7 +71,9 @@ service cloud.firestore {
          request.auth.uid == resource.data.friendId);
       allow create: if isAuthed() &&
         request.auth.uid == request.resource.data.userId;
-      allow update, delete: if isOwner(resource.data.userId);
+      allow update, delete: if isAuthed() &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == resource.data.friendId);
     }
 
     // FriendRequests collection - users can manage their own friend requests
@@ -85,6 +92,8 @@ service cloud.firestore {
     // Chats collection - users can access their own chats
     match /chats/{chatId} {
       allow read: if isAuthed() &&
+        (chatId.matches(request.auth.uid + '_.*') || chatId.matches('.*_' + request.auth.uid));
+      allow create: if isAuthed() &&
         (chatId.matches(request.auth.uid + '_.*') || chatId.matches('.*_' + request.auth.uid));
       allow write: if false; // managed via messages subcollection
     }
@@ -105,13 +114,30 @@ service cloud.firestore {
       allow read: if isAuthed();
       allow write: if false;
     }
-    match /users/{userId}/rankings/{rankingId} {
-      allow read: if isAuthed();
-      allow write: if false;
-    }
     match /global_rankings/{period} {
       allow read: if isAuthed();
       allow write: if false;
+    }
+
+    // Screen Time Data - users can only access their own data
+    match /screenTime/{docId} {
+      allow read: if isAuthed() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAuthed() && resource.data.userId == request.auth.uid;
+      allow delete: if isOwner(resource.data.userId);
+    }
+    
+    // Hyper Focus Sessions - users can only access their own sessions
+    match /hyperFocusSessions/{sessionId} {
+      allow read: if isAuthed() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // UGC Moderation (User Reporting)
+    match /reports/{reportId} {
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.reporterId;
+      allow read, update, delete: if false;
     }
 
     match /admin/{document=**} { allow read, write: if false; }

@@ -19,21 +19,36 @@ export function useDailyDeviceUsage() {
   useEffect(() => {
     async function checkAuth() {
       if (Platform.OS === "ios") {
-        const { ScreenTimeUsage } = NativeModules;
-        if (ScreenTimeUsage && ScreenTimeUsage.isAuthorized) {
-          try {
-            const authorized = await ScreenTimeUsage.isAuthorized();
-            setIsAuthorized(authorized);
-            if (authorized) {
-              setPermissionsRequested(true);
+        // SAFETY: Delay module access significantly to ensure React Native is fully initialized
+        // This helps prevent crashes during the TurboModule interop layer setup
+        try {
+          const { ScreenTimeUsage } = NativeModules;
+          // Extra safety: check module exists and has the method before calling
+          if (ScreenTimeUsage && typeof ScreenTimeUsage.isAuthorized === 'function') {
+            try {
+              const authorized = await ScreenTimeUsage.isAuthorized();
+              setIsAuthorized(authorized);
+              if (authorized) {
+                setPermissionsRequested(true);
+              }
+            } catch (e) {
+              console.log("Error checking authorization:", e);
+              setIsAuthorized(false);
             }
-          } catch (e) {
-            console.log("Error checking authorization:", e);
+          } else {
+            console.log("ScreenTimeUsage module not available or missing isAuthorized");
+            setModuleAvailable(false);
           }
+        } catch (e) {
+          console.log("Error accessing ScreenTimeUsage module:", e);
+          setModuleAvailable(false);
         }
       }
     }
-    checkAuth();
+    // Delay initial check significantly to ensure module is fully initialized
+    // This helps avoid crashes during app startup
+    const timer = setTimeout(checkAuth, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   async function refresh() {
@@ -41,20 +56,27 @@ export function useDailyDeviceUsage() {
       let active = 0;
       let hasData = false;
       if (Platform.OS === "ios") {
-        const { ScreenTimeUsage } = NativeModules;
-        if (ScreenTimeUsage) {
-          active = await ScreenTimeUsage.getTodayActiveSeconds();
-          hasData = active > 0;
-          
-          // Get debug info
-          try {
-            const debug = await ScreenTimeUsage.getDebugInfo();
-            console.log("[useDailyDeviceUsage] Debug info:", JSON.stringify(debug, null, 2));
-            setDebugInfo(debug);
-          } catch (e) {
-            console.log("[useDailyDeviceUsage] Could not get debug info:", e);
+        try {
+          const { ScreenTimeUsage } = NativeModules;
+          if (ScreenTimeUsage && typeof ScreenTimeUsage.getTodayActiveSeconds === 'function') {
+            active = await ScreenTimeUsage.getTodayActiveSeconds();
+            hasData = active > 0;
+            
+            // Get debug info (non-critical, wrap in separate try-catch)
+            if (typeof ScreenTimeUsage.getDebugInfo === 'function') {
+              try {
+                const debug = await ScreenTimeUsage.getDebugInfo();
+                console.log("[useDailyDeviceUsage] Debug info:", JSON.stringify(debug, null, 2));
+                setDebugInfo(debug);
+              } catch (e) {
+                console.log("[useDailyDeviceUsage] Could not get debug info:", e);
+              }
+            }
+          } else {
+            setModuleAvailable(false);
           }
-        } else {
+        } catch (e) {
+          console.log("[useDailyDeviceUsage] Error accessing native module:", e);
           setModuleAvailable(false);
         }
       } else if (Platform.OS === "android") {

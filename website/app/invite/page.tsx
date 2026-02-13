@@ -41,7 +41,7 @@ function InviteContent() {
         <div className="mt-8 border-t pt-6">
           <p className="text-sm text-gray-500">
             Don't have the app yet? <br />
-            <a href="https://apps.apple.com" className="text-blue-600 font-semibold">Download on the App Store</a>
+            <a href="https://apps.apple.com/hk/app/pabo-focus/id6755391886?l=en-GB" className="text-blue-600 font-semibold" target="_blank" rel="noopener noreferrer">Download on the App Store</a>
           </p>
         </div>
       </div>

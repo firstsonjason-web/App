@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Target, BarChart3, Zap, Users, LineChart, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Target, BarChart3, Zap, Users, LineChart, Sparkles, CheckCircle2, Shield, Crown, Trophy } from 'lucide-react';
 
 const FeatureDetail = ({ title, badge, desc, list, visual, reverse = false }: any) => {
   return (
@@ -98,15 +98,14 @@ export default function FeaturesPage() {
           />
 
           <FeatureDetail 
-            reverse
             badge="Screen Time Tracking"
             title="Monitor Your Digital Habits"
-            desc="Get real-time insights into your screen time across all apps. Track your progress and see how you're improving over time."
+            desc="Get real-time insights into your screen time using Apple's Screen Time API. Track your progress and see how you're improving over time."
             list={[
-              "Real-time screen time tracking",
+              "Real-time screen time tracking via iOS ScreenTime",
               "App-by-app usage breakdown",
-              "Weekly and monthly trends",
-              "Focus time vs screen time comparison"
+              "Weekly and monthly usage trends",
+              "Set daily screen time goals and limits"
             ]}
             visual={
               <div className="bg-surface rounded-3xl p-8 shadow-xl border border-gray-100">
@@ -190,6 +189,71 @@ export default function FeaturesPage() {
                   <div className="w-12 h-12 rounded-full border-4 border-surface bg-accent text-white flex items-center justify-center text-xs font-bold shadow-sm">
                     +9k
                   </div>
+                </div>
+              </div>
+            }
+          />
+
+          <FeatureDetail 
+            badge="Rankings"
+            title="Compete on Leaderboards"
+            desc="See how you stack up against friends and the global community. Climb the ranks as you build better habits."
+            list={[
+              "Global and friends-only leaderboards",
+              "Weekly and all-time rankings",
+              "Country-based competition",
+              "Rank up from Novice to Grandmaster"
+            ]}
+            visual={
+              <div className="bg-surface rounded-3xl p-8 shadow-xl border border-gray-100">
+                <div className="text-lg font-bold mb-6 flex items-center gap-2 text-text-primary">
+                  <Trophy className="text-yellow-500" /> Leaderboard
+                </div>
+                <div className="space-y-3">
+                  {[
+                    { rank: "1", name: "Sarah K.", pts: "6,250", badge: "🏆" },
+                    { rank: "2", name: "James L.", pts: "5,100", badge: "🥈" },
+                    { rank: "3", name: "You", pts: "4,800", badge: "🥉" },
+                  ].map((user, i) => (
+                    <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl ${i === 2 ? 'bg-accent/10 border border-accent/20' : 'bg-background border border-gray-100'}`}>
+                      <span className="text-lg">{user.badge}</span>
+                      <span className={`font-bold ${i === 2 ? 'text-accent' : 'text-text-primary'}`}>{user.name}</span>
+                      <span className="ml-auto text-sm font-bold text-text-secondary">{user.pts} pts</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            }
+          />
+
+          <FeatureDetail 
+            reverse
+            badge="Deep Focus"
+            title="Hyper Focus Mode"
+            desc="Block distracting apps and enter a timed deep focus session. Earn bonus points for staying focused and build real productivity habits."
+            list={[
+              "Block distracting apps during focus sessions",
+              "Timed focus sessions with progress tracking",
+              "Earn 1 point per 3 minutes of deep focus",
+              "Powered by Apple's Screen Time API"
+            ]}
+            visual={
+              <div className="bg-surface rounded-3xl p-8 shadow-xl border border-gray-100 text-center">
+                <div className="text-lg font-bold mb-8 flex items-center justify-center gap-2 text-text-primary">
+                  <Shield className="text-green-500" /> Hyper Focus Active
+                </div>
+                <div className="w-32 h-32 mx-auto relative mb-6">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
+                    <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="352" strokeDashoffset="88" className="text-green-500" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-black text-text-primary">45:00</span>
+                    <span className="text-[10px] text-text-secondary font-bold uppercase">remaining</span>
+                  </div>
+                </div>
+                <div className="inline-block bg-green-50 text-green-700 font-bold text-sm px-4 py-2 rounded-full">
+                  +15 points earned
                 </div>
               </div>
             }

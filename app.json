@@ -17,7 +17,7 @@
       "icon": "./assets/images/AppIcons/appstore.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.homingchan.app",
-      "buildNumber": "31",
+      "buildNumber": "59",
       "infoPlist": {
         "NSCameraUsageDescription": "Pabo Focus needs access to your camera to let you take and share photos of your progress in the community.",
         "NSPhotoLibraryUsageDescription": "Pabo Focus needs access to your photo library to let you upload and share photos of your progress in the community.",

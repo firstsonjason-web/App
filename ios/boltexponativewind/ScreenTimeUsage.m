@@ -7,6 +7,11 @@
 
 @interface RCT_EXTERN_MODULE(ScreenTimeUsage, NSObject)
 
+// All methods are marked as requiresMainQueueSetup for thread safety
++ (BOOL)requiresMainQueueSetup {
+  return YES;
+}
+
 RCT_EXTERN_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 

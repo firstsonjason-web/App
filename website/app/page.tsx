@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { CheckCircle2, ArrowRight, Smartphone, Target, Star, BarChart3, Users, Zap, Gift } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Smartphone, Target, Star, BarChart3, Users, Zap, Gift, Shield, Crown, Trophy } from 'lucide-react';
 
 const Hero = () => {
   return (
@@ -135,12 +135,12 @@ const Hero = () => {
 
 const Features = () => {
   const features = [
-    { icon: <Target className="text-blue-500" />, title: "Set Daily Goals", desc: "Create personalized digital wellness goals that matter to you." },
-    { icon: <Star className="text-yellow-500" />, title: "Earn Points", desc: "Get rewarded for completing goals and building healthy habits." },
-    { icon: <BarChart3 className="text-secondary" />, title: "Track Progress", desc: "Monitor your journey with detailed insights and visualizations." },
-    { icon: <Users className="text-purple-500" />, title: "Join Community", desc: "Connect with others on the same wellness journey." },
-    { icon: <Zap className="text-orange-500" />, title: "Stay Mindful", desc: "Build awareness around your digital habits in real-time." },
-    { icon: <Gift className="text-pink-500" />, title: "Daily Rewards", desc: "Set personal rewards to celebrate your achievements." },
+    { icon: <Target className="text-blue-500" />, title: "Set Daily Goals", desc: "Create personalized digital wellness goals with easy, medium, and hard difficulty levels." },
+    { icon: <BarChart3 className="text-secondary" />, title: "Screen Time Tracking", desc: "Monitor your real-time screen usage with Apple Screen Time integration." },
+    { icon: <Star className="text-yellow-500" />, title: "Points & Levels", desc: "Earn points, level up from Novice to Grandmaster, and maintain streaks." },
+    { icon: <Trophy className="text-orange-500" />, title: "Rankings & Leaderboards", desc: "Compete globally or with friends on weekly and all-time leaderboards." },
+    { icon: <Users className="text-purple-500" />, title: "Community", desc: "Share progress, join groups, and find accountability partners." },
+    { icon: <Shield className="text-green-500" />, title: "Hyper Focus Mode", desc: "Block distracting apps and enter deep focus sessions to reclaim your time." },
   ];
 
   return (
@@ -251,28 +251,102 @@ const Benefits = () => {
   );
 };
 
+const Pricing = () => {
+  const tiers = [
+    {
+      name: "Free",
+      price: "$0",
+      desc: "Get started with essentials",
+      features: ["3 daily activities", "Basic goal tracking", "Points & levels", "Community viewing"],
+      cta: "Get Started",
+      highlight: false,
+    },
+    {
+      name: "Daily Plan",
+      price: null,
+      desc: "For focused individuals",
+      features: ["6 daily activities", "Screen time tracking", "Rankings & leaderboards", "Community board access", "Unlimited friends"],
+      cta: "Start Free Trial",
+      highlight: true,
+    },
+    {
+      name: "Prof Plan",
+      price: null,
+      desc: "Everything, unlimited",
+      features: ["Unlimited activities", "All Daily Plan features", "Detailed reports & insights", "Create community groups", "Priority support"],
+      cta: "Start Free Trial",
+      highlight: false,
+    },
+  ];
+
+  return (
+    <section id="pricing" className="py-24 bg-surface">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold text-text-primary mb-4">Choose Your Plan</h2>
+          <p className="text-text-secondary max-w-2xl mx-auto">Start free and upgrade when you&apos;re ready. All paid plans include a 14-day free trial.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {tiers.map((tier, i) => (
+            <motion.div
+              key={i}
+              whileHover={{ y: -8 }}
+              className={`rounded-3xl p-8 ${tier.highlight ? 'bg-accent text-white shadow-xl shadow-accent/20 scale-[1.02]' : 'bg-background border border-gray-100 shadow-sm'} transition-all`}
+            >
+              <h3 className={`text-xl font-bold mb-2 ${tier.highlight ? 'text-white' : 'text-text-primary'}`}>{tier.name}</h3>
+              <p className={`text-sm mb-6 ${tier.highlight ? 'text-white/70' : 'text-text-secondary'}`}>{tier.desc}</p>
+              {tier.price ? (
+                <div className={`text-4xl font-extrabold mb-6 ${tier.highlight ? 'text-white' : 'text-text-primary'}`}>{tier.price}<span className="text-lg font-normal opacity-60">/mo</span></div>
+              ) : (
+                <div className={`text-2xl font-bold mb-6 ${tier.highlight ? 'text-white' : 'text-text-primary'}`}>See in app</div>
+              )}
+              <ul className="space-y-3 mb-8">
+                {tier.features.map((f, j) => (
+                  <li key={j} className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className={tier.highlight ? 'text-white' : 'text-secondary'} />
+                    <span className={`text-sm ${tier.highlight ? 'text-white/90' : 'text-text-secondary'}`}>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/#download"
+                className={`block text-center py-3 rounded-2xl font-bold text-sm transition-all ${
+                  tier.highlight
+                    ? 'bg-white text-accent hover:shadow-lg'
+                    : 'bg-surface text-text-primary border-2 border-gray-100 hover:border-accent hover:text-accent'
+                }`}
+              >
+                {tier.cta}
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+        <div className="text-center mt-10">
+          <Link href="/pricing" className="text-accent font-semibold hover:underline inline-flex items-center gap-2">
+            View full plan comparison <ArrowRight size={16} />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const Download = () => {
   return (
     <section id="download" className="py-24 bg-accent relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">Ready to Transform Your Digital Life?</h2>
-        <p className="text-xl text-white/80 mb-12 max-w-2xl mx-auto">Join thousands of happy users today and start your journey to digital wellness.</p>
-        <div className="flex flex-wrap justify-center gap-6">
-          <button className="bg-surface text-text-primary px-8 py-4 rounded-2xl flex items-center gap-4 hover:scale-105 transition-transform shadow-xl">
+        <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">Start with a free plan and upgrade anytime. All paid plans include a 14-day free trial.</p>
+        <div className="flex flex-wrap justify-center gap-6 mb-8">
+          <a href="https://apps.apple.com/hk/app/pabo-focus/id6755391886?l=en-GB" target="_blank" rel="noopener noreferrer" className="bg-surface text-text-primary px-8 py-4 rounded-2xl flex items-center gap-4 hover:scale-105 transition-transform shadow-xl">
             <Smartphone size={32} />
             <div className="text-left">
               <div className="text-xs font-medium opacity-60">Download on the</div>
               <div className="text-xl font-bold">App Store</div>
             </div>
-          </button>
-          <button className="bg-surface text-text-primary px-8 py-4 rounded-2xl flex items-center gap-4 hover:scale-105 transition-transform shadow-xl">
-            <Zap size={32} />
-            <div className="text-left">
-              <div className="text-xs font-medium opacity-60">Get it on</div>
-              <div className="text-xl font-bold">Google Play</div>
-            </div>
-          </button>
+          </a>
         </div>
+        <p className="text-white/60 text-sm">Available on iOS 16 and later</p>
       </div>
       {/* Decorative circles */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
@@ -288,6 +362,7 @@ export default function Home() {
       <Features />
       <HowItWorks />
       <Benefits />
+      <Pricing />
       <Download />
     </div>
   );
