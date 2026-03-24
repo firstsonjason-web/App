@@ -61,12 +61,16 @@ export interface UserProfile {
   dailyPrize?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  isPrivate?: boolean; // Default false (public)
-  subscriptionPlan?: 'free' | 'pro' | 'promax'; // Subscription plan
-  country?: string; // User's country for rankings
-  age?: number; // User's age
-  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say'; // User's gender
-  bio?: string; // User's bio/introduction
+  isPrivate?: boolean;
+  subscriptionPlan?: 'free' | 'pro' | 'promax';
+  country?: string;
+  age?: number;
+  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
+  bio?: string;
+  badges?: string[];
+  weeklyPoints?: number;
+  monthlyPoints?: number;
+  streak?: number;
 }
 
 export interface Activity {
@@ -773,28 +777,57 @@ export class DatabaseService {
   }
 
   // Rankings/Leaderboard Services
-  static async getLeaderboard(limitCount: number = 50): Promise<any[]> {
+  static async getLeaderboard(limitCount: number = 50, timeframe: string = 'alltime'): Promise<any[]> {
     try {
-      const usersQuery = query(
-        collection(db, 'users'),
-        orderBy('totalPoints', 'desc'),
-        limit(limitCount)
-      );
+      let usersQuery;
+      
+      if (timeframe === 'alltime') {
+        usersQuery = query(
+          collection(db, 'users'),
+          orderBy('totalPoints', 'desc'),
+          limit(limitCount)
+        );
+      } else {
+        usersQuery = query(
+          collection(db, 'users'),
+          orderBy(timeframe === 'weekly' ? 'weeklyPoints' : 'monthlyPoints', 'desc'),
+          limit(limitCount)
+        );
+      }
 
       const usersSnapshot = await getDocs(usersQuery);
+      const now = Timestamp.now();
+      const weekAgo = Timestamp.fromMillis(now.toMillis() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = Timestamp.fromMillis(now.toMillis() - 30 * 24 * 60 * 60 * 1000);
+
       const users = usersSnapshot.docs.map((doc, index) => {
         const userData = doc.data();
+        const countryEmoji = this.getCountryEmoji(userData.country);
+        
+        let pointsForRanking: number;
+        let weeklyChange = 0;
+        
+        if (timeframe === 'alltime') {
+          pointsForRanking = userData.totalPoints || 0;
+        } else if (timeframe === 'weekly') {
+          pointsForRanking = userData.weeklyPoints || 0;
+          weeklyChange = userData.weeklyPoints || 0;
+        } else {
+          pointsForRanking = userData.monthlyPoints || 0;
+          weeklyChange = userData.monthlyPoints || 0;
+        }
+
         return {
           id: doc.id,
           name: userData.displayName || userData.email?.split('@')[0] || 'User',
           avatar: userData.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100',
-          points: userData.totalPoints || 0,
+          points: pointsForRanking,
           rank: index + 1,
           level: `Level ${Math.floor((userData.totalPoints || 0) / 100) + 1}`,
-          streak: Math.floor((userData.totalPoints || 0) / 50),
-          country: '🇺🇸', // Default, could be added to user profile
-          weeklyChange: Math.floor(Math.random() * 20) - 10, // Mock data for now
-          badges: ['🎯', '💎', '🚀'], // Mock data for now
+          streak: userData.streak || Math.floor((userData.totalPoints || 0) / 50),
+          country: countryEmoji,
+          weeklyChange: weeklyChange,
+          badges: userData.badges || ['🌱'],
         };
       });
 
@@ -805,26 +838,62 @@ export class DatabaseService {
     }
   }
 
+  private static getCountryEmoji(countryCode?: string): string {
+    if (!countryCode) return '🌍';
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  }
+
   static async updateUserRanking(userId: string): Promise<void> {
     try {
       const userProfile = await this.getUserProfile(userId);
       if (userProfile) {
-        // Update user's ranking data
+        const now = Timestamp.now();
+        const weekAgo = Timestamp.fromMillis(now.toMillis() - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = Timestamp.fromMillis(now.toMillis() - 30 * 24 * 60 * 60 * 1000);
+
+        const activitiesSnapshot = await getDocs(
+          query(
+            collection(db, 'activities'),
+            where('userId', '==', userId)
+          )
+        );
+
+        let weeklyPoints = 0;
+        let monthlyPoints = 0;
+
+        activitiesSnapshot.docs.forEach(doc => {
+          const activity = doc.data();
+          if (activity.completedAt) {
+            const completedAt = activity.completedAt as Timestamp;
+            if (completedAt.toMillis() >= weekAgo.toMillis()) {
+              weeklyPoints += activity.points || 0;
+            }
+            if (completedAt.toMillis() >= monthAgo.toMillis()) {
+              monthlyPoints += activity.points || 0;
+            }
+          }
+        });
+
+        const countryEmoji = this.getCountryEmoji(userProfile.country);
+
         const rankingData = {
           userId,
           userName: userProfile.displayName || userProfile.email?.split('@')[0] || 'User',
           userAvatar: userProfile.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100',
           totalPoints: userProfile.totalPoints || 0,
-          weeklyPoints: 0, // Would need to calculate weekly points
-          monthlyPoints: 0, // Would need to calculate monthly points
-          streak: Math.floor((userProfile.totalPoints || 0) / 50),
+          weeklyPoints,
+          monthlyPoints,
+          streak: userProfile.streak || Math.floor((userProfile.totalPoints || 0) / 50),
           level: `Level ${Math.floor((userProfile.totalPoints || 0) / 100) + 1}`,
-          country: '🇺🇸', // Default
-          badges: ['🎯', '💎', '🚀'], // Mock data for now
+          country: countryEmoji,
+          badges: userProfile.badges || ['🌱'],
           lastUpdated: Timestamp.now()
         };
 
-        // Update or create ranking document
         await setDoc(doc(db, 'rankings', userId), rankingData);
       }
     } catch (error) {

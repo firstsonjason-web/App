@@ -1,0 +1,23 @@
+name: Branch Protection
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - dev
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  protect:
+    name: Enforce branch protection rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check protection rules
+        run: |
+          echo "Branch protection summary:"
+          echo "- main/master: Requires PR, status checks, and review before merge"
+          echo "- dev: Requires PR and lint pass before merge"

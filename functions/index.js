@@ -25,8 +25,13 @@ const logging = new Logging({
 
 const { Stripe } = require('stripe');
 const stripe = new Stripe(functions.config().stripe.secret, {
-  apiVersion: '2020-08-27',
+  apiVersion: '2025-4-0.basalt',
 });
+
+const PLAN_PRICING = {
+  pro: { amount: 1500, name: 'Pro Plan ($15/month)' },
+  promax: { amount: 3000, name: 'ProMax Plan ($30/month)' },
+};
 
 /**
  * When a user is created, create a Stripe customer object for them.
@@ -197,7 +202,8 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   }
 
   const userId = context.auth.uid;
-  const amount = plan === 'pro' ? 1500 : 3000; // in cents
+  const planConfig = PLAN_PRICING[plan];
+  const amount = planConfig.amount;
   const currency = 'usd';
 
   try {
@@ -208,7 +214,6 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
     if (customerDoc.exists) {
       customerId = customerDoc.data().customer_id;
     } else {
-      // Create new customer
       const customer = await stripe.customers.create({
         email: context.auth.token.email,
         metadata: { userId }
@@ -220,7 +225,10 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       });
     }
 
-    // Create Payment Intent
+    // Create idempotency key based on user and plan
+    const idempotencyKey = `${userId}_${plan}_${Date.now()}`;
+
+    // Create Payment Intent with idempotency
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency,
@@ -228,8 +236,24 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       metadata: {
         userId,
         plan,
-        type: 'subscription'
-      }
+        type: 'subscription',
+        planName: planConfig.name
+      },
+      description: `Subscription payment for ${planConfig.name}`
+    }, {
+      idempotencyKey
+    });
+
+    // Save payment intent to Firestore for audit trail
+    await admin.firestore().collection('payments').add({
+      paymentIntentId: paymentIntent.id,
+      userId,
+      plan,
+      amount,
+      currency,
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      clientSecret: paymentIntent.client_secret
     });
 
     return {
@@ -239,6 +263,188 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   } catch (error) {
     functions.logger.error('Error creating payment intent:', error);
     throw new functions.https.HttpsError('internal', 'Failed to create payment intent');
+  }
+});
+
+/**
+ * Update payment status after successful payment
+ */
+exports.updatePaymentStatus = functions.firestore
+  .document('payments/{paymentId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    
+    if (before.status !== 'succeeded' && after.status === 'succeeded') {
+      const { userId, plan } = after;
+      
+      // Update user subscription
+      await admin.firestore().collection('users').doc(userId).update({
+        subscriptionPlan: plan,
+        subscriptionUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        subscriptionStatus: 'active'
+      });
+    }
+  });
+
+/**
+ * Verify user subscription status and return allowed features
+ */
+exports.verifySubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const userId = context.auth.uid;
+  const { feature, value } = data;
+
+  try {
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    
+    if (!userDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'User not found');
+    }
+
+    const userData = userDoc.data();
+    const plan = userData.subscriptionPlan || 'free';
+    const subscriptionStatus = userData.subscriptionStatus || 'inactive';
+    const trialEndsAt = userData.trialEndsAt;
+    
+    // Check if user has active trial
+    let hasActiveTrial = false;
+    if (trialEndsAt) {
+      const trialEnd = trialEndsAt.toDate();
+      hasActiveTrial = trialEnd > new Date();
+    }
+
+    const isActive = subscriptionStatus === 'active' || hasActiveTrial;
+    const planTier = plan === 'promax' ? 3 : plan === 'pro' ? 2 : 1;
+
+    // Define feature limits
+    const featureLimits = {
+      goals: { free: 3, pro: 6, promax: Infinity },
+      posts: { free: 2, pro: 10, promax: 25 },
+      friends: { free: 5, pro: 20, promax: Infinity },
+      activities: { free: 3, pro: 6, promax: Infinity },
+    };
+
+    let allowed = true;
+    let currentCount = 0;
+    let limit = Infinity;
+
+    if (feature && featureLimits[feature]) {
+      limit = featureLimits[feature][plan] || 0;
+      
+      // Get current count for the feature
+      if (isActive || plan !== 'free') {
+        const countQuery = await admin.firestore().collection(feature).where('userId', '==', userId).get();
+        currentCount = countQuery.size;
+        allowed = currentCount < limit;
+      } else {
+        allowed = false;
+      }
+    }
+
+    return {
+      plan,
+      isActive,
+      hasTrial: hasActiveTrial,
+      trialEndsAt: trialEndsAt ? trialEndsAt.toISOString() : null,
+      featureLimits,
+      featureCheck: {
+        feature,
+        allowed,
+        currentCount,
+        limit,
+        requestedValue: value
+      }
+    };
+  } catch (error) {
+    functions.logger.error('Error verifying subscription:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to verify subscription');
+  }
+});
+
+/**
+ * Start trial period for user
+ */
+exports.startTrial = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const userId = context.auth.uid;
+  const { plan } = data;
+
+  if (!['pro', 'promax'].includes(plan)) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid plan for trial');
+  }
+
+  try {
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    // Check if user already has an active trial
+    if (userData.trialEndsAt) {
+      const existingTrial = userData.trialEndsAt.toDate();
+      if (existingTrial > new Date()) {
+        throw new functions.https.HttpsError('already-exists', 'Trial already active');
+      }
+    }
+
+    // Start 14-day trial
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 14);
+
+    await admin.firestore().collection('users').doc(userId).update({
+      subscriptionPlan: plan,
+      subscriptionStatus: 'trial',
+      trialEndsAt: admin.firestore.Timestamp.fromDate(trialEndDate),
+      trialStartedAt: admin.firestore.FieldValue.serverTimestamp(),
+      subscriptionUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    return {
+      success: true,
+      plan,
+      trialEndsAt: trialEndDate.toISOString(),
+      trialDays: 14
+    };
+  } catch (error) {
+    functions.logger.error('Error starting trial:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError('internal', 'Failed to start trial');
+  }
+});
+
+/**
+ * Cancel subscription and revert to free plan
+ */
+exports.cancelSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const userId = context.auth.uid;
+
+  try {
+    await admin.firestore().collection('users').doc(userId).update({
+      subscriptionPlan: 'free',
+      subscriptionStatus: 'cancelled',
+      subscriptionCancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+      subscriptionUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    return {
+      success: true,
+      newPlan: 'free',
+      effectiveDate: 'end_of_billing_period'
+    };
+  } catch (error) {
+    functions.logger.error('Error cancelling subscription:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to cancel subscription');
   }
 });
 

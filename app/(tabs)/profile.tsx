@@ -633,29 +633,22 @@ function ProfileScreen() {
       return false;
     }
 
-    // On web, we'll show a message about redirecting to a payment page
+    // On web, redirect to Stripe Checkout
     if (Platform.OS === 'web') {
-      console.log('💳 [Payment Debug] Web platform detected, showing redirect alert');
-      Alert.alert(
-        t('paymentProcessing'),
-        t('redirectToSecurePaymentPage'),
-        [
-          {
-            text: t('continue'),
-            onPress: () => {
-              console.log('💳 [Payment Debug] User proceeded with web payment simulation');
-              // On web, we would redirect to a payment page
-              // For now we'll simulate a successful payment
-              setTimeout(() => {
-                console.log('💳 [Payment Debug] Simulating successful payment for web');
-                handleSuccessfulPayment(plan);
-              }, 1000); // Simulate processing delay
-            }
-          },
-          { text: t('cancel'), style: 'cancel' }
-        ]
-      );
-      return true;
+      console.log('💳 [Payment Debug] Web platform detected, creating Stripe Checkout session');
+      try {
+        const { clientSecret } = await DatabaseService.createPaymentIntent(plan);
+        Alert.alert(
+          t('webPaymentRequired'),
+          t('webPaymentDescription'),
+          [{ text: t('ok') }]
+        );
+        return false;
+      } catch (error) {
+        console.error('💳 [Payment Debug] Error creating payment intent for web:', error);
+        Alert.alert(t('error'), t('failedToInitializePaymentSheetSimple'));
+        return false;
+      }
     }
 
     try {
@@ -799,43 +792,24 @@ function ProfileScreen() {
         return;
       }
 
-      // Only use Stripe payment sheet on native platforms
       if (Platform.OS !== 'web') {
         console.log('💰 [Payment Debug] Presenting payment sheet on native platform');
-        try {
-          const { error } = await presentPaymentSheet();
+        const { error } = await presentPaymentSheet();
 
-          if (error) {
-            console.error('💰 [Payment Debug] Payment failed:', error);
-            Alert.alert(t('error'), t('paymentFailed', { errorMessage: error.message }));
-          } else {
-            console.log('💰 [Payment Debug] Payment successful, processing...');
-            // Payment successful
-            if (user?.uid) {
-              await DatabaseService.updateUserProfile(user.uid, { subscriptionPlan: selectedPlan });
-            }
-            await AsyncStorage.setItem('subscriptionPlan', selectedPlan);
-            setCurrentPlan(selectedPlan);
-            setShowPaymentModal(false);
-
-            const planNames = {
-              pro: 'Pro Plan ($15/month)',
-              promax: 'ProMax Plan ($30/month)'
-            };
-
-            Alert.alert(
-              t('paymentSuccessful'),
-              t('upgradedToPlan', { planName: planNames[selectedPlan] }),
-              [{ text: t('ok') }]
-            );
-            console.log('💰 [Payment Debug] Payment success alert shown and modal closed');
-          }
-        } catch (error) {
-          console.error('💰 [Payment Debug] Unexpected error during payment presentation:', error);
-          Alert.alert(t('error'), t('unexpectedErrorDuringPayment'));
+        if (error) {
+          console.error('💰 [Payment Debug] Payment failed:', error);
+          Alert.alert(t('error'), t('paymentFailed', { errorMessage: error.message }));
+        } else {
+          console.log('💰 [Payment Debug] Payment successful, calling handleSuccessfulPayment');
+          await handleSuccessfulPayment(selectedPlan);
         }
       } else {
-        console.log('💰 [Payment Debug] Web platform - payment handled separately');
+        console.log('💰 [Payment Debug] Web platform - payment requires redirect flow');
+        Alert.alert(
+          t('webPaymentRequired'),
+          t('webPaymentDescription'),
+          [{ text: t('ok') }]
+        );
       }
     } catch (error) {
       console.error('💰 [Payment Debug] Unexpected error during payment:', error);

@@ -24,6 +24,14 @@
         "simulator": false
       }
     },
+    "dev": {
+      "distribution": "internal",
+      "autoIncrement": true,
+      "ios": {
+        "simulator": false,
+        "bundleIdentifier": "com.homingchan.app.dev"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "distribution": "store",
@@ -33,6 +41,12 @@
     }
   },
   "submit": {
+    "dev": {
+      "ios": {
+        "appleTeamId": "MPZ46V7CWZ",
+        "ascAppId": "6755391886"
+      }
+    },
     "production": {
       "ios": {
         "appleTeamId": "MPZ46V7CWZ",

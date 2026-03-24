@@ -22,7 +22,7 @@ import { DatabaseService } from '@/lib/firebase-services';
 const { width } = Dimensions.get('window');
 
 interface User {
-  id: number;
+  id: string;
   name: string;
   avatar: string;
   points: number;
@@ -34,104 +34,21 @@ interface User {
   badges: string[];
 }
 
-const initialLeaderboard: User[] = [
-  {
-    id: 1,
-    name: 'Alex Chen',
-    avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150',
-    points: 3245,
-    rank: 1,
-    level: 'Digital Master',
-    streak: 28,
-    country: '🇺🇸',
-    weeklyChange: 12,
-    badges: ['🏆', '🔥', '⭐']
-  },
-  {
-    id: 2,
-    name: 'Sarah Johnson',
-    avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150',
-    points: 2987,
-    rank: 2,
-    level: 'Focus Expert',
-    streak: 21,
-    country: '🇨🇦',
-    weeklyChange: 8,
-    badges: ['🥈', '🎯', '💪']
-  },
-  {
-    id: 3,
-    name: 'Marcus Williams',
-    avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150',
-    points: 2756,
-    rank: 3,
-    level: 'Mindful Warrior',
-    streak: 19,
-    country: '🇬🇧',
-    weeklyChange: 5,
-    badges: ['🥉', '🧘', '🌟']
-  },
-  {
-    id: 4,
+const getEmptyLeaderboard = (currentUserId?: string): User[] => {
+  const placeholderUser = currentUserId ? {
+    id: currentUserId,
     name: 'You',
     avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150',
-    points: 2156,
-    rank: 4,
-    level: 'Digital Warrior',
-    streak: 15,
-    country: '🇺🇸',
-    weeklyChange: 3,
-    badges: ['🎯', '💎', '🚀']
-  },
-  {
-    id: 5,
-    name: 'Emma Davis',
-    avatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=150',
-    points: 1987,
-    rank: 5,
-    level: 'Focus Seeker',
-    streak: 12,
-    country: '🇦🇺',
-    weeklyChange: -2,
-    badges: ['🌱', '📚', '✨']
-  },
-  {
-    id: 6,
-    name: 'David Kim',
-    avatar: 'https://images.pexels.com/photos/1040880/pexels-photo-1040880.jpeg?auto=compress&cs=tinysrgb&w=150',
-    points: 1834,
-    rank: 6,
-    level: 'Mindful Beginner',
-    streak: 9,
-    country: '🇰🇷',
-    weeklyChange: 1,
-    badges: ['🌿', '🎨', '🏃']
-  },
-  {
-    id: 7,
-    name: 'Lisa Rodriguez',
-    avatar: 'https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg?auto=compress&cs=tinysrgb&w=150',
-    points: 1672,
-    rank: 7,
-    level: 'Digital Explorer',
-    streak: 7,
-    country: '🇪🇸',
-    weeklyChange: -1,
-    badges: ['🗺️', '🌸', '💫']
-  },
-  {
-    id: 8,
-    name: 'James Wilson',
-    avatar: 'https://images.pexels.com/photos/1212984/pexels-photo-1212984.jpeg?auto=compress&cs=tinysrgb&w=150',
-    points: 1543,
-    rank: 8,
-    level: 'Focus Apprentice',
-    streak: 5,
-    country: '🇳🇿',
-    weeklyChange: 4,
-    badges: ['🎪', '🎭', '🎨']
-  }
-];
+    points: 0,
+    rank: 0,
+    level: 'Newcomer',
+    streak: 0,
+    country: '🌍',
+    weeklyChange: 0,
+    badges: ['🌱'] as string[],
+  } : null;
+  return placeholderUser ? [placeholderUser] : [];
+};
 
 const getTimeframes = (t: any) => [
   { id: 'daily', name: t('today') },
@@ -200,12 +117,11 @@ export default function RankingsScreen() {
   const loadLeaderboard = async () => {
     try {
       setLoading(true);
-      const firebaseLeaderboard = await DatabaseService.getLeaderboard(50);
+      const firebaseLeaderboard = await DatabaseService.getLeaderboard(50, selectedTimeframe);
 
-      // Update current user's data in the leaderboard
       if (userProfile) {
         const currentUserPoints = getTotalPoints();
-        const currentUserIndex = firebaseLeaderboard.findIndex(user => user.id === user.uid);
+        const currentUserIndex = firebaseLeaderboard.findIndex(u => u.id === user.uid);
 
         if (currentUserIndex !== -1) {
           firebaseLeaderboard[currentUserIndex] = {
@@ -214,39 +130,49 @@ export default function RankingsScreen() {
             name: 'You',
           };
         } else {
-          // Add current user if not in leaderboard
+          const countryEmoji = getCountryEmoji(userProfile.country);
           firebaseLeaderboard.push({
             id: user!.uid,
             name: 'You',
-            avatar: userProfile ? userProfile.avatar || 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150' : 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150',
+            avatar: userProfile.avatar || 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150',
             points: currentUserPoints,
             rank: firebaseLeaderboard.length + 1,
             level: `Level ${Math.floor(currentUserPoints / 100) + 1}`,
             streak: Math.floor(currentUserPoints / 50),
-            country: '🇺🇸',
-            weeklyChange: 3,
-            badges: ['🎯', '💎', '🚀'],
+            country: countryEmoji,
+            weeklyChange: 0,
+            badges: userProfile.badges || ['🌱'],
           });
         }
 
-        // Re-sort leaderboard
         firebaseLeaderboard.sort((a, b) => b.points - a.points);
 
-        // Update ranks
-        const updatedLeaderboard = firebaseLeaderboard.map((user, index) => ({
-          ...user,
+        const updatedLeaderboard = firebaseLeaderboard.map((u, index) => ({
+          ...u,
           rank: index + 1,
         }));
 
         setLeaderboard(updatedLeaderboard);
-      } else {
+      } else if (firebaseLeaderboard.length > 0) {
         setLeaderboard(firebaseLeaderboard);
+      } else {
+        setLeaderboard(getEmptyLeaderboard());
       }
     } catch (error) {
       console.error('Error loading leaderboard:', error);
+      setLeaderboard(getEmptyLeaderboard(user?.uid));
     } finally {
       setLoading(false);
     }
+  };
+
+  const getCountryEmoji = (countryCode?: string): string => {
+    if (!countryCode) return '🌍';
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
   };
 
   // Load user's current points from Firebase

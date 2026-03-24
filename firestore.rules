@@ -9,15 +9,31 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthed();
       allow create: if isOwner(userId);
-      // We allow updates to their own profile, including blockedUserIds
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      // Allow updates to most profile fields, but protect subscription fields
+      allow update: if isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'subscriptionPlan', 'subscriptionStatus', 'subscriptionUpdatedAt', 
+        'trialEndsAt', 'trialStartedAt', 'subscriptionCancelledAt'
+      ]);
+      // Subscription fields can only be updated by admin functions (via service account)
+      allow update: if false; // Direct client updates to subscription fields are blocked
       
       // Subcollections like userStats or achievements
       match /{allPaths=**} {
         allow read: if isAuthed();
         allow write: if isOwner(userId);
       }
+    }
+    
+    // Payments collection - only readable by owner, writable by system only
+    match /payments/{paymentId} {
+      allow read: if isAuthed() && request.auth.uid == resource.data.userId;
+      allow create, update, delete: if false;
+    }
+    
+    // stripe_customers - system managed, not accessible from client
+    match /stripe_customers/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false;
     }
 
     // Goals & Activities - Personal progress data
