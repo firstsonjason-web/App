@@ -1,71 +1,69 @@
 "use client";
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Heart, Shield, Zap, Users } from 'lucide-react';
+import Image from "next/image";
+import { Heart, Shield, Zap, Users } from "lucide-react";
+import SectionReveal from "@/components/SectionReveal";
+
+const values = [
+  { icon: Heart, title: "User first", desc: "Wellness outcomes beat engagement metrics." },
+  { icon: Shield, title: "Privacy", desc: "Your data stays yours. We do not sell it." },
+  { icon: Zap, title: "Simplicity", desc: "One daily goal, clear rewards, no clutter." },
+  { icon: Users, title: "Community", desc: "Accountability without the noise." },
+];
 
 export default function AboutPage() {
   return (
-    <div className="bg-background pt-32">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-5xl lg:text-6xl font-extrabold text-text-primary mb-6"
-          >
-            Our Mission
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-xl text-text-secondary max-w-3xl mx-auto leading-relaxed"
-          >
-            We believe technology should empower us, not overwhelm us. LumoLife was created to help people reclaim their time and build a healthier relationship with their digital devices — with Lumo, a tiny companion that grows with your habits.
-          </motion.p>
+    <div className="bg-lumo-ink pt-28 pb-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <SectionReveal>
+            <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
+              Technology should give time back
+            </h1>
+            <p className="mt-5 max-w-lg text-lg leading-relaxed text-text-secondary">
+              LumoLife helps you build healthier phone habits with one daily goal, focus sessions, and Lumo, a companion that grows with your streaks.
+            </p>
+          </SectionReveal>
+          <SectionReveal className="relative aspect-[4/3] overflow-hidden rounded-card border border-white/10">
+            <Image
+              src="https://picsum.photos/seed/lumolife-about-mission/900/675"
+              alt="Person taking a mindful break from their phone outdoors"
+              fill
+              className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+            />
+          </SectionReveal>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-12 mb-32">
-          <div className="bg-surface p-12 rounded-[3rem] border border-gray-100">
-            <h2 className="text-3xl font-bold text-text-primary mb-6">The Problem</h2>
-            <p className="text-text-secondary leading-relaxed mb-6">
-              In today's hyper-connected world, we spend an average of 7 hours a day on screens. This constant connectivity often leads to decreased focus, increased anxiety, and a disconnect from the physical world.
-            </p>
-            <p className="text-text-secondary leading-relaxed">
-              Most apps are designed to keep us hooked. We wanted to build something different—an app that helps you put your phone down.
+        <SectionReveal className="mt-24 grid gap-6 md:grid-cols-2">
+          <div className="rounded-card border border-white/10 bg-surface p-8 md:p-10">
+            <h2 className="text-2xl font-bold text-white">The problem</h2>
+            <p className="mt-4 leading-relaxed text-text-secondary">
+              Most apps compete for attention. That leaves people drained, distracted, and unsure how to change.
             </p>
           </div>
-          <div className="bg-accent/5 p-12 rounded-[3rem] border border-accent/10">
-            <h2 className="text-3xl font-bold text-text-primary mb-6">Our Solution</h2>
-            <p className="text-text-secondary leading-relaxed mb-6">
-              LumoLife uses behavioral science and gamification to make digital wellness engaging. Set one daily goal, run focus sessions, upgrade Lumo&apos;s stats and cosmetics, and build streaks that stick.
-            </p>
-            <p className="text-text-secondary leading-relaxed">
-              By focusing on positive reinforcement rather than restriction, we help users build lasting habits that stick.
+          <div className="rounded-card border border-lumo-teal/20 bg-lumo-teal/5 p-8 md:p-10">
+            <h2 className="text-2xl font-bold text-white">Our approach</h2>
+            <p className="mt-4 leading-relaxed text-text-secondary">
+              Positive reinforcement beats guilt. Small wins, visible progress, and optional Screen Time data when you want it.
             </p>
           </div>
-        </div>
+        </SectionReveal>
 
-        <div className="mb-32">
-          <h2 className="text-4xl font-bold text-text-primary text-center mb-16">Our Values</h2>
-          <div className="grid md:grid-cols-4 gap-8">
-            {[
-              { icon: <Heart className="text-red-500" />, title: "User First", desc: "Your wellness is our top priority." },
-              { icon: <Shield className="text-blue-500" />, title: "Privacy", desc: "Your data is yours. We never sell it." },
-              { icon: <Zap className="text-yellow-500" />, title: "Simplicity", desc: "Powerful tools, easy to use." },
-              { icon: <Users className="text-purple-500" />, title: "Community", desc: "Better together, supporting each other." },
-            ].map((v, i) => (
-              <div key={i} className="text-center">
-                <div className="w-16 h-16 bg-surface shadow-lg rounded-2xl flex items-center justify-center mx-auto mb-6 border border-gray-50">
-                  {v.icon}
+        <SectionReveal className="mt-24">
+          <h2 className="text-3xl font-bold text-white">What we stand for</h2>
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {values.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="rounded-card border border-white/10 bg-surface/50 p-6">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-lumo-teal/10 text-lumo-teal">
+                  <Icon size={20} aria-hidden />
                 </div>
-                <h3 className="text-xl font-bold text-text-primary mb-2">{v.title}</h3>
-                <p className="text-text-secondary text-sm">{v.desc}</p>
+                <h3 className="mt-4 font-semibold text-white">{title}</h3>
+                <p className="mt-2 text-sm text-text-secondary">{desc}</p>
               </div>
             ))}
           </div>
-        </div>
+        </SectionReveal>
       </div>
     </div>
   );

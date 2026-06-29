@@ -1,48 +1,47 @@
-'use client';
+"use client";
 
-import { useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Users } from "lucide-react";
+import AppStoreButton from "@/components/AppStoreButton";
 
 function InviteContent() {
   const searchParams = useSearchParams();
-  const uid = searchParams.get('uid');
+  const uid = searchParams.get("uid");
 
   useEffect(() => {
     if (uid) {
-      // Try to open the app automatically
       window.location.href = `stayhealthiness://invite?uid=${uid}`;
     }
   }, [uid]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-        <div className="w-20 h-20 bg-blue-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg">
-          <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
+    <div className="flex min-h-[70dvh] items-center justify-center px-4 py-24">
+      <div className="w-full max-w-md rounded-card border border-white/10 bg-surface p-8 text-center shadow-glow-teal">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-card bg-lumo-teal/15 text-lumo-teal">
+          <Users size={28} aria-hidden />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">You're Invited!</h1>
-        <p className="text-gray-600 mb-8">
-          A friend has invited you to join their focus circle on LumoLife.
+        <h1 className="text-2xl font-bold text-white">You are invited</h1>
+        <p className="mt-3 text-text-secondary">
+          A friend invited you to their focus circle on LumoLife.
         </p>
-        
+
         {uid ? (
           <a
             href={`stayhealthiness://invite?uid=${uid}`}
-            className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition duration-200 shadow-md"
+            className="mt-8 block w-full rounded-pill bg-lumo-teal py-4 font-semibold text-lumo-ink transition active:scale-[0.98] hover:bg-lumo-teal/90"
           >
             Open LumoLife
           </a>
         ) : (
-          <p className="text-red-500">Invalid invite link. Please ask your friend for a new one.</p>
+          <p className="mt-8 text-sm text-red-400">Invalid invite link. Ask your friend to send a new one.</p>
         )}
-        
-        <div className="mt-8 border-t pt-6">
-          <p className="text-sm text-gray-500">
-            Don't have the app yet? <br />
-            <a href="https://apps.apple.com/hk/app/pabo-focus/id6755391886?l=en-GB" className="text-blue-600 font-semibold" target="_blank" rel="noopener noreferrer">Download on the App Store</a>
-          </p>
+
+        <div className="mt-8 border-t border-white/10 pt-6">
+          <p className="text-sm text-text-secondary">Need the app first?</p>
+          <div className="mt-4 flex justify-center">
+            <AppStoreButton />
+          </div>
         </div>
       </div>
     </div>
@@ -51,7 +50,11 @@ function InviteContent() {
 
 export default function InvitePage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50dvh] items-center justify-center text-text-secondary">Loading...</div>
+      }
+    >
       <InviteContent />
     </Suspense>
   );

@@ -1,71 +1,63 @@
-import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
+import Link from "next/link";
+import Image from "next/image";
+import { SUPPORT_EMAIL } from "@/lib/site";
 
-const Footer = () => {
+export default function Footer() {
   return (
-    <footer className="bg-surface border-t border-gray-100 pt-16 pb-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10">
-                <Image 
-                  src="/icon.png" 
-                  alt="LumoLife logo" 
-                  fill
-                  className="object-contain"
-                />
+    <footer className="border-t border-white/10 bg-lumo-ink">
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-4 lg:col-span-1">
+            <div className="flex items-center gap-2.5">
+              <div className="relative h-9 w-9 overflow-hidden rounded-xl ring-1 ring-white/15">
+                <Image src="/icon.png" alt="" fill className="object-cover" />
               </div>
-              <span className="text-xl font-bold text-text-primary">LumoLife</span>
+              <span className="text-lg font-bold text-white">LumoLife</span>
             </div>
-            <p className="text-text-secondary text-sm leading-relaxed">
-              Meet Lumo — your tiny focus companion. Set goals, build streaks, and grow healthier digital habits.
+            <p className="max-w-xs text-sm leading-relaxed text-text-secondary">
+              Meet Lumo. One daily goal, focus sessions, and a companion that grows with your habits.
             </p>
           </div>
 
           <div>
-            <h4 className="font-bold text-text-primary mb-6">Product</h4>
-            <ul className="space-y-4">
-              <li><Link href="/features" className="text-text-secondary hover:text-accent transition-colors text-sm">Features</Link></li>
-              <li><Link href="/pricing" className="text-text-secondary hover:text-accent transition-colors text-sm">Pricing</Link></li>
-              <li><Link href="/#download" className="text-text-secondary hover:text-accent transition-colors text-sm">Download</Link></li>
-              <li><Link href="/about" className="text-text-secondary hover:text-accent transition-colors text-sm">About Us</Link></li>
+            <h2 className="mb-4 text-sm font-semibold text-white">Product</h2>
+            <ul className="space-y-3 text-sm">
+              <li><Link href="/features" className="text-text-secondary hover:text-lumo-teal">Features</Link></li>
+              <li><Link href="/pricing" className="text-text-secondary hover:text-lumo-teal">Pricing</Link></li>
+              <li><Link href="/#download" className="text-text-secondary hover:text-lumo-teal">Download</Link></li>
+              <li><Link href="/about" className="text-text-secondary hover:text-lumo-teal">About</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-bold text-text-primary mb-6">Support</h4>
-            <ul className="space-y-4">
-              <li><Link href="/support" className="text-text-secondary hover:text-accent transition-colors text-sm">Help Center</Link></li>
-              <li><Link href="/support#faq" className="text-text-secondary hover:text-accent transition-colors text-sm">FAQ</Link></li>
-              <li><Link href="/support#contact" className="text-text-secondary hover:text-accent transition-colors text-sm">Contact Us</Link></li>
+            <h2 className="mb-4 text-sm font-semibold text-white">Support</h2>
+            <ul className="space-y-3 text-sm">
+              <li><Link href="/support" className="text-text-secondary hover:text-lumo-teal">Help center</Link></li>
+              <li><Link href="/community-guidelines" className="text-text-secondary hover:text-lumo-teal">Community guidelines</Link></li>
+              <li>
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-text-secondary hover:text-lumo-teal">
+                  {SUPPORT_EMAIL}
+                </a>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-bold text-text-primary mb-6">Legal</h4>
-            <ul className="space-y-4">
-              <li><Link href="/privacy-policy" className="text-text-secondary hover:text-accent transition-colors text-sm">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="text-text-secondary hover:text-accent transition-colors text-sm">Terms of Service</Link></li>
-              <li><Link href="/apple-app-site-association" className="text-text-secondary hover:text-accent transition-colors text-xs opacity-50">App Site Association</Link></li>
+            <h2 className="mb-4 text-sm font-semibold text-white">Legal</h2>
+            <ul className="space-y-3 text-sm">
+              <li><Link href="/privacy-policy" className="text-text-secondary hover:text-lumo-teal">Privacy policy</Link></li>
+              <li><Link href="/terms" className="text-text-secondary hover:text-lumo-teal">Terms of service</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-text-secondary text-sm">
+        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row sm:items-center">
+          <p className="text-sm text-text-secondary">
             &copy; {new Date().getFullYear()} LumoLife. All rights reserved.
           </p>
-          <div className="flex items-center gap-6">
-            <a href="https://www.stayhealthiness.com" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-text-primary transition-colors text-sm font-medium">
-              stayhealthiness.com
-            </a>
-          </div>
+          <p className="text-sm text-text-secondary">Pro included free in the current release.</p>
         </div>
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}

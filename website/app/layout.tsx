@@ -1,15 +1,33 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-const inter = Inter({ subsets: ["latin"] });
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "LumoLife — Stay Healthy, Be Happy",
-  description: "Meet Lumo, your tiny focus companion. Set daily goals, run focus sessions, grow Lumo's stats and cosmetics, and track Screen Time when you choose.",
-  keywords: ["LumoLife", "digital wellness", "screen time", "focus", "habits", "streaks", "Lumo"],
+  title: "LumoLife - Meet Lumo, your focus companion",
+  description:
+    "Set daily goals, run focus sessions, and grow Lumo's stats and cosmetics. Pro features included free in the current App Store release.",
+  keywords: [
+    "LumoLife",
+    "digital wellness",
+    "screen time",
+    "focus",
+    "habits",
+    "iOS",
+    "Lumo",
+  ],
+  openGraph: {
+    title: "LumoLife",
+    description: "Your tiny focus companion for healthier phone habits.",
+    siteName: "LumoLife",
+  },
 };
 
 export default function RootLayout({
@@ -19,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={inter.className}>
+      <body className={`${outfit.variable} font-sans`}>
         <Navbar />
         <main>{children}</main>
         <Footer />

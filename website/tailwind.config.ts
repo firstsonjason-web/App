@@ -9,18 +9,31 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#3B3B44",
-        secondary: "#22C55E",
-        accent: "#4A4A54",
-        background: "#F8F8FA",
-        surface: "#FFFFFF",
-        "text-primary": "#1A1A1E",
-        "text-secondary": "#5C5C66",
+        "lumo-ink": "#071719",
+        "lumo-deep": "#103A3C",
+        "lumo-mid": "#0F766E",
+        "lumo-teal": "#14B8A6",
+        "lumo-gold": "#F59E0B",
+        "lumo-cream": "#F7FCFB",
+        primary: "#14B8A6",
+        secondary: "#14B8A6",
+        accent: "#14B8A6",
+        background: "#071719",
+        surface: "#0C2527",
+        "text-primary": "#F7FCFB",
+        "text-secondary": "#94A3B8",
       },
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+      fontFamily: {
+        sans: ["var(--font-outfit)", "system-ui", "sans-serif"],
+      },
+      boxShadow: {
+        "glow-teal": "0 0 40px rgb(20 184 166 / 0.25)",
+        "glow-gold": "0 8px 24px rgb(245 158 11 / 0.35)",
+        card: "0 24px 60px rgb(0 0 0 / 0.35)",
+      },
+      borderRadius: {
+        card: "1.25rem",
+        pill: "9999px",
       },
     },
   },

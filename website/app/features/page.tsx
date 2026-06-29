@@ -1,282 +1,146 @@
 "use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Target, BarChart3, Zap, Users, LineChart, Sparkles, CheckCircle2, Shield, Crown, Trophy } from 'lucide-react';
+import Image from "next/image";
+import { CheckCircle2, Flame, Users, Trophy, Shield } from "lucide-react";
+import SectionReveal from "@/components/SectionReveal";
+import AppStoreButton from "@/components/AppStoreButton";
 
-const FeatureDetail = ({ title, badge, desc, list, visual, reverse = false }: any) => {
+type FeatureBlockProps = {
+  title: string;
+  desc: string;
+  list: string[];
+  image: string;
+  imageAlt: string;
+  reverse?: boolean;
+};
+
+function FeatureBlock({ title, desc, list, image, imageAlt, reverse }: FeatureBlockProps) {
   return (
-    <div className={`flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} gap-16 items-center py-20`}>
-      <motion.div 
-        initial={{ opacity: 0, x: reverse ? 20 : -20 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        className="flex-1"
-      >
-        <span className="inline-block px-4 py-1.5 bg-accent/10 text-accent rounded-full text-sm font-bold mb-6">
-          {badge}
-        </span>
-        <h2 className="text-4xl font-bold text-text-primary mb-6 leading-tight">{title}</h2>
-        <p className="text-lg text-text-secondary mb-8 leading-relaxed">{desc}</p>
-        <ul className="space-y-4">
-          {list.map((item: string, i: number) => (
-            <li key={i} className="flex items-start gap-3">
-              <CheckCircle2 className="text-secondary mt-1 flex-shrink-0" size={20} />
-              <span className="text-text-secondary">{item}</span>
+    <SectionReveal
+      className={`grid items-center gap-12 py-16 lg:grid-cols-2 lg:gap-16 ${reverse ? "lg:[&>*:first-child]:order-2" : ""}`}
+    >
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">{title}</h2>
+        <p className="mt-4 max-w-lg text-lg leading-relaxed text-text-secondary">{desc}</p>
+        <ul className="mt-8 space-y-3">
+          {list.map((item) => (
+            <li key={item} className="flex gap-3 text-text-secondary">
+              <CheckCircle2 className="mt-0.5 shrink-0 text-lumo-teal" size={18} aria-hidden />
+              {item}
             </li>
           ))}
         </ul>
-      </motion.div>
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        whileInView={{ opacity: 1, scale: 1 }}
-        viewport={{ once: true }}
-        className="flex-1 w-full"
-      >
-        <div className="bg-background rounded-[2.5rem] p-8 lg:p-12 border border-gray-100 shadow-inner">
-          {visual}
-        </div>
-      </motion.div>
-    </div>
+      </div>
+      <div className="relative aspect-[4/3] overflow-hidden rounded-card border border-white/10">
+        <Image src={image} alt={imageAlt} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
+      </div>
+    </SectionReveal>
   );
-};
+}
 
 export default function FeaturesPage() {
   return (
-    <div className="bg-background pt-32">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-20">
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-5xl lg:text-6xl font-extrabold text-text-primary mb-6"
-          >
-            Powerful Features for <br />
-            <span className="text-accent">Digital Wellness</span>
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-xl text-text-secondary max-w-3xl mx-auto"
-          >
-            Everything you need to transform your relationship with technology and reclaim your focus.
-          </motion.p>
-        </div>
+    <div className="bg-lumo-ink pt-28 pb-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <SectionReveal className="max-w-2xl">
+          <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
+            Built for real focus habits
+          </h1>
+          <p className="mt-5 text-lg text-text-secondary">
+            Goals, Screen Time, Lumo progression, and community tools in one iOS app.
+          </p>
+        </SectionReveal>
 
-        {/* Features List */}
-        <div className="space-y-12">
-          <FeatureDetail 
-            badge="Goal Setting"
-            title="Set Meaningful Daily Goals"
-            desc="Create personalized digital wellness goals that align with your lifestyle and values. Choose from recommended activities or create your own custom goals."
+        <div className="mt-8 divide-y divide-white/10">
+          <FeatureBlock
+            title="Daily goals"
+            desc="Pick one target that fits your day. Earn points by difficulty and keep streaks alive."
             list={[
-              "Pre-built goal templates for quick start",
-              "Custom goal creation with flexible parameters",
-              "Daily, weekly, and monthly goal options",
-              "Smart reminders to keep you on track"
+              "Recommended templates or custom goals",
+              "Daily, weekly, and monthly options",
+              "Reminders when you want them",
             ]}
-            visual={
-              <div className="bg-surface rounded-3xl p-8 shadow-xl border border-gray-100">
-                <div className="text-lg font-bold mb-6 flex items-center gap-2 text-text-primary">
-                  <Target className="text-accent" /> Daily Goals
-                </div>
-                <div className="space-y-4">
-                  {['Read for 30 minutes', 'Exercise 20 minutes', 'Meditate for 10 minutes'].map((text, i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 bg-background rounded-2xl border border-gray-100">
-                      <div className="w-10 h-10 bg-surface rounded-xl flex items-center justify-center shadow-sm">
-                        {['📚', '🏃', '🧘'][i]}
-                      </div>
-                      <span className="font-medium text-text-secondary">{text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            }
+            image="https://picsum.photos/seed/lumolife-feature-goals/900/675"
+            imageAlt="Person planning a focused morning routine"
           />
-
-          <FeatureDetail 
-            badge="Screen Time Tracking"
-            title="Monitor Your Digital Habits"
-            desc="Get real-time insights into your screen time using Apple's Screen Time API. Track your progress and see how you're improving over time."
-            list={[
-              "Real-time screen time tracking via iOS ScreenTime",
-              "App-by-app usage breakdown",
-              "Weekly and monthly usage trends",
-              "Set daily screen time goals and limits"
-            ]}
-            visual={
-              <div className="bg-surface rounded-3xl p-8 shadow-xl border border-gray-100">
-                <div className="text-lg font-bold mb-6 flex items-center gap-2 text-text-primary">
-                  <BarChart3 className="text-secondary" /> Today's Activity
-                </div>
-                <div className="text-center py-6">
-                  <div className="text-5xl font-black text-text-primary mb-2">2h 15m</div>
-                  <div className="text-text-secondary font-medium mb-6">Screen Time</div>
-                  <div className="w-full h-4 bg-background rounded-full overflow-hidden mb-4">
-                    <div className="h-full bg-secondary w-[45%] rounded-full" />
-                  </div>
-                  <div className="text-secondary font-bold flex items-center justify-center gap-1">
-                    <Zap size={16} /> ↓ 25% from yesterday
-                  </div>
-                </div>
-              </div>
-            }
-          />
-
-          <FeatureDetail 
-            badge="Gamification"
-            title="Earn Points & Level Up"
-            desc="Stay motivated with our points and achievements system. Complete goals, maintain streaks, and unlock new levels as you progress."
-            list={[
-              "Earn points for completed goals",
-              "Build and maintain focus streaks",
-              "Unlock achievements and badges",
-              "Level up and track your progress"
-            ]}
-            visual={
-              <div className="grid grid-cols-1 gap-4">
-                <div className="bg-gradient-to-r from-orange-400 to-red-500 p-6 rounded-3xl text-white shadow-lg">
-                  <div className="text-sm font-bold opacity-80 mb-1">Current Streak</div>
-                  <div className="text-3xl font-black flex items-center gap-2">🔥 7 Days</div>
-                </div>
-                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-3xl text-white shadow-lg">
-                  <div className="text-sm font-bold opacity-80 mb-1">Experience Level</div>
-                  <div className="text-3xl font-black flex items-center gap-2">⭐ Level 5</div>
-                </div>
-                <div className="bg-gradient-to-r from-emerald-400 to-teal-500 p-6 rounded-3xl text-white shadow-lg">
-                  <div className="text-sm font-bold opacity-80 mb-1">Total Points</div>
-                  <div className="text-3xl font-black flex items-center gap-2">🎯 1,250 pts</div>
-                </div>
-              </div>
-            }
-          />
-
-          <FeatureDetail 
+          <FeatureBlock
             reverse
-            badge="Community"
-            title="Connect with Like-Minded People"
-            desc="Join a supportive community of people on the same journey. Share experiences, get motivated, and learn from others."
+            title="Screen Time insights"
+            desc="See usage trends after you grant iOS Screen Time permission. No selling your data."
             list={[
-              "Share your progress and achievements",
-              "Find accountability partners",
-              "Discover tips and success stories",
-              "Join challenges and compete"
+              "App-by-app breakdown",
+              "Weekly and monthly trends",
+              "Optional daily limits",
             ]}
-            visual={
-              <div className="bg-surface rounded-3xl p-8 shadow-xl border border-gray-100">
-                <div className="text-lg font-bold mb-8 flex items-center gap-2 text-text-primary">
-                  <Users className="text-purple-500" /> Active Community
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center p-6 bg-background rounded-2xl border border-gray-100">
-                    <div className="text-3xl font-bold text-text-primary mb-1">10K+</div>
-                    <div className="text-xs text-text-secondary font-bold uppercase tracking-wider">Members</div>
-                  </div>
-                  <div className="text-center p-6 bg-background rounded-2xl border border-gray-100">
-                    <div className="text-3xl font-bold text-text-primary mb-1">25+</div>
-                    <div className="text-xs text-text-secondary font-bold uppercase tracking-wider">Countries</div>
-                  </div>
-                </div>
-                <div className="mt-8 flex -space-x-3 justify-center">
-                  {[1,2,3,4,5].map(i => (
-                    <div key={i} className="w-12 h-12 rounded-full border-4 border-surface bg-gray-200 overflow-hidden shadow-sm">
-                      <img src={`https://i.pravatar.cc/150?u=${i}`} alt="User" />
-                    </div>
-                  ))}
-                  <div className="w-12 h-12 rounded-full border-4 border-surface bg-accent text-white flex items-center justify-center text-xs font-bold shadow-sm">
-                    +9k
-                  </div>
-                </div>
-              </div>
-            }
-          />
-
-          <FeatureDetail 
-            badge="Rankings"
-            title="Compete on Leaderboards"
-            desc="See how you stack up against friends and the global community. Climb the ranks as you build better habits."
-            list={[
-              "Global and friends-only leaderboards",
-              "Weekly and all-time rankings",
-              "Country-based competition",
-              "Rank up from Novice to Grandmaster"
-            ]}
-            visual={
-              <div className="bg-surface rounded-3xl p-8 shadow-xl border border-gray-100">
-                <div className="text-lg font-bold mb-6 flex items-center gap-2 text-text-primary">
-                  <Trophy className="text-yellow-500" /> Leaderboard
-                </div>
-                <div className="space-y-3">
-                  {[
-                    { rank: "1", name: "Sarah K.", pts: "6,250", badge: "🏆" },
-                    { rank: "2", name: "James L.", pts: "5,100", badge: "🥈" },
-                    { rank: "3", name: "You", pts: "4,800", badge: "🥉" },
-                  ].map((user, i) => (
-                    <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl ${i === 2 ? 'bg-accent/10 border border-accent/20' : 'bg-background border border-gray-100'}`}>
-                      <span className="text-lg">{user.badge}</span>
-                      <span className={`font-bold ${i === 2 ? 'text-accent' : 'text-text-primary'}`}>{user.name}</span>
-                      <span className="ml-auto text-sm font-bold text-text-secondary">{user.pts} pts</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            }
-          />
-
-          <FeatureDetail 
-            reverse
-            badge="Deep Focus"
-            title="Hyper Focus Mode"
-            desc="Block distracting apps and enter a timed deep focus session. Earn bonus points for staying focused and build real productivity habits."
-            list={[
-              "Block distracting apps during focus sessions",
-              "Timed focus sessions with progress tracking",
-              "Earn 1 point per 3 minutes of deep focus",
-              "Powered by Apple's Screen Time API"
-            ]}
-            visual={
-              <div className="bg-surface rounded-3xl p-8 shadow-xl border border-gray-100 text-center">
-                <div className="text-lg font-bold mb-8 flex items-center justify-center gap-2 text-text-primary">
-                  <Shield className="text-green-500" /> Hyper Focus Active
-                </div>
-                <div className="w-32 h-32 mx-auto relative mb-6">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
-                    <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="352" strokeDashoffset="88" className="text-green-500" />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-black text-text-primary">45:00</span>
-                    <span className="text-[10px] text-text-secondary font-bold uppercase">remaining</span>
-                  </div>
-                </div>
-                <div className="inline-block bg-green-50 text-green-700 font-bold text-sm px-4 py-2 rounded-full">
-                  +15 points earned
-                </div>
-              </div>
-            }
+            image="https://picsum.photos/seed/lumolife-feature-screentime/900/675"
+            imageAlt="Calm workspace with phone set aside"
           />
         </div>
 
-        {/* CTA */}
-        <div className="py-32">
-          <div className="bg-primary rounded-[3rem] p-12 lg:p-20 text-center text-white relative overflow-hidden">
-            <div className="relative z-10">
-              <h2 className="text-4xl lg:text-5xl font-bold mb-8">Ready to Get Started?</h2>
-              <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">Join thousands of users building healthier digital habits and reclaiming their time.</p>
-              <Link 
-                href="/#download" 
-                className="inline-block bg-surface text-text-primary px-10 py-5 rounded-2xl text-xl font-bold hover:scale-105 transition-transform shadow-2xl"
+        {/* Bento: 4 features, varied cells */}
+        <SectionReveal className="mt-20">
+          <h2 className="text-3xl font-bold text-white">Everything in the app</h2>
+          <div className="mt-10 grid gap-4 md:grid-cols-3 md:grid-rows-2">
+            {[
+              {
+                icon: Flame,
+                title: "Lumo progression",
+                body: "Points unlock stats, skins, and cosmetics for your companion.",
+                image: "https://picsum.photos/seed/lumolife-lumo-pet/600/400",
+                className: "md:col-span-2 md:row-span-2 min-h-[280px]",
+              },
+              {
+                icon: Users,
+                title: "Community",
+                body: "Posts, groups, and shared challenges.",
+                image: "https://picsum.photos/seed/lumolife-community-feed/500/400",
+                className: "min-h-[200px]",
+              },
+              {
+                icon: Trophy,
+                title: "Rankings",
+                body: "Friends and global leaderboards.",
+                image: "https://picsum.photos/seed/lumolife-rankings/500/400",
+                className: "min-h-[200px]",
+              },
+            ].map(({ icon: Icon, title, body, image, className }) => (
+              <div
+                key={title}
+                className={`relative overflow-hidden rounded-card border border-white/10 ${className}`}
               >
-                Download App Now
-              </Link>
-            </div>
-            <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+                <Image src={image} alt="" fill className="object-cover opacity-40" sizes="33vw" aria-hidden />
+                <div className="relative flex h-full flex-col justify-end bg-gradient-to-t from-lumo-ink via-lumo-ink/80 to-transparent p-6">
+                  <Icon className="mb-3 text-lumo-teal" size={22} aria-hidden />
+                  <h3 className="text-lg font-semibold text-white">{title}</h3>
+                  <p className="mt-1 text-sm text-text-secondary">{body}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        </SectionReveal>
+
+        <FeatureBlock
+          title="Hyper Focus sessions"
+          desc="Block distracting apps, run a timed session, and claim bonus points when you finish."
+          list={[
+            "Powered by Apple Screen Time APIs",
+            "Pending points until session completes",
+            "Works alongside your daily goal",
+          ]}
+          image="https://picsum.photos/seed/lumolife-hyperfocus/900/675"
+          imageAlt="Deep work session with minimal distractions"
+        />
+
+        <SectionReveal className="mt-24 rounded-card border border-lumo-teal/20 bg-gradient-to-br from-lumo-deep/40 to-surface p-10 text-center md:p-14">
+          <Shield className="mx-auto text-lumo-teal" size={28} aria-hidden />
+          <h2 className="mt-4 text-3xl font-bold text-white">Try it on iPhone</h2>
+          <p className="mx-auto mt-3 max-w-md text-text-secondary">
+            Pro is included for all signed-in users in the current App Store release.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <AppStoreButton />
+          </div>
+        </SectionReveal>
       </div>
     </div>
   );
