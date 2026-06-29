@@ -1,8 +1,10 @@
 "use client";
 
-import Image from "next/image";
-import { Heart, Shield, Zap, Users } from "lucide-react";
+import { Heart, Shield, Zap, Users, Smartphone, Lock } from "lucide-react";
 import SectionReveal from "@/components/SectionReveal";
+import PageHeader from "@/components/PageHeader";
+import LumoVisual from "@/components/LumoVisual";
+import CtaBand from "@/components/CtaBand";
 
 const values = [
   { icon: Heart, title: "User first", desc: "Wellness outcomes beat engagement metrics." },
@@ -11,28 +13,29 @@ const values = [
   { icon: Users, title: "Community", desc: "Accountability without the noise." },
 ];
 
+const builtFor = [
+  {
+    icon: Smartphone,
+    title: "Native on iPhone",
+    body: "Built for iOS 17+ with Sign in with Apple, push reminders, and Screen Time APIs when you opt in.",
+  },
+  {
+    icon: Lock,
+    title: "Private by default",
+    body: "Usage data stays in your account. Community sharing is always your choice.",
+  },
+];
+
 export default function AboutPage() {
   return (
-    <div className="bg-lumo-ink pt-28 pb-24">
+    <div className="bg-lumo-ink pt-28 pb-0">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <SectionReveal>
-            <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
-              Technology should give time back
-            </h1>
-            <p className="mt-5 max-w-lg text-lg leading-relaxed text-text-secondary">
-              LumoLife helps you build healthier phone habits with one daily goal, focus sessions, and Lumo, a companion that grows with your streaks.
-            </p>
-          </SectionReveal>
-          <SectionReveal className="relative aspect-[4/3] overflow-hidden rounded-card border border-white/10">
-            <Image
-              src="https://picsum.photos/seed/lumolife-about-mission/900/675"
-              alt="Person taking a mindful break from their phone outdoors"
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
-          </SectionReveal>
+          <PageHeader
+            title="Technology should give time back"
+            description="LumoLife helps you build healthier phone habits with one daily goal, focus sessions, and Lumo, a companion that grows with your streaks."
+          />
+          <LumoVisual size="lg" caption="Lumo grows when you keep your promises to yourself." />
         </div>
 
         <SectionReveal className="mt-24 grid gap-6 md:grid-cols-2">
@@ -64,7 +67,21 @@ export default function AboutPage() {
             ))}
           </div>
         </SectionReveal>
+
+        <SectionReveal className="my-24">
+          <h2 className="text-3xl font-bold text-white">Built for iPhone</h2>
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
+            {builtFor.map(({ icon: Icon, title, body }) => (
+              <div key={title} className="rounded-card border border-white/10 bg-surface p-8">
+                <Icon className="text-lumo-teal" size={24} aria-hidden />
+                <h3 className="mt-4 text-xl font-semibold text-white">{title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-text-secondary">{body}</p>
+              </div>
+            ))}
+          </div>
+        </SectionReveal>
       </div>
+      <CtaBand title="Meet Lumo on your iPhone" description="Download LumoLife and pick your first daily goal today." />
     </div>
   );
 }

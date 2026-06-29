@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Target,
@@ -13,6 +13,10 @@ import {
 } from "lucide-react";
 import AppStoreButton from "@/components/AppStoreButton";
 import SectionReveal from "@/components/SectionReveal";
+import LumoVisual from "@/components/LumoVisual";
+import BentoTile from "@/components/BentoTile";
+import CtaBand from "@/components/CtaBand";
+import { LUMO_MASCOT, proFeatures } from "@/lib/site";
 
 const steps = [
   {
@@ -29,35 +33,10 @@ const steps = [
   },
 ];
 
-const bento = [
-  {
-    title: "Daily goals that stick",
-    body: "One clear target per day. Points scale with difficulty.",
-    icon: Target,
-    image: "https://picsum.photos/seed/lumolife-goals/800/600",
-    className: "md:col-span-2 md:row-span-2",
-  },
-  {
-    title: "Hyper Focus mode",
-    body: "Block distractions and claim pending points when you finish.",
-    icon: Flame,
-    image: "https://picsum.photos/seed/lumolife-focus/600/400",
-    className: "md:col-span-1",
-  },
-  {
-    title: "Grow with Lumo",
-    body: "Upgrade stats, unlock skins, and equip cosmetics.",
-    icon: Sparkles,
-    image: "https://picsum.photos/seed/lumolife-lumo/600/400",
-    className: "md:col-span-1",
-  },
-  {
-    title: "Community and challenges",
-    body: "Share progress, join groups, and climb rankings.",
-    icon: Users,
-    image: "https://picsum.photos/seed/lumolife-community/900/500",
-    className: "md:col-span-2",
-  },
+const progression = [
+  { label: "Easy goal", value: "10 pts", note: "Good for warm-up days" },
+  { label: "Medium goal", value: "25 pts", note: "Your default stretch" },
+  { label: "Hard goal", value: "50 pts", note: "When you want a real win" },
 ];
 
 export default function Home() {
@@ -65,7 +44,6 @@ export default function Home() {
 
   return (
     <div className="marketing-grid overflow-hidden">
-      {/* Hero: asymmetric split */}
       <section className="relative min-h-[100dvh] pt-24">
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-8 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:pb-28 lg:pt-12">
           <motion.div
@@ -88,38 +66,21 @@ export default function Home() {
               <AppStoreButton />
               <Link
                 href="/features"
-                className="rounded-2xl border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:border-lumo-teal/50 hover:text-lumo-teal"
+                className="rounded-2xl border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:border-lumo-teal/50 hover:text-lumo-teal active:scale-[0.98]"
               >
                 See features
               </Link>
             </div>
           </motion.div>
 
-          <motion.div
-            initial={reduce ? false : { opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="relative mx-auto w-full max-w-md lg:max-w-none"
-          >
-            <div className="absolute -inset-4 rounded-[2rem] bg-lumo-teal/20 blur-3xl" aria-hidden />
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 shadow-card ring-1 ring-white/10">
-              <Image
-                src="https://picsum.photos/seed/lumolife-hero-companion/900/1100"
-                alt="Person taking a mindful break from their phone outdoors"
-                width={900}
-                height={1100}
-                priority
-                className="aspect-[4/5] w-full object-cover"
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-lumo-ink via-lumo-ink/80 to-transparent p-6">
-                <p className="text-sm font-medium text-white">One daily goal. Lumo reacts to your streak.</p>
-              </div>
-            </div>
-          </motion.div>
+          <LumoVisual
+            size="xl"
+            priority
+            caption="Your companion lights up when you show up."
+          />
         </div>
       </section>
 
-      {/* Trust strip below hero */}
       <SectionReveal className="border-y border-white/10 bg-white/[0.02] py-8">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-4 px-4 text-sm text-text-secondary sm:px-6 lg:px-8">
           <span className="flex items-center gap-2">
@@ -137,7 +98,6 @@ export default function Home() {
         </div>
       </SectionReveal>
 
-      {/* Bento features */}
       <section id="features" className="py-24 lg:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionReveal className="mb-14 max-w-2xl">
@@ -150,44 +110,82 @@ export default function Home() {
           </SectionReveal>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:auto-rows-[minmax(180px,auto)]">
-            {bento.map((item, i) => (
-              <SectionReveal
-                key={item.title}
-                delay={i * 0.05}
-                className={`group relative overflow-hidden rounded-card border border-white/10 bg-surface ${item.className}`}
-              >
-                <Image
-                  src={item.image}
-                  alt=""
-                  width={800}
-                  height={600}
-                  className="absolute inset-0 h-full w-full object-cover opacity-40 transition-opacity duration-500 group-hover:opacity-55"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-lumo-ink via-lumo-ink/70 to-lumo-ink/20" />
-                <div className="relative flex h-full min-h-[200px] flex-col justify-end p-6 md:min-h-0 md:p-8">
-                  <item.icon size={22} className="mb-3 text-lumo-teal" aria-hidden />
-                  <h3 className="text-xl font-bold text-white">{item.title}</h3>
-                  <p className="mt-2 max-w-sm text-sm leading-relaxed text-text-secondary">
-                    {item.body}
-                  </p>
-                </div>
-              </SectionReveal>
-            ))}
+            <BentoTile
+              title="Daily goals that stick"
+              body="One clear target per day. Points scale with difficulty."
+              icon={Target}
+              gradient="bg-gradient-to-br from-lumo-teal/25 via-lumo-deep/40 to-lumo-ink"
+              className="md:col-span-2 md:row-span-2"
+              delay={0}
+            />
+            <BentoTile
+              title="Hyper Focus mode"
+              body="Block distractions and claim pending points when you finish."
+              icon={Flame}
+              gradient="bg-gradient-to-br from-lumo-mid/30 to-lumo-ink"
+              className="md:col-span-1"
+              delay={0.05}
+            />
+            <BentoTile
+              title="Grow with Lumo"
+              body="Upgrade stats, unlock skins, and equip cosmetics."
+              icon={Sparkles}
+              gradient="bg-gradient-to-br from-lumo-gold/15 via-lumo-deep/30 to-lumo-ink"
+              className="md:col-span-1 min-h-[220px]"
+              delay={0.1}
+            >
+              <div className="pointer-events-none absolute right-2 top-2 h-24 w-24 opacity-90 md:h-28 md:w-28">
+                <Image src={LUMO_MASCOT} alt="" fill className="object-cover" aria-hidden />
+              </div>
+            </BentoTile>
+            <BentoTile
+              title="Community and challenges"
+              body="Share progress, join groups, and climb rankings."
+              icon={Users}
+              gradient="bg-gradient-to-br from-lumo-deep/50 via-lumo-ink to-lumo-ink"
+              className="md:col-span-2"
+              delay={0.15}
+            />
           </div>
 
           <div className="mt-10 text-center">
-            <Link
-              href="/features"
-              className="text-sm font-semibold text-lumo-teal hover:underline"
-            >
+            <Link href="/features" className="text-sm font-semibold text-lumo-teal hover:underline">
               Full feature list
             </Link>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="border-y border-white/10 bg-white/[0.02] py-24">
+      <section className="border-y border-white/10 bg-white/[0.02] py-24 lg:py-28">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
+          <SectionReveal>
+            <h2 className="text-3xl font-bold text-white md:text-4xl">Points Lumo actually uses</h2>
+            <p className="mt-4 max-w-lg text-text-secondary">
+              Complete your daily goal to feed Lumo. Difficulty maps to points so small wins still count.
+            </p>
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              {progression.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-card border border-white/10 bg-surface/80 p-4 text-center"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wide text-lumo-teal">
+                    {item.label}
+                  </p>
+                  <p className="mt-2 text-2xl font-bold text-white">{item.value}</p>
+                  <p className="mt-1 text-xs text-text-secondary">{item.note}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-sm text-text-secondary">
+              Hyper Focus adds 1 point per 3 minutes while a session runs.
+            </p>
+          </SectionReveal>
+          <LumoVisual size="lg" caption="Stats, skins, and cosmetics unlock as you keep showing up." />
+        </div>
+      </section>
+
+      <section className="py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionReveal className="mb-14 text-center">
             <h2 className="text-3xl font-bold text-white md:text-4xl">Start in three steps</h2>
@@ -208,41 +206,46 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pricing teaser */}
-      <section className="py-24">
+      <section className="border-y border-white/10 bg-white/[0.02] py-24">
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
           <SectionReveal>
-            <h2 className="text-3xl font-bold text-white md:text-4xl">Pro features, included free</h2>
-            <p className="mx-auto mt-4 max-w-lg text-text-secondary">
-              Rankings, reports, community tools, and Screen Time tracking are unlocked for every signed-in user in this release. No in-app purchases shown.
+            <blockquote className="text-xl font-medium leading-relaxed text-white md:text-2xl">
+              &ldquo;I finally have one goal instead of ten habits I abandon by Tuesday.&rdquo;
+            </blockquote>
+            <p className="mt-6 text-sm text-text-secondary">
+              Mara Okonkwo, designer and early LumoLife user
             </p>
-            <div className="mt-8">
-              <Link
-                href="/pricing"
-                className="text-sm font-semibold text-lumo-teal hover:underline"
-              >
-                Pricing details
-              </Link>
-            </div>
           </SectionReveal>
         </div>
       </section>
 
-      {/* Download */}
-      <section id="download" className="relative overflow-hidden py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-lumo-mid/30 via-lumo-deep/50 to-lumo-ink" aria-hidden />
-        <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
-          <SectionReveal>
-            <h2 className="text-3xl font-bold text-white md:text-4xl">Ready to meet Lumo?</h2>
-            <p className="mx-auto mt-4 max-w-md text-text-secondary">
-              Available on iPhone. Requires iOS 17 or later.
+      <section className="py-24 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionReveal className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold text-white md:text-4xl">Pro features, included free</h2>
+            <p className="mt-4 text-text-secondary">
+              Rankings, reports, community tools, and Screen Time tracking are unlocked for every signed-in user in this release.
             </p>
-            <div className="mt-8 flex justify-center">
-              <AppStoreButton />
-            </div>
           </SectionReveal>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {proFeatures.map((feature, i) => (
+              <SectionReveal key={feature.title} delay={i * 0.04}>
+                <div className="h-full rounded-card border border-white/10 bg-surface/60 p-6">
+                  <h3 className="font-semibold text-white">{feature.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-text-secondary">{feature.body}</p>
+                </div>
+              </SectionReveal>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <Link href="/pricing" className="text-sm font-semibold text-lumo-teal hover:underline">
+              Pricing details
+            </Link>
+          </div>
         </div>
       </section>
+
+      <CtaBand />
     </div>
   );
 }
