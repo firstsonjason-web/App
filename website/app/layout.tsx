@@ -7,9 +7,9 @@ import Footer from "@/components/Footer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Pabo Focus - Stay Healthy, Be Happy",
-  description: "Transform your relationship with technology and build healthier digital habits. Track screen time, set goals, and join a community of mindful technology users.",
-  keywords: ["digital wellness", "screen time", "mindfulness", "productivity", "focus", "digital detox"],
+  title: "LumoLife — Stay Healthy, Be Happy",
+  description: "Meet Lumo, your tiny focus companion. Set daily goals, run focus sessions, grow Lumo's stats and cosmetics, and track Screen Time when you choose.",
+  keywords: ["LumoLife", "digital wellness", "screen time", "focus", "habits", "streaks", "Lumo"],
 };
 
 export default function RootLayout({

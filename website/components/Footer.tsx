@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Twitter, Instagram } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -13,15 +12,15 @@ const Footer = () => {
               <div className="relative w-10 h-10">
                 <Image 
                   src="/icon.png" 
-                  alt="Pabo Focus Logo" 
+                  alt="LumoLife logo" 
                   fill
                   className="object-contain"
                 />
               </div>
-              <span className="text-xl font-bold text-text-primary">Pabo Focus</span>
+              <span className="text-xl font-bold text-text-primary">LumoLife</span>
             </div>
             <p className="text-text-secondary text-sm leading-relaxed">
-              Transform your relationship with technology and build healthier digital habits. Stay Healthy, Be Happy.
+              Meet Lumo — your tiny focus companion. Set goals, build streaks, and grow healthier digital habits.
             </p>
           </div>
 
@@ -56,14 +55,11 @@ const Footer = () => {
 
         <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-text-secondary text-sm">
-            &copy; {new Date().getFullYear()} Pabo Focus. All rights reserved.
+            &copy; {new Date().getFullYear()} LumoLife. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="https://x.com/PaboFocus?s=20" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-text-primary transition-colors" aria-label="X (Twitter)">
-              <Twitter size={20} />
-            </a>
-            <a href="https://www.instagram.com/pabo1910/?utm_source=ig_web_button_share_sheet" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Instagram">
-              <Instagram size={20} />
+            <a href="https://www.stayhealthiness.com" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-text-primary transition-colors text-sm font-medium">
+              stayhealthiness.com
             </a>
           </div>
         </div>

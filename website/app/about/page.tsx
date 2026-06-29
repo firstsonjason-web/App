@@ -22,7 +22,7 @@ export default function AboutPage() {
             transition={{ delay: 0.1 }}
             className="text-xl text-text-secondary max-w-3xl mx-auto leading-relaxed"
           >
-            We believe technology should empower us, not overwhelm us. Pabo Focus was created to help people reclaim their time and build a healthier relationship with their digital devices.
+            We believe technology should empower us, not overwhelm us. LumoLife was created to help people reclaim their time and build a healthier relationship with their digital devices — with Lumo, a tiny companion that grows with your habits.
           </motion.p>
         </div>
 
@@ -39,7 +39,7 @@ export default function AboutPage() {
           <div className="bg-accent/5 p-12 rounded-[3rem] border border-accent/10">
             <h2 className="text-3xl font-bold text-text-primary mb-6">Our Solution</h2>
             <p className="text-text-secondary leading-relaxed mb-6">
-              Pabo Focus uses behavioral science and gamification to make digital wellness engaging and rewarding. We don't just track time; we help you set meaningful goals and find joy in offline activities.
+              LumoLife uses behavioral science and gamification to make digital wellness engaging. Set one daily goal, run focus sessions, upgrade Lumo&apos;s stats and cosmetics, and build streaks that stick.
             </p>
             <p className="text-text-secondary leading-relaxed">
               By focusing on positive reinforcement rather than restriction, we help users build lasting habits that stick.

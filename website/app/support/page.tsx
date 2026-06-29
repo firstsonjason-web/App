@@ -2,17 +2,16 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Mail, MessageCircle, HelpCircle, BookOpen, Twitter, Instagram } from 'lucide-react';
+import { Mail, MessageCircle, HelpCircle } from 'lucide-react';
 
 export default function SupportPage() {
   const faqs = [
-    { q: "How does Pabo Focus track my screen time?", a: "Pabo Focus uses Apple's Screen Time API (ScreenTime framework) to monitor app usage accurately while maintaining your privacy. All data stays on your device and in your secure account." },
-    { q: "Is my data shared with anyone?", a: "No, your data is private and stored securely using Firebase with encryption. We never sell your personal information or usage data to third parties." },
-    { q: "What's included in the free plan?", a: "The free plan includes up to 3 daily activities, basic goal tracking, the points and leveling system, and viewing community posts. Upgrade to Daily or Prof for screen time tracking, rankings, and more." },
-    { q: "How do subscriptions work?", a: "Both the Daily Plan and Prof Plan come with a 14-day free trial. Subscriptions are billed monthly through Apple In-App Purchases and can be managed or cancelled anytime from your Apple ID settings." },
-    { q: "How do I earn points?", a: "You earn points by completing daily goals: 10 pts for Easy, 25 pts for Medium, 50 pts for Hard. Hyper Focus mode earns 1 point per 3 minutes. Build streaks to level up faster!" },
-    { q: "Can I change or cancel my subscription?", a: "Yes! Go to Profile > Membership in the app to view your plan. Upgrades take effect immediately, and downgrades apply at the end of your current billing period. You can also manage subscriptions in Settings > Apple ID > Subscriptions." },
-    { q: "What happens to my data if I delete my account?", a: "When you delete your account, all your personal data including goals, posts, and profile information is permanently removed from our servers. This action cannot be undone." },
+    { q: "How does LumoLife track my screen time?", a: "LumoLife uses Apple's Screen Time API (Family Controls / DeviceActivity) to monitor app usage after you grant permission. Data is stored securely in your account." },
+    { q: "Is my data shared with anyone?", a: "No. Your private data is stored securely using Firebase. We never sell your personal information." },
+    { q: "What's included in the current release?", a: "Pro features are included for all signed-in users at no charge in this App Store release. In-app purchases are not offered in this version." },
+    { q: "How do I earn points?", a: "Complete daily goals (10 / 25 / 50 points by difficulty) and Hyper Focus sessions (1 point per 3 minutes). Points unlock Lumo upgrades and cosmetics." },
+    { q: "How do I delete my account?", a: "Go to Profile → Account & Privacy in the app. Deleting your account permanently removes your profile, goals, posts, and usage data." },
+    { q: "What happens to my data if I delete my account?", a: "All personal data is permanently removed from our servers. This action cannot be undone." },
   ];
 
   return (
@@ -57,32 +56,14 @@ export default function SupportPage() {
           <h2 className="text-4xl font-bold mb-6">Still have questions?</h2>
           <p className="text-xl text-gray-300 mb-10">We're here to help you on your digital wellness journey.</p>
           <a 
-            href="mailto:support@pabofocus.com" 
+            href="mailto:support@stayhealthiness.com" 
             className="inline-flex items-center gap-3 bg-accent text-white px-10 py-5 rounded-2xl text-xl font-bold hover:scale-105 transition-transform shadow-xl"
           >
             <Mail /> Contact Support
           </a>
 
           <div className="mt-16 flex flex-col items-center gap-6">
-            <p className="text-gray-300 font-medium">Follow us for updates and tips</p>
-            <div className="flex gap-6">
-              <a 
-                href="https://x.com/PaboFocus" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center hover:bg-white/20 transition-colors"
-              >
-                <Twitter size={24} />
-              </a>
-              <a 
-                href="https://www.instagram.com/pabo1910/" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center hover:bg-white/20 transition-colors"
-              >
-                <Instagram size={24} />
-              </a>
-            </div>
+            <p className="text-gray-300 font-medium">Questions? Email us anytime.</p>
           </div>
         </div>
       </div>

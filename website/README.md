@@ -1,30 +1,17 @@
-# Pabo Focus Website
+# LumoLife Website
 
-This is the official website for Pabo Focus, built with Next.js, Tailwind CSS, and Framer Motion.
+Official marketing site for **LumoLife** (iOS digital wellness app), deployed at [stayhealthiness.com](https://www.stayhealthiness.com/).
 
-## Getting Started
+Built with Next.js, Tailwind CSS, and Framer Motion. Lives in this monorepo under `website/`.
 
-First, install the dependencies:
+## Local dev
 
 ```bash
+cd website
 npm install
-# or
-yarn install
-```
-
-Then, run the development server:
-
-```bash
 npm run dev
-# or
-yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deploy
 
-## Tech Stack
-
-- **Framework:** [Next.js](https://nextjs.org/)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **Animations:** [Framer Motion](https://www.framer.com/motion/)
-- **Icons:** [Lucide React](https://lucide.dev/)
+Connected to Vercel from the `website/` root. Push to `main` on [firstsonjason-web/App](https://github.com/firstsonjason-web/App) to deploy.

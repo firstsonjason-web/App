@@ -20,7 +20,7 @@ const Hero = () => {
               <span className="text-accent">Be Happy</span>
             </h1>
             <p className="text-xl text-text-secondary mb-10 max-w-lg leading-relaxed">
-              Transform your relationship with technology and build healthier digital habits with Pabo Focus.
+              Meet Lumo — your tiny focus companion. Build healthier digital habits with daily goals, focus sessions, and a companion that grows with you.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
               <Link
@@ -71,8 +71,8 @@ const Hero = () => {
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-6">
                     <div>
-                      <h3 className="text-2xl font-black">PaboFocus</h3>
-                      <p className="text-xs text-gray-500 font-medium">Digital Wellness Reimagined</p>
+                      <h3 className="text-2xl font-black">LumoLife</h3>
+                      <p className="text-xs text-gray-500 font-medium">Your tiny focus companion</p>
                     </div>
                     <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
                       <Zap size={20} className="text-white fill-current" />
@@ -147,7 +147,7 @@ const Features = () => {
     <section id="features" className="py-24 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-text-primary mb-4">Why Choose Pabo Focus?</h2>
+          <h2 className="text-4xl font-bold text-text-primary mb-4">Why Choose LumoLife?</h2>
           <p className="text-text-secondary max-w-2xl mx-auto">Everything you need to build healthier digital habits and reclaim your time.</p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -252,78 +252,34 @@ const Benefits = () => {
 };
 
 const Pricing = () => {
-  const tiers = [
-    {
-      name: "Free",
-      price: "$0",
-      desc: "Get started with essentials",
-      features: ["3 daily activities", "Basic goal tracking", "Points & levels", "Community viewing"],
-      cta: "Get Started",
-      highlight: false,
-    },
-    {
-      name: "Daily Plan",
-      price: null,
-      desc: "For focused individuals",
-      features: ["6 daily activities", "Screen time tracking", "Rankings & leaderboards", "Community board access", "Unlimited friends"],
-      cta: "Start Free Trial",
-      highlight: true,
-    },
-    {
-      name: "Prof Plan",
-      price: null,
-      desc: "Everything, unlimited",
-      features: ["Unlimited activities", "All Daily Plan features", "Detailed reports & insights", "Create community groups", "Priority support"],
-      cta: "Start Free Trial",
-      highlight: false,
-    },
-  ];
-
   return (
     <section id="pricing" className="py-24 bg-surface">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-text-primary mb-4">Choose Your Plan</h2>
-          <p className="text-text-secondary max-w-2xl mx-auto">Start free and upgrade when you&apos;re ready. All paid plans include a 14-day free trial.</p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          {tiers.map((tier, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ y: -8 }}
-              className={`rounded-3xl p-8 ${tier.highlight ? 'bg-accent text-white shadow-xl shadow-accent/20 scale-[1.02]' : 'bg-background border border-gray-100 shadow-sm'} transition-all`}
-            >
-              <h3 className={`text-xl font-bold mb-2 ${tier.highlight ? 'text-white' : 'text-text-primary'}`}>{tier.name}</h3>
-              <p className={`text-sm mb-6 ${tier.highlight ? 'text-white/70' : 'text-text-secondary'}`}>{tier.desc}</p>
-              {tier.price ? (
-                <div className={`text-4xl font-extrabold mb-6 ${tier.highlight ? 'text-white' : 'text-text-primary'}`}>{tier.price}<span className="text-lg font-normal opacity-60">/mo</span></div>
-              ) : (
-                <div className={`text-2xl font-bold mb-6 ${tier.highlight ? 'text-white' : 'text-text-primary'}`}>See in app</div>
-              )}
-              <ul className="space-y-3 mb-8">
-                {tier.features.map((f, j) => (
-                  <li key={j} className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className={tier.highlight ? 'text-white' : 'text-secondary'} />
-                    <span className={`text-sm ${tier.highlight ? 'text-white/90' : 'text-text-secondary'}`}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/#download"
-                className={`block text-center py-3 rounded-2xl font-bold text-sm transition-all ${
-                  tier.highlight
-                    ? 'bg-white text-accent hover:shadow-lg'
-                    : 'bg-surface text-text-primary border-2 border-gray-100 hover:border-accent hover:text-accent'
-                }`}
-              >
-                {tier.cta}
-              </Link>
-            </motion.div>
-          ))}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 className="text-4xl font-bold text-text-primary mb-4">Pro features, included free</h2>
+        <p className="text-text-secondary max-w-2xl mx-auto mb-10">
+          The current App Store release includes Pro access for all signed-in users. No in-app purchases or trials — just download and start growing with Lumo.
+        </p>
+        <div className="bg-background rounded-3xl p-10 border border-gray-100 shadow-sm text-left">
+          <ul className="space-y-3 mb-8">
+            {[
+              "Goals, streaks, and Lumo progression",
+              "Screen Time tracking (with your permission)",
+              "Community, rankings, and monthly reports",
+              "Hyper Focus mode and group challenges",
+            ].map((f) => (
+              <li key={f} className="flex items-center gap-2 text-text-secondary">
+                <CheckCircle2 size={16} className="text-secondary flex-shrink-0" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <Link href="/#download" className="block text-center bg-accent text-white py-3 rounded-2xl font-bold hover:shadow-lg transition-all">
+            Download LumoLife
+          </Link>
         </div>
         <div className="text-center mt-10">
           <Link href="/pricing" className="text-accent font-semibold hover:underline inline-flex items-center gap-2">
-            View full plan comparison <ArrowRight size={16} />
+            Learn more about plans <ArrowRight size={16} />
           </Link>
         </div>
       </div>
@@ -336,7 +292,7 @@ const Download = () => {
     <section id="download" className="py-24 bg-accent relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">Ready to Transform Your Digital Life?</h2>
-        <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">Start with a free plan and upgrade anytime. All paid plans include a 14-day free trial.</p>
+        <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">Download LumoLife free on the App Store. Pro features are included for all signed-in users in this release.</p>
         <div className="flex flex-wrap justify-center gap-6 mb-8">
           <a href="https://apps.apple.com/hk/app/pabo-focus/id6755391886?l=en-GB" target="_blank" rel="noopener noreferrer" className="bg-surface text-text-primary px-8 py-4 rounded-2xl flex items-center gap-4 hover:scale-105 transition-transform shadow-xl">
             <Smartphone size={32} />

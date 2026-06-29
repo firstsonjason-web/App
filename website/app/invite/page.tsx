@@ -24,7 +24,7 @@ function InviteContent() {
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">You're Invited!</h1>
         <p className="text-gray-600 mb-8">
-          A friend has invited you to join their focus circle on PaboFocus.
+          A friend has invited you to join their focus circle on LumoLife.
         </p>
         
         {uid ? (
@@ -32,7 +32,7 @@ function InviteContent() {
             href={`stayhealthiness://invite?uid=${uid}`}
             className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition duration-200 shadow-md"
           >
-            Open PaboFocus App
+            Open LumoLife
           </a>
         ) : (
           <p className="text-red-500">Invalid invite link. Please ask your friend for a new one.</p>

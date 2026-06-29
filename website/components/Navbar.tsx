@@ -44,12 +44,12 @@ const Navbar = () => {
             <div className="relative w-12 h-12 group-hover:scale-110 transition-transform">
               <Image 
                 src="/icon.png" 
-                alt="Pabo Focus Logo" 
+                alt="LumoLife logo" 
                 fill
                 className="object-contain"
               />
             </div>
-            <span className="text-xl font-bold text-text-primary">Pabo Focus</span>
+            <span className="text-xl font-bold text-text-primary">LumoLife</span>
           </Link>
 
           {/* Desktop Nav */}

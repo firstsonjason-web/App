@@ -15,7 +15,7 @@ export default function CommunityGuidelinesPage() {
                 <div className="prose prose-lg text-text-secondary max-w-none space-y-8">
                     <section className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-6 mb-8">
                         <p className="text-emerald-800 font-medium text-lg">
-                            Welcome to the PaboFocus community! These guidelines help us maintain a positive, supportive environment for everyone focused on digital wellness.
+                            Welcome to the LumoLife community! These guidelines help us maintain a positive, supportive environment for everyone focused on digital wellness.
                         </p>
                     </section>
 
@@ -177,7 +177,7 @@ export default function CommunityGuidelinesPage() {
 
                     <section className="border-t border-gray-100 pt-8 mt-12">
                         <p className="text-sm text-gray-500 italic text-center">
-                            © 2026 PaboFocus. All rights reserved.
+                            © 2026 LumoLife. All rights reserved.
                         </p>
                     </section>
                 </div>

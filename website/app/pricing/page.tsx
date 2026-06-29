@@ -93,7 +93,7 @@ export default function PricingPage() {
             transition={{ delay: 0.1 }}
             className="text-xl text-text-secondary max-w-3xl mx-auto"
           >
-            Start free and upgrade when you're ready. All paid plans include a 14-day free trial.
+            Pro features are included free in the current App Store release. Paid subscriptions may return in a future update.
           </motion.p>
         </div>
 
@@ -170,20 +170,20 @@ export default function PricingPage() {
           <div className="space-y-6">
             {[
               {
-                q: "Is there really a free trial?",
-                a: "Yes! Both the Daily Plan and Prof Plan come with a 14-day free trial. You won't be charged until the trial ends, and you can cancel anytime.",
+                q: "Is the app really free right now?",
+                a: "Yes. The current App Store release includes Pro features for all signed-in users at no charge. In-app purchases are not offered in this version.",
               },
               {
-                q: "Can I change plans later?",
-                a: "Absolutely. You can upgrade at any time and the change takes effect immediately. Downgrades take effect at the end of your current billing period.",
+                q: "Will subscriptions come back later?",
+                a: "We may enable optional paid plans in a future release. If we do, we'll update this page and the in-app experience before any charges apply.",
               },
               {
-                q: "How do I cancel my subscription?",
-                a: "You can manage or cancel your subscription anytime through your Apple ID settings or directly from the app's Profile > Membership section.",
+                q: "How do I delete my account?",
+                a: "Open Profile → Account & Privacy in the app and choose Delete Account. This permanently removes your data from our servers.",
               },
               {
-                q: "What happens when my trial ends?",
-                a: "You'll be automatically charged for the plan you selected. We'll send you a reminder before your trial ends so there are no surprises.",
+                q: "How do I contact support?",
+                a: "Email support@stayhealthiness.com or visit the Support page on this site.",
               },
             ].map((faq, i) => (
               <div key={i} className="bg-surface p-8 rounded-2xl border border-gray-100 shadow-sm">
