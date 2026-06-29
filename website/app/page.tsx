@@ -112,16 +112,7 @@ export default function Home() {
                 className="aspect-[4/5] w-full object-cover"
               />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-lumo-ink via-lumo-ink/80 to-transparent p-6">
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-white">Today&apos;s focus</p>
-                    <p className="text-2xl font-bold text-lumo-teal">12 day streak</p>
-                  </div>
-                  <div className="rounded-card border border-white/10 bg-white/10 px-3 py-2 text-right backdrop-blur-md">
-                    <p className="text-[10px] uppercase tracking-wide text-text-secondary">Points</p>
-                    <p className="text-lg font-bold text-lumo-gold">1,240</p>
-                  </div>
-                </div>
+                <p className="text-sm font-medium text-white">One daily goal. Lumo reacts to your streak.</p>
               </div>
             </div>
           </motion.div>

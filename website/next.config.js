@@ -28,6 +28,18 @@ const nextConfig = {
         destination: '/support/',
       },
       {
+        source: '/terms.html',
+        destination: '/terms/',
+      },
+      {
+        source: '/pricing.html',
+        destination: '/pricing/',
+      },
+      {
+        source: '/community-guidelines.html',
+        destination: '/community-guidelines/',
+      },
+      {
         source: '/index.html',
         destination: '/',
       },

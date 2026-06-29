@@ -25,6 +25,10 @@ const faqs = [
     q: "How do I delete my account?",
     a: "Profile → Account & Privacy → Delete Account in the iOS app. This permanently removes your profile, goals, posts, and usage data.",
   },
+  {
+    q: "What happens to my data if I delete my account?",
+    a: "All personal data is permanently removed from our servers. This action cannot be undone.",
+  },
 ];
 
 export default function SupportPage() {

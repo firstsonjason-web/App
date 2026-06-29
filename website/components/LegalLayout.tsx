@@ -13,7 +13,7 @@ export default function LegalLayout({
 }: LegalLayoutProps) {
   return (
     <div className="bg-lumo-ink pt-28 pb-24">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">{title}</h1>
         <div className="mt-4 space-y-1 text-sm text-text-secondary">
           <p>
@@ -23,7 +23,7 @@ export default function LegalLayout({
             <strong className="text-white/80">Effective:</strong> {effective}
           </p>
         </div>
-        <div className="prose prose-invert mt-12 max-w-none space-y-8 text-text-secondary prose-headings:text-white prose-a:text-lumo-teal prose-strong:text-white">
+        <div className="prose prose-invert mt-12 max-w-none space-y-8 text-text-secondary prose-headings:text-white prose-h3:text-lg prose-a:text-lumo-teal prose-strong:text-white prose-li:marker:text-lumo-teal/70">
           {children}
         </div>
       </div>
